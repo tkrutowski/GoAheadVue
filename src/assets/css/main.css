@@ -1,0 +1,166 @@
+
+/*-----------------------------------------------TEXT-------------------------------------------*/
+.text-left {
+    text-align: left;
+}
+.text-center{
+    text-align: center;
+}
+
+/*-----------------------------------------------COLOR-------------------------------------------*/
+
+.color-red {
+    color: #dc3545;
+}
+.color-green {
+    /*color: rgba(26, 139, 17, 1)*/
+    color: #268c73
+}
+.color-gray{
+    color: #2E3236;
+}
+
+
+/*------------------------------------------------------BORDER-------------------------------------------*/
+
+.border-green {
+    border-color: #268c73 ;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.border-green:focus {
+    border-color: #268c73 !important;
+    box-shadow: 0 0 0 0.2rem rgb(38 140 115 / 25%) !important;
+}
+.border-expired {
+    border-color: rgba(137, 6, 6, 1) !important;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.border-expired:focus {
+    border-color: rgba(137, 6, 6) !important;
+    box-shadow: 0 0 0 0.2rem rgb(137 6 6 / 25%) !important;
+}
+/*-------------------------------------------------BACKGROUND*/
+.bg-office {
+    background-color: #222526 !important;
+}
+.bg-office-dark1 {
+    background-color: #1e2122!important;
+}
+.bg-office-dark2 {
+    background-color: #151819 !important;
+}
+.bg-office-orange {
+    background-color: #ee7f00  !important;
+}
+.bg-office-expired03 {
+    background-color: rgba(137, 6, 6, 0.3)  !important;
+}
+.bg-office-expired01 {
+    background-color: rgba(137, 6, 6, 0.1)  !important;
+}
+.bg-office-paid03 {
+    background-color: rgba(7, 63, 1, 0.3)  !important;
+}
+.bg-office-paid01 {
+    background-color: rgba(7, 63, 1, 0.1)  !important;
+}
+
+/*DROPDOWN*/
+.p-dropdown-label {
+    /*color: #268c73;*/
+}
+
+.p-dropdown {
+    border-color: #268c73 ;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    color: #268c73;
+}
+.p-dropdown:hover {
+    /*color: #dc3545;*/
+    border-color: #238068 !important;
+    /*border: 1px solid #2ca083;*/
+}
+.p-dropdown:not(.p.disabled).p-focus {
+    /*outline: 0 none;*/
+    /*outline-offset: 0;*/
+    box-shadow: 0 0 0 0.2rem #95cfc1;
+    /*box-shadow: 0 0 0 0.2rem #2ca083;*/
+    border-color: #238068;
+}
+/*INPUTTEXT*/
+.p-inputtext {
+    border-color: #268c73 ;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    color: #268c73;
+}
+.p-inputtext:hover {
+    /*color: #dc3545;*/
+    border-color: #238068 !important;
+    /*border: 1px solid #2ca083;*/
+}
+.p-inputtext:enabled:focus {
+    /*outline: 0 none;*/
+    /*outline-offset: 0;*/
+    box-shadow: 0 0 0 0.2rem #95cfc1;
+    /*box-shadow: 0 0 0 0.2rem #2ca083;*/
+    border-color: #238068;
+}
+
+/*BIUTON*/
+.p-button {
+    color: #ffffff;
+    background-color: #2ca083 ;
+    border: 1px solid #2ca083;
+}
+.p-button:hover {
+    color: #dc3545;
+    background-color: #238068 !important;
+    /*border: 1px solid #2ca083;*/
+}
+
+/*TABLE HEADER*/
+.p-datatable .p-sortable-column .p-sortable-column-icon {
+    color: #268c73;
+}
+.p-datatable .p-sortable-column:hover .p-sortable-column-icon:hover {
+    color: #268c73;
+}
+.p-datatable .p-datatable-thead > tr > th {
+    color: #268c73;
+}
+.p-datatable .p-datatable-thead:hover > tr > th:hover {
+    color: #268c73;
+}
+
+.p-datatable .p-sortable-column.p-highlight {
+    background: #d2f3eb;
+    color: #268c73
+}
+.p-datatable .p-sortable-column.p-highlight:hover {
+    background: #66d5ba;
+    color: #268c73
+}
+.p-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
+    color: #268c73;
+}
+.p-datatable .p-sortable-column.p-highlight .p-sortable-column-icon:hover {
+    color: #268c73;
+}
+
+.p-datatable .p-column-header-content {
+    /*display: flex;*/
+    /*align-items: center;*/
+    justify-content: center;
+}
+/*TABLE ROW*/
+.p-datatable .p-datatable-tbody > tr {
+    color: #268c73;
+}
+/*column text*/
+.p-datatable .p-datatable-tbody > tr > td {
+    text-align: center;
+}
