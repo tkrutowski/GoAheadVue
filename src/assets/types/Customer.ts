@@ -1,5 +1,5 @@
-import CustomerType from "@/assets/types/CustomerType";
-import CustomerStatusType from "@/assets/types/CustomerStatusType";
+import { CustomerType } from "@/assets/types/CustomerType";
+import { CustomerStatus } from "@/assets/types/CustomerStatus";
 
 export interface Customer {
   id: number;
@@ -8,9 +8,9 @@ export interface Customer {
   nip: string;
   phone: string;
   mail: string;
-  customerType: CustomerType;
+  customerType: CustomerType | undefined;
   otherInfo: string;
-  customerStatus: CustomerStatusType;
+  customerStatus: CustomerStatus;
   regon: string;
   address: Address;
 }

@@ -1,2 +1,5 @@
-type CustomerType = "CUSTOMER" | "COMPANY";
-export default CustomerType;
+type Type = "CUSTOMER" | "COMPANY";
+export interface CustomerType {
+  name: Type;
+  viewName: string;
+}

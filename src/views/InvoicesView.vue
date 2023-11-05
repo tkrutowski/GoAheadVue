@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useInvoiceStore } from "@/stores/invoices";
 import { computed, onMounted, ref } from "vue";
 import { FilterMatchMode } from "primevue/api";
 import { Invoice } from "@/assets/types/Invoice";
@@ -13,8 +12,9 @@ import StatusButton from "@/components/StatusButton.vue";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 import { useToast } from "primevue/usetoast";
 import FileButton from "@/components/FileButton.vue";
-const toast = useToast();
+import { useInvoiceStore } from "@/stores/invoices";
 const invoiceStore = useInvoiceStore();
+const toast = useToast();
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   // name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
@@ -103,6 +103,9 @@ const submitDelete = async () => {
   showDeleteConfirmationDialog.value = false;
 };
 
+//
+//-------------------------------------------------EDIT INVOICE-------------------------------------------------
+//
 const editItem = (item: Invoice) => {
   console.log("EDIT INVOICE:", item);
   const invoiceItem: Invoice = JSON.parse(JSON.stringify(item));
@@ -182,7 +185,9 @@ onMounted(() => {
       </template>
 
       <template #empty>
-        <h4 class="color-red">Nie znaleziono faktur...</h4>
+        <h4 class="color-red" v-if="!invoiceStore.loadingInvoices">
+          Nie znaleziono faktur...
+        </h4>
       </template>
 
       <template #loading>

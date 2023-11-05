@@ -2,9 +2,10 @@ import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import HomeView from "../views/HomeView.vue";
 import LoginView from "@/views/LoginView.vue";
 import Error503View from "@/views/Error503View.vue";
-//GOAHEAD
 import InvoicesView from "@/views/InvoicesView.vue";
 import InvoiceView from "@/views/InvoiceView.vue";
+import CustomersView from "@/views/CustomersView.vue";
+import CustomerView from "@/views/CustomerView.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -33,6 +34,18 @@ const routes: Array<RouteRecordRaw> = [
     path: "/goahead/invoice/:isEdit/:invoiceId",
     name: "Invoice",
     component: InvoiceView,
+    props: true,
+  },
+  {
+    path: "/goahead/customer/all",
+    name: "Customers",
+    component: CustomersView,
+    props: true,
+  },
+  {
+    path: "/goahead/customer/:isEdit/:customerId",
+    name: "Customer",
+    component: CustomerView,
     props: true,
   },
   // {

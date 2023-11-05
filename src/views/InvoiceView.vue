@@ -14,6 +14,7 @@ import DeleteButton from "@/components/DeleteButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
 import router from "@/router";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
+import IconButton from "@/components/IconButton.vue";
 
 const customerStore = useCustomerStore();
 const invoiceStore = useInvoiceStore();
@@ -64,10 +65,10 @@ const invoiceItem = ref<InvoiceItem>({
 const invoiceNumber = ref<number>(0);
 const invoiceYear = ref<number>();
 const paymentLate = ref<number>();
-const btnSaveDisabled = ref<boolean>(false);
 const btnShowError = ref<boolean>(false);
 const btnShowBusy = ref<boolean>(false);
 const btnShowOk = ref<boolean>(false);
+const btnSaveDisabled = ref<boolean>(false);
 
 const formatCurrency = (value: number) => {
   return value.toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
@@ -78,12 +79,13 @@ const totalAmount = computed(() => {
   }, 0);
   return formatCurrency(total);
 });
-const disabledBtn = computed(() => {
+const isSaveBtnDisabled = computed(() => {
   return (
-    invoiceStore.loadingPaymentType &&
-    invoiceStore.loadingInvoices &&
-    invoiceStore.loadingInvoiceNo &&
-    customerStore.loadingCustomer
+    invoiceStore.loadingPaymentType ||
+    invoiceStore.loadingInvoices ||
+    invoiceStore.loadingInvoiceNo ||
+    customerStore.loadingCustomer ||
+    btnSaveDisabled.value
   );
 });
 const invoiceDateTemp = ref<string>("");
@@ -277,9 +279,9 @@ const submitDelete = async () => {
 onMounted(() => {
   console.log("onMounted GET");
   btnSaveDisabled.value = true;
-  customerStore.getCustomersFromDb("ALL");
+  customerStore.getCustomersFromDb("ALL", false);
   invoiceStore.getPaymentType();
-  btnSaveDisabled.value = disabledBtn.value;
+  btnSaveDisabled.value = false;
 });
 
 onMounted(async () => {
@@ -318,7 +320,7 @@ onMounted(async () => {
         console.error("Błąd podczas pobierania faktury:", error);
       });
   }
-  btnSaveDisabled.value = disabledBtn.value;
+  btnSaveDisabled.value = false;
 });
 
 //
@@ -365,6 +367,15 @@ const showErrorCustomer = () => {
     <form @submit.stop.prevent="saveInvoice">
       <Panel>
         <template #header>
+          <IconButton
+            v-tooltip.right="{
+              value: 'Powrót do listy faktur',
+              showDelay: 500,
+              hideDelay: 300,
+            }"
+            icon="pi-fw pi-list"
+            @click="() => router.push({ name: 'Invoices' })"
+          />
           <div class="w-full flex justify-content-center">
             <h3 class="color-green">
               {{
@@ -633,7 +644,7 @@ const showErrorCustomer = () => {
               :is-busy-icon="btnShowBusy"
               :is-error-icon="btnShowError"
               :is-ok-icon="btnShowOk"
-              :btn-disabled="btnSaveDisabled"
+              :btn-disabled="isSaveBtnDisabled"
             />
           </div>
         </div>

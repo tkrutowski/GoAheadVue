@@ -15,6 +15,7 @@ export const useInvoiceStore = defineStore("invoice", {
     loadingInvoiceNo: false,
     loadingPaymentType: false,
     loadingFile: false,
+    loadingWait: false,
     invoices: [] as Invoice[],
     paymentTypes: [] as PaymentMethod[],
   }),
@@ -27,6 +28,24 @@ export const useInvoiceStore = defineStore("invoice", {
 
   //actions = metody w komponentach
   actions: {
+    //
+    //GET CUSTOMER'S INVOICES
+    //
+    async getCustomerInvoices(customerId: number) {
+      console.log("geCustomerInvoices() ", customerId);
+      if (this.invoices.length === 0) {
+        console.log("Downloading Invoices...", this.invoices.length);
+        this.loadingWait = true;
+        await this.getInvoicesFromDb("ALL");
+        this.loadingWait = false;
+        console.log("Downloaded Invoices ", this.invoices.length);
+      }
+      const result = this.invoices.filter(
+        (invoice) => invoice.idCustomer === customerId
+      );
+      console.log("geCustomerInvoices() size: ", result.length);
+      return result;
+    },
     //
     //GET LATEST INVOICE ITEM
     //
