@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import StatusType from "@/assets/types/StatusType";
-import { onMounted } from "vue";
 defineProps({
   btnType: {
     //dodanie typu
@@ -24,8 +23,8 @@ defineProps({
   >
     <i
       :class="{
-        'pi pi-check-square': btnType === 'PAID',
-        'pi pi-stop': btnType === 'TO_PAY',
+        'pi pi-check-square': btnType === 'PAID' || 'ACTIVE',
+        'pi pi-stop': btnType === 'TO_PAY' || 'INACTIVE',
       }"
     ></i>
   </Button>

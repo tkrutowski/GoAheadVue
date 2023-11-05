@@ -49,12 +49,19 @@ const items = ref([
       {
         label: "Nowy",
         icon: "pi pi-fw pi-user-plus",
-        // to: { name: "Home" },
+        command: () => {
+          router.push({
+            name: "Customer",
+            params: { isEdit: "false", customerId: 0 },
+          });
+        },
       },
       {
         label: "Lista klientów",
         icon: "pi pi-fw pi-bars",
-        // to: { name: "Home" },
+        command: () => {
+          router.push({ name: "Customers" });
+        },
       },
     ],
   },
