@@ -118,8 +118,6 @@ export const useInvoiceStore = defineStore("invoice", {
         const response = await httpCommon.get(`/goahead/invoice/` + invoiceId, {
           headers: authorization.token !== "null" ? headers : {},
         });
-        console.log("DB: ", response.data);
-        console.log("DB custID: ", response.data.idCustomer);
         return response.data;
       } catch (e) {
         if (ErrorService.isAxiosError(e)) {
@@ -138,12 +136,6 @@ export const useInvoiceStore = defineStore("invoice", {
     //
     async updateInvoiceStatusDb(invoiceId: number, status: PaymentStatus) {
       console.log("START - updateInvoiceStatusDb()");
-      console.log(
-        "invoice id: " +
-          invoiceId +
-          ", status: " +
-          JSON.stringify(status, null, 2)
-      );
 
       const authorization = useAuthorizationStore();
       const headers = {
@@ -178,7 +170,7 @@ export const useInvoiceStore = defineStore("invoice", {
     //ADD INVOICE
     //
     async addInvoiceDb(invoice: Invoice) {
-      console.log("START - addInvoiceDb(", invoice, ")");
+      console.log("START - addInvoiceDb()");
       const authorization = useAuthorizationStore();
       const headers = {
         Authorization: "Bearer " + authorization.token,

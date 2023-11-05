@@ -47,7 +47,6 @@ const changeStatusConfirmationMessage = computed(() => {
   return "No message";
 });
 const submitChangeStatus = async () => {
-  console.log("submitChangeStatus: ", customerTemp.value);
   if (customerTemp.value) {
     let newStatus: CustomerStatus = {
       name:
@@ -59,7 +58,6 @@ const submitChangeStatus = async () => {
           ? "Aktywny"
           : "Nieaktywny",
     };
-    console.log("newStatus", newStatus);
     const result = await customerStore.updateCustomerStatusDb(
       customerTemp.value?.id,
       newStatus
@@ -84,7 +82,6 @@ const submitChangeStatus = async () => {
 //
 const showDeleteConfirmationDialog = ref<boolean>(false);
 const showDeleteInformationDialog = ref<boolean>(false);
-const showLoadingDialog = ref<boolean>(true);
 const hasInvoices = ref<boolean>(false);
 
 const confirmDeleteInvoice = async (customer: Customer) => {
@@ -108,7 +105,7 @@ const deleteConfirmationMessage = computed(() => {
   return "No message";
 });
 const submitDelete = async () => {
-  console.log("submitDelete: ", customerTemp.value);
+  console.log("submitDelete()");
   if (customerTemp.value) {
     const result = await customerStore.deleteCustomerDb(customerTemp.value.id);
     if (result)
@@ -126,7 +123,7 @@ const submitDelete = async () => {
 //-------------------------------------------------EDIT CUSTOMER-------------------------------------------------
 //
 const editCustomer = (customer: Customer) => {
-  console.log("EDIT CUSTOMER:", customer);
+  // console.log("EDIT CUSTOMER:", customer);
   const customerTemp: Customer = JSON.parse(JSON.stringify(customer));
   router.push({
     name: "Customer",

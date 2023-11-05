@@ -1,17 +1,12 @@
 <script setup lang="ts">
 import { useCustomerStore } from "@/stores/customers";
 import { useRoute } from "vue-router";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { Customer } from "@/assets/types/Customer";
-import moment from "moment";
 import OfficeButton from "@/components/OfficeButton.vue";
-import AddInvoiceItemDialog from "@/components/AddEditInvoiceItemDialog.vue";
 import { useToast } from "primevue/usetoast";
-import EditButton from "@/components/EditButton.vue";
-import DeleteButton from "@/components/DeleteButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
 import router from "@/router";
-import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 import { CustomerType } from "@/assets/types/CustomerType";
 import IconButton from "@/components/IconButton.vue";
 
@@ -20,7 +15,6 @@ const route = useRoute();
 
 const toast = useToast();
 let selectedCustomerType = ref<CustomerType | undefined>();
-const showNewItemModal = ref(false);
 const customer = ref<Customer>({
   id: 0,
   name: "",
@@ -67,7 +61,7 @@ function saveCustomer() {
 //---------------------------------------------------------NEW CUSTOMER----------------------------------------------
 //
 async function newCustomer() {
-  console.log("newCustomer(): ", customer.value);
+  console.log("newCustomer()");
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
     btnShowError.value = true;
@@ -109,7 +103,6 @@ async function editCustomer() {
     setTimeout(() => (btnShowError.value = false), 5000);
   } else {
     btnSaveDisabled.value = true;
-    console.log("editCustomer(): ", customer.value);
     const result: boolean = await customerStore.updateCustomerDb(
       customer.value
     );
@@ -157,10 +150,7 @@ onMounted(async () => {
       .then((data) => {
         if (data) {
           customer.value = data;
-          console.log("TYPE przed ", customer.value.customerType);
           selectedCustomerType.value = customer.value.customerType;
-          console.log("TYPE po ", customer.value.customerType);
-          console.log("TYPE ", selectedCustomerType);
         }
       })
       .catch((error) => {
@@ -273,8 +263,8 @@ const showErrorPhone = () => {
 
   <div class="m-4 grid flex flex-column">
     <form
-      @submit.stop.prevent="saveCustomer"
       class="col-12 col-md-9 col-xl-6 align-self-center"
+      @submit.stop.prevent="saveCustomer"
     >
       <Panel>
         <template #header>
@@ -296,7 +286,7 @@ const showErrorPhone = () => {
               <ProgressSpinner
                 class="ml-3"
                 style="width: 40px; height: 40px"
-                strokeWidth="5"
+                stroke-width="5"
               />
             </div>
           </div>
@@ -339,7 +329,7 @@ const showErrorPhone = () => {
             <InputText
               id="input"
               v-model="customer.firstName"
-              class="input-office-green border-green"
+              class="border-green"
               :class="{ 'p-invalid': showErrorFirstName() }"
               :disabled="isCompanyType"
               maxlength="40"
@@ -371,7 +361,7 @@ const showErrorPhone = () => {
             <InputText
               id="nip"
               v-model="customer.nip"
-              class="input-office-green border-green"
+              class="border-green"
               :class="{ 'p-invalid': showErrorNip() }"
               maxlength="100"
             />
@@ -402,7 +392,7 @@ const showErrorPhone = () => {
             <InputText
               id="street"
               v-model="customer.address.street"
-              class="input-office-green border-green"
+              class="border-green"
               :class="{ 'p-invalid': showErrorStreet() }"
               maxlength="100"
             />
@@ -443,7 +433,7 @@ const showErrorPhone = () => {
             <InputText
               id="mail"
               v-model="customer.mail"
-              class="input-office-green border-green"
+              class="border-green"
               :class="{ 'p-invalid': showErrorMail() }"
               maxlength="100"
             />
@@ -466,12 +456,10 @@ const showErrorPhone = () => {
         </div>
 
         <!-- ROW-6  OTHER INFO  -->
-        <div class="row card-elem-office-ahead">
-          <div class="col">
-            <div class="flex flex-column">
-              <label for="input">Dodatkowe informacje:</label>
-              <Textarea v-model="customer.otherInfo" rows="4" cols="30" />
-            </div>
+        <div class="row">
+          <div class="flex flex-column">
+            <label for="input">Dodatkowe informacje:</label>
+            <Textarea v-model="customer.otherInfo" rows="4" cols="30" />
           </div>
         </div>
 

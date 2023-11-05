@@ -46,7 +46,7 @@ const changeStatusConfirmationMessage = computed(() => {
   return "No message";
 });
 const submitChangeStatus = async () => {
-  console.log("submitChangeStatus: ", invoiceTemp.value);
+  console.log("submitChangeStatus()");
   if (invoiceTemp.value) {
     let newStatus: PaymentStatus = {
       name: invoiceTemp.value.paymentStatus.name === "PAID" ? "TO_PAY" : "PAID",
@@ -55,7 +55,6 @@ const submitChangeStatus = async () => {
           ? "Zapłacony"
           : "Do zapłaty",
     };
-    console.log("newStatus", newStatus);
     const result = await invoiceStore.updateInvoiceStatusDb(
       invoiceTemp.value.idInvoice,
       newStatus
@@ -87,7 +86,7 @@ const deleteConfirmationMessage = computed(() => {
   return "No message";
 });
 const submitDelete = async () => {
-  console.log("submitDelete: ", invoiceTemp.value);
+  console.log("submitDelete()");
   if (invoiceTemp.value) {
     const result = await invoiceStore.deleteInvoiceDb(
       invoiceTemp.value.idInvoice
@@ -107,7 +106,6 @@ const submitDelete = async () => {
 //-------------------------------------------------EDIT INVOICE-------------------------------------------------
 //
 const editItem = (item: Invoice) => {
-  console.log("EDIT INVOICE:", item);
   const invoiceItem: Invoice = JSON.parse(JSON.stringify(item));
   router.push({
     name: "Invoice",
@@ -145,7 +143,7 @@ onMounted(() => {
           <ProgressSpinner
             class="ml-3"
             style="width: 40px; height: 40px"
-            strokeWidth="5"
+            stroke-width="5"
           />
         </div>
       </div>
@@ -195,10 +193,10 @@ onMounted(() => {
       </template>
 
       <Column expander style="width: 5rem" />
-      <Column field="invoiceNumber" header="Nr faktury" sortable></Column>
-      <Column field="customerName" header="Nazwa klienta" sortable></Column>
-      <Column field="sellDate" header="Data sprzedaży" sortable></Column>
-      <Column field="invoiceDate" header="Data wystawienia" sortable></Column>
+      <Column field="invoiceNumber" header="Nr faktury" sortable />
+      <Column field="customerName" header="Nazwa klienta" sortable />
+      <Column field="sellDate" header="Data sprzedaży" sortable />
+      <Column field="invoiceDate" header="Data wystawienia" sortable />
       <Column field="paymentMethod" header="Rodzaj płatności" sortable>
         <template #body="{ data, field }">
           {{ formatCurrency(data[field].viewName) }}
@@ -298,12 +296,5 @@ onMounted(() => {
 <style scoped>
 .p-datatable .p-datatable-tbody > tr > td {
   text-align: center !important;
-}
-
-.card {
-  //background: var(--surface-card);
-  padding: 2rem;
-  border-radius: 10px;
-  margin-bottom: 1rem;
 }
 </style>

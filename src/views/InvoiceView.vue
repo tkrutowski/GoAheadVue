@@ -111,7 +111,7 @@ function saveInvoice() {
 //---------------------------------------------------------NEW INVOICE----------------------------------------------
 //
 async function newInvoice() {
-  console.log("newInvoice(): ", invoice.value);
+  console.log("newInvoice()");
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
     btnShowError.value = true;
@@ -157,7 +157,7 @@ async function editInvoice() {
   } else {
     invoice.value.invoiceNumber = invoiceYear.value + "/" + invoiceNumber.value;
     btnSaveDisabled.value = true;
-    console.log("editInvoice(): ", invoice.value);
+    console.log("editInvoice()");
     const result: boolean = await invoiceStore.updateInvoiceDb(invoice.value);
 
     if (result) {
@@ -189,9 +189,7 @@ function newItem() {
   const latestItem = invoiceStore.getLatestItemForCustomer(
     invoice.value.idCustomer
   );
-  console.log("latest ", latestItem);
   if (latestItem) {
-    console.log("latest IF ", latestItem);
     invoiceItem.value = latestItem;
     invoiceItem.value.idInvoice = invoice.value.idInvoice;
     invoiceItem.value.jm = latestItem.jm;
@@ -207,7 +205,6 @@ function newItem() {
 
     invoiceItem.value = JSON.parse(JSON.stringify(invoiceItem.value));
   }
-  console.log("item ", invoiceItem);
   isEditItem.value = false;
   showNewItemModal.value = true;
 }
@@ -268,7 +265,7 @@ const deleteConfirmationMessage = computed(() => {
 });
 
 const submitDelete = async () => {
-  console.log("submitDelete: ", invoiceItem.value);
+  console.log("submitDelete()");
   if (invoiceItem.value) {
     if (invoiceDeleteItemIndex.value !== -1)
       invoice.value.invoiceItems.splice(invoiceDeleteItemIndex.value, 1);
@@ -386,13 +383,13 @@ const showErrorCustomer = () => {
             </h3>
           </div>
         </template>
-        <div class="row flex flex-row">
-          <div class="col">
+        <div class="flex flex-row grid">
+          <div class="flex flex-column col-12 col-xl-6">
             <!-- ROW-1   CUSTOMER -->
-            <div class="row card-elem-office-ahead">
+            <div class="row">
               <div class="col">
                 <div class="flex flex-row">
-                  <div class="flex flex-column w-full">
+                  <div class="flex flex-column col-12">
                     <label for="input-customer">Wybierz klienta:</label>
                     <Dropdown
                       id="input-customer"
@@ -423,124 +420,114 @@ const showErrorCustomer = () => {
             </div>
 
             <!-- ROW-2  INVOICE NUMBER/YEAR  -->
-            <div class="flex-row flex card-elem-office-ahead">
-              <div class="col">
-                <div class="flex flex-row">
-                  <div class="flex flex-column w-full">
-                    <label for="input">Numer faktury</label>
-                    <InputNumber
-                      id="input"
-                      v-model="invoiceNumber"
-                      class="input-office-green border-green"
-                      mode="decimal"
-                      show-buttons
-                      :min="1"
-                      :max="100"
-                    />
-                  </div>
-                  <div v-if="invoiceStore.loadingInvoiceNo" class="mt-4">
-                    <ProgressSpinner
-                      class="ml-2 mt-1"
-                      style="width: 40px; height: 40px"
-                      stroke-width="5"
-                    />
-                  </div>
-                </div>
+            <div class="flex-row flex grid">
+              <!--              <div class="col">-->
+              <!--                <div class="flex flex-row">-->
+              <div class="flex flex-column col-12 col-md-6">
+                <label for="number">Numer faktury</label>
+                <InputNumber
+                  id="number"
+                  v-model="invoiceNumber"
+                  class="border-green"
+                  mode="decimal"
+                  show-buttons
+                  :min="1"
+                  :max="100"
+                />
               </div>
-              <div class="col">
-                <div class="flex flex-column">
-                  <label for="input">Rok faktury</label>
-                  <InputNumber
-                    id="input"
-                    v-model="invoiceYear"
-                    mode="decimal"
-                    :use-grouping="false"
-                    show-buttons
-                    :min="2020"
-                    :max="2050"
-                  />
-                </div>
+              <div v-if="invoiceStore.loadingInvoiceNo" class="mt-4">
+                <ProgressSpinner
+                  class="ml-2 mt-1"
+                  style="width: 40px; height: 40px"
+                  stroke-width="5"
+                />
               </div>
+              <!--                </div>-->
+              <!--              </div>-->
+              <!--              <div class="col">-->
+              <div class="flex flex-column col-12 col-md-6">
+                <label for="year">Rok faktury</label>
+                <InputNumber
+                  id="year"
+                  v-model="invoiceYear"
+                  mode="decimal"
+                  :use-grouping="false"
+                  show-buttons
+                  :min="2020"
+                  :max="2050"
+                />
+              </div>
+              <!--              </div>-->
             </div>
 
             <!-- ROW-3  DATES  -->
-            <div class="row card-elem-office-ahead">
-              <div class="col">
-                <div class="flex flex-column">
-                  <label for="input">Data wystawienia:</label>
-                  <Calendar
-                    v-model="invoiceDateTemp"
-                    show-icon
-                    date-format="yy-mm-dd"
-                  />
-                </div>
+            <div class="flex-row flex grid">
+              <div class="flex flex-column col-12 col-md-6">
+                <label for="input">Data wystawienia:</label>
+                <Calendar
+                  v-model="invoiceDateTemp"
+                  show-icon
+                  date-format="yy-mm-dd"
+                />
               </div>
-              <div class="col">
-                <div class="flex flex-column">
-                  <label for="input">Data sprzedaży:</label>
-                  <Calendar
-                    v-model="sellDateTemp"
-                    show-icon
-                    date-format="yy-mm-dd"
-                  />
-                </div>
+              <div class="flex flex-column col-12 col-md-6">
+                <label for="input">Data sprzedaży:</label>
+                <Calendar
+                  v-model="sellDateTemp"
+                  show-icon
+                  date-format="yy-mm-dd"
+                />
               </div>
             </div>
 
             <!-- ROW-4  LATE PAYMENT, PAYMENT_TYPE  -->
-            <div class="row card-elem-office-ahead">
-              <div class="col">
-                <div class="flex flex-column">
-                  <label for="input">Odroczenie płatności:</label>
-                  <InputNumber
-                    id="input"
-                    v-model="paymentLate"
-                    class="input-office-green border-green"
-                    mode="decimal"
-                    :use-grouping="false"
-                    show-buttons
-                    :min="0"
-                    :max="90"
-                  />
-                </div>
+            <div class="flex flex-row grid">
+              <div class="flex flex-column col-12 col-md-6">
+                <label for="input">Odroczenie płatności:</label>
+                <InputNumber
+                  id="input"
+                  v-model="paymentLate"
+                  class="border-green"
+                  mode="decimal"
+                  :use-grouping="false"
+                  show-buttons
+                  :min="0"
+                  :max="90"
+                />
               </div>
-              <div class="col">
-                <div class="flex flex-row">
-                  <div class="flex flex-column w-full">
-                    <label for="input-customer">Forma płatności:</label>
-                    <Dropdown
-                      id="input-customer"
-                      v-model="invoice.paymentMethod"
-                      class="input-office-green border-green"
-                      :options="invoiceStore.paymentTypes"
-                      option-label="viewName"
-                      required
-                    />
-                  </div>
-                  <div v-if="invoiceStore.loadingPaymentType" class="mt-4">
-                    <ProgressSpinner
-                      class="ml-2 mt-1"
-                      style="width: 40px; height: 40px"
-                      stroke-width="5"
-                    />
-                  </div>
+              <div class="flex flex-column col-12 col-md-6">
+                <label for="input-customer">Forma płatności:</label>
+                <Dropdown
+                  id="input-customer"
+                  v-model="invoice.paymentMethod"
+                  class="border-green"
+                  :options="invoiceStore.paymentTypes"
+                  option-label="viewName"
+                  required
+                />
+                <div v-if="invoiceStore.loadingPaymentType" class="mt-4">
+                  <ProgressSpinner
+                    class="ml-2 mt-1"
+                    style="width: 40px; height: 40px"
+                    stroke-width="5"
+                  />
                 </div>
               </div>
             </div>
 
             <!-- ROW-5  OTHER INFO  -->
-            <div class="row card-elem-office-ahead">
-              <div class="col">
-                <div class="flex flex-column">
-                  <label for="input">Dodatkowe informacje:</label>
-                  <Textarea v-model="invoice.otherInfo" rows="5" cols="30" />
-                </div>
+            <div class="flex-row flex grid">
+              <!--              <div class="col">-->
+              <div class="flex flex-column col-12">
+                <label for="input">Dodatkowe informacje:</label>
+                <Textarea v-model="invoice.otherInfo" rows="5" cols="30" />
               </div>
+              <!--              </div>-->
             </div>
           </div>
 
           <!-- TABLE INVOIS_ITEMS -->
-          <div class="col">
+          <div class="flex flex-column col-12 col-xl-6">
             <DataTable :value="invoice.invoiceItems" class="border-green pt-2">
               <template #header>
                 <!--        input do filtrowania na razie tutaj. Potem przenieść do navbaru-->

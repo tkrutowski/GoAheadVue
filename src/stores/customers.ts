@@ -88,7 +88,6 @@ export const useCustomerStore = defineStore("customer", {
             headers: authorization.token !== "null" ? headers : {},
           }
         );
-        console.log("DB: ", response.data);
         return response.data;
       } catch (e) {
         if (ErrorService.isAxiosError(e)) {
@@ -107,12 +106,6 @@ export const useCustomerStore = defineStore("customer", {
     //
     async updateCustomerStatusDb(customerId: number, status: CustomerStatus) {
       console.log("START - updateCustomerStatusDb()");
-      console.log(
-        "invoice id: " +
-          customerId +
-          ", status: " +
-          JSON.stringify(status, null, 2)
-      );
 
       const authorization = useAuthorizationStore();
       const headers = {
@@ -147,7 +140,7 @@ export const useCustomerStore = defineStore("customer", {
     //ADD CUSTOMER
     //
     async addCustomerDb(customer: Customer) {
-      console.log("START - addCustomerDb(", customer, ")");
+      console.log("START - addCustomerDb()");
       const authorization = useAuthorizationStore();
       const headers = {
         Authorization: "Bearer " + authorization.token,
