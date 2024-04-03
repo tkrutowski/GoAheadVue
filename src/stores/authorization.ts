@@ -47,7 +47,7 @@ export const useAuthorizationStore = defineStore("authorization", {
       this.busyIcon = true;
       this.btnDisabled = true;
       httpCommon
-        .post("/auth/login", {
+        .post("/v1/auth/login", {
           username: username,
           password: password,
         })
