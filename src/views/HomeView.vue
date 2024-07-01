@@ -9,7 +9,7 @@ const authorizationStore = useAuthorizationStore();
 <template>
   <TheMenu />
   <h1
-    v-if="!authorizationStore.isAuthenticated"
+    v-if="!authorizationStore.isAuthenticatedOrToken"
     class="color-green flex justify-content-center mt-8"
   >
     Musisz się najpierw zalogować... ;)

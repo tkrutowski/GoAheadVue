@@ -178,6 +178,7 @@ const getCustomerFullName = computed(() => {
       </div>
     </template>
     <DataTable
+      v-if="!customerStore.loadingCustomer"
       v-model:filters="filters"
       v-model:expandedRows="expandedRows"
       :value="customerStore.customers"
@@ -189,7 +190,13 @@ const getCustomerFullName = computed(() => {
       :rows-per-page-options="[5, 10, 20, 50]"
       table-style="min-width: 50rem"
       filter-display="row"
-      :global-filter-fields="['customerName', 'invoiceNumber', 'sellDate']"
+      :global-filter-fields="[
+        'firstName',
+        'name',
+        'nip',
+        'address.street',
+        'address.city',
+      ]"
     >
       <template #header>
         <div class="flex justify-content-sm-between">

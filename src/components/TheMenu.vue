@@ -80,7 +80,7 @@ const items = ref([
         />
       </template>
       <template #end>
-        <div v-if="!authorizationStore.isAuthenticated">
+        <div v-if="!authorizationStore.isAuthenticatedOrToken">
           <router-link :to="{ name: 'login' }" style="text-decoration: none">
             <OfficeButton
               size="sm"

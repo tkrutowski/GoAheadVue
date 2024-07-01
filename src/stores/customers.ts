@@ -24,6 +24,11 @@ export const useCustomerStore = defineStore("customer", {
         return state.customers.find((customer) => customer.id === id);
       };
     },
+    getCustomerName: (state) => {
+      return state.customers.map(
+        (customer) => customer.firstName + " " + customer.name
+      );
+    },
   },
 
   //actions = metody w komponentach
@@ -36,7 +41,7 @@ export const useCustomerStore = defineStore("customer", {
       this.loadingCustomer = true;
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         if (this.customers.length === 0) {
@@ -46,7 +51,7 @@ export const useCustomerStore = defineStore("customer", {
               `&address=` +
               address,
             {
-              headers: authorization.token !== "null" ? headers : {},
+              headers: authorization.accessToken !== "null" ? headers : {},
             }
           );
           // JSON responses are automatically parsed.
@@ -79,13 +84,13 @@ export const useCustomerStore = defineStore("customer", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.get(
           `/goahead/customer/` + customerId + `?isAddress=` + isAddress,
           {
-            headers: authorization.token !== "null" ? headers : {},
+            headers: authorization.accessToken !== "null" ? headers : {},
           }
         );
         return response.data;
@@ -109,14 +114,14 @@ export const useCustomerStore = defineStore("customer", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         await httpCommon.put(
           `/goahead/customer/customerstatus/` + customerId,
           { value: status.name },
           {
-            headers: authorization.token !== "null" ? headers : {},
+            headers: authorization.accessToken !== "null" ? headers : {},
           }
         );
         const customer = this.customers.find((item) => item.id === customerId);
@@ -143,11 +148,11 @@ export const useCustomerStore = defineStore("customer", {
       console.log("START - addCustomerDb()");
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.post(`/goahead/customer`, customer, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         this.customers.push(response.data);
         return true;
@@ -171,11 +176,11 @@ export const useCustomerStore = defineStore("customer", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.put(`/goahead/customer`, customer, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         const index = this.customers.findIndex(
           (item) => item.id === customer.id
@@ -201,11 +206,11 @@ export const useCustomerStore = defineStore("customer", {
       console.log("START - deleteCustomerDb()");
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         await httpCommon.delete(`/goahead/customer/` + customerId, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         const index = this.customers.findIndex(
           (item) => item.id === customerId
@@ -232,14 +237,14 @@ export const useCustomerStore = defineStore("customer", {
       this.loadingCustomerType = true;
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         if (this.customerTypes.length === 0) {
           const response = await httpCommon.get(
             `/goahead/customer/customertype`,
             {
-              headers: authorization.token !== "null" ? headers : {},
+              headers: authorization.accessToken !== "null" ? headers : {},
             }
           );
           this.customerTypes = response.data;

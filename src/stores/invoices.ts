@@ -24,8 +24,11 @@ export const useInvoiceStore = defineStore("invoice", {
   getters: {
     getSortedInvoices: (state) =>
       state.invoices.sort((a, b) => a.idInvoice - b.idInvoice),
+    getCustomerName: (state) => {
+      const all = state.invoices.map((inv) => inv.customerName);
+      return [...new Set(all)];
+    },
   },
-
   //actions = metody w komponentach
   actions: {
     //
@@ -74,14 +77,14 @@ export const useInvoiceStore = defineStore("invoice", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         if (this.invoices.length === 0) {
           const response = await httpCommon.get(
             `/goahead/invoice?status=` + paymentStatus,
             {
-              headers: authorization.token !== "null" ? headers : {},
+              headers: authorization.accessToken !== "null" ? headers : {},
             }
           );
           console.log(
@@ -112,11 +115,11 @@ export const useInvoiceStore = defineStore("invoice", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.get(`/goahead/invoice/` + invoiceId, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         return response.data;
       } catch (e) {
@@ -139,14 +142,14 @@ export const useInvoiceStore = defineStore("invoice", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         await httpCommon.put(
           `/goahead/invoice/paymentstatus/` + invoiceId,
           { value: status.name },
           {
-            headers: authorization.token !== "null" ? headers : {},
+            headers: authorization.accessToken !== "null" ? headers : {},
           }
         );
         const inv = this.invoices.find((inv) => inv.idInvoice === invoiceId);
@@ -173,11 +176,11 @@ export const useInvoiceStore = defineStore("invoice", {
       console.log("START - addInvoiceDb()");
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.post(`/goahead/invoice`, invoice, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         this.invoices.push(response.data);
         return true;
@@ -201,11 +204,11 @@ export const useInvoiceStore = defineStore("invoice", {
 
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.put(`/goahead/invoice`, invoice, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         const index = this.invoices.findIndex(
           (inv) => inv.idInvoice === invoice.idInvoice
@@ -231,11 +234,11 @@ export const useInvoiceStore = defineStore("invoice", {
       console.log("START - deleteInvoiceDb()");
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         await httpCommon.delete(`/goahead/invoice/` + invoiceId, {
-          headers: authorization.token !== "null" ? headers : {},
+          headers: authorization.accessToken !== "null" ? headers : {},
         });
         const index = this.invoices.findIndex(
           (inv) => inv.idInvoice === invoiceId
@@ -285,14 +288,14 @@ export const useInvoiceStore = defineStore("invoice", {
       this.loadingPaymentType = true;
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         if (this.paymentTypes.length === 0) {
           const response = await httpCommon.get(
             `/goahead/invoice/paymenttype`,
             {
-              headers: authorization.token !== "null" ? headers : {},
+              headers: authorization.accessToken !== "null" ? headers : {},
             }
           );
           this.paymentTypes = response.data;
@@ -317,13 +320,13 @@ export const useInvoiceStore = defineStore("invoice", {
       this.loadingFile = true;
       const authorization = useAuthorizationStore();
       const headers = {
-        Authorization: "Bearer " + authorization.token,
+        Authorization: "Bearer " + authorization.accessToken,
       };
       try {
         const response = await httpCommon.get(
           `/goahead/invoice/pdf/` + invoiceID,
           {
-            headers: authorization.token !== "null" ? headers : {},
+            headers: authorization.accessToken !== "null" ? headers : {},
             responseType: "blob",
           }
         );

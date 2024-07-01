@@ -1,9 +1,44 @@
+<script setup lang="ts">
+import { useAuthorizationStore } from "@/stores/authorization";
+import { onMounted, ref } from "vue";
+import OfficeButton from "@/components/OfficeButton.vue";
+import router from "@/router";
+const authorizationStore = useAuthorizationStore();
+
+const username = ref<string>("");
+const password = ref<string>("");
+
+onMounted(() => {
+  console.log("MOUNTED");
+  authorizationStore.loginError = false;
+});
+async function login() {
+  let result = await authorizationStore.login(username.value, password.value);
+
+  if (result) {
+    //TODO załadować karty kredytowe i inne
+    // router.back();
+    goBack();
+  }
+}
+function goBack(): void {
+  let history: string[] | [] = JSON.parse(
+    localStorage.getItem("navigationHistory") || "[]"
+  );
+  let lastAddress = history[history.length - 1];
+  if (lastAddress && (lastAddress === "/error" || lastAddress === "/login")) {
+    history = history.slice(-25);
+    history = history.filter((item) => item !== lastAddress); // Usuń ostatnią odwiedzoną stronę
+    localStorage.setItem("navigationHistory", JSON.stringify(history));
+  }
+
+  if (history.length > 0) router.replace(history[history.length - 1]);
+  else router.replace("/");
+}
+</script>
 <template>
   <!--  <div class="bg-office">-->
-  <form
-    class="login-form mb-5 mt-1 mt-md-5"
-    @submit.prevent="authorizationStore.login(username, password)"
-  >
+  <form class="login-form mb-5 mt-1 mt-md-5" @submit.prevent="login()">
     <h2 class="mb-5 color-green text-center">Logowanie</h2>
 
     <!-- ERROR -->
@@ -57,21 +92,6 @@
     </p>
   </form>
 </template>
-<script setup lang="ts">
-import { useAuthorizationStore } from "@/stores/authorization";
-import { onMounted, ref } from "vue";
-import OfficeButton from "@/components/OfficeButton.vue";
-
-const authorizationStore = useAuthorizationStore();
-
-const username = ref<string>("");
-const password = ref<string>("");
-
-onMounted(() => {
-  console.log("MOUNTED");
-  authorizationStore.loginError = false;
-});
-</script>
 <style scoped>
 #error {
   color: red;

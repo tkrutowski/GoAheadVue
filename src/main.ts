@@ -56,8 +56,10 @@ import Sidebar from "primevue/sidebar";
 import TabMenu from "primevue/tabmenu";
 import Textarea from "primevue/textarea";
 import Toast from "primevue/toast";
+import Tag from "primevue/tag";
 import Toolbar from "primevue/toolbar";
 import Tooltip from "primevue/tooltip";
+import TriStateCheckbox from "primevue/tristatecheckbox";
 import AutoComplete from "primevue/autocomplete";
 
 declare module "pinia" {
@@ -120,8 +122,10 @@ app.component("SelectButton", SelectButton);
 app.component("Slider", Slider);
 app.component("Sidebar", Sidebar);
 app.component("TabMenu", TabMenu);
+app.component("Tag", Tag);
 app.component("Textarea", Textarea);
 app.component("Toast", Toast);
 app.component("Toolbar", Toolbar);
+app.component("TriStateCheckbox", TriStateCheckbox);
 
 app.mount("#app");

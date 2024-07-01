@@ -12,6 +12,8 @@ import StatusButton from "@/components/StatusButton.vue";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 import { useToast } from "primevue/usetoast";
 import FileButton from "@/components/FileButton.vue";
+import { useCustomerStore } from "@/stores/customers";
+const customerStore = useCustomerStore();
 import { useInvoiceStore } from "@/stores/invoices";
 const invoiceStore = useInvoiceStore();
 const toast = useToast();
@@ -21,14 +23,39 @@ const filters = ref({
   // 'country.name': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   // representative: { value: null, matchMode: FilterMatchMode.IN },
   // status: { value: null, matchMode: FilterMatchMode.EQUALS },
+  customerName: { value: null, matchMode: FilterMatchMode.EQUALS },
   // verified: { value: null, matchMode: FilterMatchMode.EQUALS }
 });
 const expandedRows = ref([]);
+const selectedCustomerName = ref();
 const invoiceTemp = ref<Invoice>();
 const formatCurrency = (value: number) => {
   return value.toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
 };
+const formattedCustomerNames = computed(() => {
+  return invoiceStore.getCustomerName.map((name) => ({
+    label: name,
+    value: name,
+  }));
+});
 //
+//---------------------------------FILTER
+//
+//
+// const filterCallback = () => {
+//   // Twoja logika filtracji.
+//   // Zaktualizuj stan tabeli faktur w oparciu o wybraną nazwę klienta.
+//   // Możesz zrobić to bezpośrednio manipulując stanem faktur w magazynie Pinia,
+//   // albo jeśli DataTable ma swoją własną logikę filtrowania, zaktualizuj ją tutaj.
+//
+//   // Przykład: jeśli tabela używa lokalnego stanu do śledzenia filtrów, możesz zrobić coś takiego:
+//   const filteredInvoices = invoiceStore.invoices.filter((invoice) => {
+//     return invoice.customerName === selectedCustomerName.value;
+//   });
+//
+//   // Zakładając, że masz zdefiniowaną reaktywną właściwość dla przechowywania przefiltrowanych faktur
+//   // invoiceStore.setFilteredInvoices(filteredInvoices);
+// };
 //---------------------------------------------STATUS CHANGE--------------------------------------------------
 //
 const showStatusChangeConfirmationDialog = ref<boolean>(false);
@@ -41,7 +68,9 @@ const changeStatusConfirmationMessage = computed(() => {
     return `Czy chcesz zmienić status faktury nr <b>${
       invoiceTemp.value.invoiceNumber
     }</b> na <b>${
-      invoiceTemp.value.paymentStatus === "PAID" ? "Do zapłaty" : "Zapłacony"
+      invoiceTemp.value.paymentStatus.name === "PAID"
+        ? "Do zapłaty"
+        : "Zapłacony"
     }</b>?`;
   return "No message";
 });
@@ -149,6 +178,7 @@ onMounted(() => {
       </div>
     </template>
     <DataTable
+      v-if="!invoiceStore.loadingInvoices"
       v-model:expandedRows="expandedRows"
       v-model:filters="filters"
       :value="invoiceStore.invoices"
@@ -194,7 +224,33 @@ onMounted(() => {
 
       <Column expander style="width: 5rem" />
       <Column field="invoiceNumber" header="Nr faktury" sortable />
-      <Column field="customerName" header="Nazwa klienta" sortable />
+      <Column
+        field="customerName"
+        header="Nazwa klienta"
+        sortable
+        :showFilterMenu="false"
+        :filterMenuStyle="{ width: '14rem' }"
+        style="min-width: 12rem"
+      >
+        <template #body="{ data }">
+          <Tag :value="data.customerName" />
+        </template>
+        <template #filter="{ filterModel, filterCallback }">
+          <Dropdown
+            v-model="filterModel.value"
+            @change="filterCallback()"
+            :options="invoiceStore.getCustomerName"
+            placeholder="Wybierz..."
+            class="p-column-filter"
+            style="min-width: 12rem; width: 12rem"
+            :showClear="true"
+          >
+            <template #option="slotProps">
+              <Tag :value="slotProps.option" />
+            </template>
+          </Dropdown>
+        </template>
+      </Column>
       <Column field="sellDate" header="Data sprzedaży" sortable />
       <Column field="invoiceDate" header="Data wystawienia" sortable />
       <Column field="paymentMethod" header="Rodzaj płatności" sortable>
