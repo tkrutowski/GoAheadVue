@@ -46,33 +46,33 @@ function goBack(): void {
       <p id="error">Niestety podałeś niewłaściwy login lub hasło.</p>
     </div>
 
-    <!-- LOGIN id="form-group-login"-->
-    <div class="form-group color-green mb-3">
-      <label for="inputLogin" class="form-label">Login</label>
-      <input
-        type="text"
-        id="inputLogin"
-        class="form-control form-control-lg"
-        placeholder="Nazwa użytkownika"
-        autocomplete="username"
-        required
-        v-model="username"
+    <!-- USERNAME -->
+    <FloatLabel class="">
+      <InputText
+          id="username"
+          v-model="username"
+          class="w-full"
+          autocomplete="username"
+          required
       />
-    </div>
+      <label for="username">Login</label>
+    </FloatLabel>
 
     <!-- PASSWORD -->
-    <div class="form-group color-green">
-      <label for="inputPassword" class="form-label">Hasło</label>
-      <input
-        type="password"
-        id="inputPassword"
-        class="form-control form-control-lg"
-        placeholder="Hasło"
-        autocomplete="current-password"
-        required
-        v-model="password"
+    <FloatLabel class="mt-9">
+      <Password
+          id="password"
+          v-model="password"
+          toggle-mask
+          required
+          class="w-full text-yellow-400"
+          autocomplete="current-password"
+          :input-style="{'width':'100%'}"
+          :feedback="false"
+
       />
-    </div>
+      <label for="password" class="w-full">Hasło</label>
+    </FloatLabel>
 
     <!-- BUTTON -->
     <office-button

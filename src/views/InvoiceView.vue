@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { useCustomerStore } from "@/stores/customers";
-import { useInvoiceStore } from "@/stores/invoices";
-import { useRoute } from "vue-router";
-import { computed, onMounted, ref, watch } from "vue";
-import { Customer } from "@/assets/types/Customer";
-import { Invoice, InvoiceItem } from "@/assets/types/Invoice";
+import {useCustomerStore} from "@/stores/customers";
+import {useInvoiceStore} from "@/stores/invoices";
+import {useRoute} from "vue-router";
+import {computed, onMounted, ref, watch} from "vue";
+import {Customer} from "@/types/Customer";
+import {Invoice, InvoiceItem} from "@/types/Invoice";
 import moment from "moment";
 import OfficeButton from "@/components/OfficeButton.vue";
 import AddInvoiceItemDialog from "@/components/AddEditInvoiceItemDialog.vue";
-import { useToast } from "primevue/usetoast";
+import {useToast} from "primevue/usetoast";
 import EditButton from "@/components/EditButton.vue";
 import DeleteButton from "@/components/DeleteButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
@@ -32,21 +32,21 @@ const invoice = ref<Invoice>({
     month: "2-digit",
     day: "2-digit",
   })
-    .format(new Date())
-    .split(".")
-    .reverse()
-    .join("-"),
+      .format(new Date())
+      .split(".")
+      .reverse()
+      .join("-"),
   invoiceDate: new Intl.DateTimeFormat("pl-PL", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   })
-    .format(new Date())
-    .split(".")
-    .reverse()
-    .join("-"),
-  paymentMethod: { name: "TRANSFER", viewName: "przelew" },
-  paymentStatus: { name: "TO_PAY", viewName: "Do zapłaty" },
+      .format(new Date())
+      .split(".")
+      .reverse()
+      .join("-"),
+  paymentMethod: {name: "TRANSFER", viewName: "przelew"},
+  paymentStatus: {name: "TO_PAY", viewName: "Do zapłaty"},
   paymentDeadline: 14,
   paymentDate: "",
   otherInfo: "",
@@ -71,7 +71,7 @@ const btnShowOk = ref<boolean>(false);
 const btnSaveDisabled = ref<boolean>(false);
 
 const formatCurrency = (value: number) => {
-  return value.toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
+  return value.toLocaleString("pl-PL", {style: "currency", currency: "PLN"});
 };
 const totalAmount = computed(() => {
   let total = invoice.value.invoiceItems.reduce((acc, item) => {
@@ -81,11 +81,11 @@ const totalAmount = computed(() => {
 });
 const isSaveBtnDisabled = computed(() => {
   return (
-    invoiceStore.loadingPaymentType ||
-    invoiceStore.loadingInvoices ||
-    invoiceStore.loadingInvoiceNo ||
-    customerStore.loadingCustomer ||
-    btnSaveDisabled.value
+      invoiceStore.loadingPaymentType ||
+      invoiceStore.loadingInvoices ||
+      invoiceStore.loadingInvoiceNo ||
+      customerStore.loadingCustomer ||
+      btnSaveDisabled.value
   );
 });
 const invoiceDateTemp = ref<string>("");
@@ -107,6 +107,7 @@ function saveInvoice() {
     newInvoice();
   }
 }
+
 //
 //---------------------------------------------------------NEW INVOICE----------------------------------------------
 //
@@ -131,7 +132,7 @@ async function newInvoice() {
       });
       btnShowOk.value = true;
       setTimeout(() => {
-        router.push({ name: "Invoices" });
+        router.push({name: "Invoices"});
       }, 3000);
     } else btnShowError.value = true;
 
@@ -149,6 +150,7 @@ async function newInvoice() {
 const isEdit = ref<boolean>(false);
 const isEditItem = ref<boolean>(false);
 const editItemIndex = ref<number>(-1);
+
 async function editInvoice() {
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
@@ -169,7 +171,7 @@ async function editInvoice() {
       });
       btnShowOk.value = true;
       setTimeout(() => {
-        router.push({ name: "Invoices" });
+        router.push({name: "Invoices"});
       }, 3000);
     } else btnShowError.value = true;
 
@@ -187,7 +189,7 @@ async function editInvoice() {
 //
 function newItem() {
   const latestItem = invoiceStore.getLatestItemForCustomer(
-    invoice.value.idCustomer
+      invoice.value.idCustomer
   );
   if (latestItem) {
     invoiceItem.value = latestItem;
@@ -208,6 +210,7 @@ function newItem() {
   isEditItem.value = false;
   showNewItemModal.value = true;
 }
+
 //
 //------------------------------------------------- EDIT INVOICE_ITEM---------------------------------------------------
 //
@@ -220,10 +223,10 @@ const editItem = (item: InvoiceItem, index: number) => {
 
 function saveInvoiceItem(item: InvoiceItem) {
   if (isEditItem.value && editItemIndex.value != -1) {
-    invoice.value.invoiceItems[editItemIndex.value] = { ...item };
+    invoice.value.invoiceItems[editItemIndex.value] = {...item};
   } else {
     // invoice.value.invoiceItems.push(JSON.parse(JSON.stringify(item)));
-    invoice.value.invoiceItems.push({ ...item });
+    invoice.value.invoiceItems.push({...item});
   }
   //reset
   resetEditItem();
@@ -297,25 +300,25 @@ onMounted(async () => {
     console.log("onMounted EDIT INVOICE");
     const invoiceId = Number(route.params.invoiceId as string);
     invoiceStore
-      .getInvoiceFromDb(invoiceId)
-      .then((data) => {
-        if (data) {
-          invoice.value = data;
-          selectedCustomer.value = customerStore.getCustomerById(
-            invoice.value.idCustomer
-          );
-          invoiceNumber.value = Number(
-            invoice.value.invoiceNumber.split("/")[1]
-          );
-          invoiceYear.value = Number(invoice.value.invoiceNumber.split("/")[0]);
-          paymentLate.value = invoice.value.paymentDeadline;
-          invoiceDateTemp.value = invoice.value.invoiceDate;
-          sellDateTemp.value = invoice.value.sellDate;
-        }
-      })
-      .catch((error) => {
-        console.error("Błąd podczas pobierania faktury:", error);
-      });
+        .getInvoiceFromDb(invoiceId)
+        .then((data) => {
+          if (data) {
+            invoice.value = data;
+            selectedCustomer.value = customerStore.getCustomerById(
+                invoice.value.idCustomer
+            );
+            invoiceNumber.value = Number(
+                invoice.value.invoiceNumber.split("/")[1]
+            );
+            invoiceYear.value = Number(invoice.value.invoiceNumber.split("/")[0]);
+            paymentLate.value = invoice.value.paymentDeadline;
+            invoiceDateTemp.value = invoice.value.invoiceDate;
+            sellDateTemp.value = invoice.value.sellDate;
+          }
+        })
+        .catch((error) => {
+          console.error("Błąd podczas pobierania faktury:", error);
+        });
   }
   btnSaveDisabled.value = false;
 });
@@ -342,22 +345,22 @@ const showErrorCustomer = () => {
 </script>
 
 <template>
-  <Toast />
-  <TheMenu />
+  <Toast/>
+  <TheMenu/>
   <AddInvoiceItemDialog
-    v-model:visible="showNewItemModal"
-    :item="invoiceItem"
-    :is-edit="isEditItem"
-    @save="saveInvoiceItem"
-    @cancel="hideNewItemModal"
+      v-model:visible="showNewItemModal"
+      :item="invoiceItem"
+      :is-edit="isEditItem"
+      @save="saveInvoiceItem"
+      @cancel="hideNewItemModal"
   />
 
   <ConfirmationDialog
-    v-model:visible="showDeleteConfirmationDialog"
-    :msg="deleteConfirmationMessage"
-    label="Usuń"
-    @save="submitDelete"
-    @cancel="showDeleteConfirmationDialog = false"
+      v-model:visible="showDeleteConfirmationDialog"
+      :msg="deleteConfirmationMessage"
+      label="Usuń"
+      @save="submitDelete"
+      @cancel="showDeleteConfirmationDialog = false"
   />
 
   <div class="m-4">
@@ -365,189 +368,191 @@ const showErrorCustomer = () => {
       <Panel>
         <template #header>
           <IconButton
-            v-tooltip.right="{
+              v-tooltip.right="{
               value: 'Powrót do listy faktur',
               showDelay: 500,
               hideDelay: 300,
             }"
-            icon="pi-fw pi-list"
-            @click="() => router.push({ name: 'Invoices' })"
+              icon="pi-fw pi-list"
+              @click="() => router.push({ name: 'Invoices' })"
           />
-          <div class="w-full flex justify-content-center">
-            <h3 class="color-green">
+          <div class="w-full flex justify-center">
+            <h3 class="">
               {{
                 isEdit
-                  ? `Edycja faktury nr: ${invoice.invoiceNumber}`
-                  : "Nowa faktura"
+                    ? `Edycja faktury nr: ${invoice.invoiceNumber}`
+                    : "Nowa faktura"
               }}
             </h3>
           </div>
         </template>
-        <div class="flex flex-row grid">
-          <div class="flex flex-column col-12 col-xl-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Fieldset class="w-full " legend="Dane faktury">
             <!-- ROW-1   CUSTOMER -->
-            <div class="row">
-              <div class="col">
-                <div class="flex flex-row">
-                  <div class="flex flex-column col-12">
-                    <label for="input-customer">Wybierz klienta:</label>
-                    <Dropdown
-                      id="input-customer"
-                      v-model="selectedCustomer"
-                      :class="{ 'p-invalid': showErrorCustomer() }"
-                      :options="customerStore.customers"
-                      option-label="name"
-                      :onchange="
+            <!--            <div class="row">-->
+            <!--              <div class="col">-->
+            <div class="flex flex-row gap-4">
+              <div class="flex flex-col w-full">
+                <label for="input-customer">Wybierz klienta:</label>
+                <Select
+                    id="input-customer"
+                    v-model="selectedCustomer"
+                    :class="{ 'p-invalid': showErrorCustomer() }"
+                    :options="customerStore.customers"
+                    option-label="name"
+                    :onchange="
                         (invoice.idCustomer = selectedCustomer
                           ? selectedCustomer.id
                           : 0)
                       "
-                      required
-                    />
-                    <small class="p-error">{{
-                      showErrorCustomer() ? "Pole jest wymagane." : "&nbsp;"
-                    }}</small>
-                  </div>
-                  <div v-if="customerStore.loadingCustomer" class="mt-4">
-                    <ProgressSpinner
+                    required
+                />
+                <small class="p-error">{{
+                    showErrorCustomer() ? "Pole jest wymagane." : "&nbsp;"
+                  }}</small>
+              </div>
+              <div v-if="customerStore.loadingCustomer" class="mt-5">
+                <ProgressSpinner
+                    class=""
+                    style="width: 35px; height: 35px"
+                    stroke-width="5"
+                />
+              </div>
+            </div>
+            <!--              </div>-->
+            <!--            </div>-->
+
+            <!-- ROW-2  INVOICE NUMBER/YEAR  -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <!--              <div class="col">-->
+              <div class="flex flex-row gap-4">
+                <div class="flex flex-col w-full ">
+                  <label for="number">Numer faktury</label>
+                  <InputNumber
+                      id="number"
+                      v-model="invoiceNumber"
+                      class="border-green"
+                      mode="decimal"
+                      show-buttons
+                      :min="1"
+                      :max="100"
+                  />
+                </div>
+                <div v-if="invoiceStore.loadingInvoiceNo" class="mt-6">
+                  <ProgressSpinner
                       class="ml-2 mt-1"
-                      style="width: 40px; height: 40px"
+                      style="width: 30px; height: 30px"
                       stroke-width="5"
-                    />
-                  </div>
+                  />
+                </div>
+              </div>
+              <!--              </div>-->
+              <div class="">
+                <div class="flex flex-col w-full">
+                  <label for="year">Rok faktury</label>
+                  <InputNumber
+                      id="year"
+                      v-model="invoiceYear"
+                      mode="decimal"
+                      :use-grouping="false"
+                      show-buttons
+                      :min="2020"
+                      :max="2050"
+                  />
                 </div>
               </div>
             </div>
 
-            <!-- ROW-2  INVOICE NUMBER/YEAR  -->
-            <div class="flex-row flex grid">
-              <!--              <div class="col">-->
-              <!--                <div class="flex flex-row">-->
-              <div class="flex flex-column col-12 col-md-6">
-                <label for="number">Numer faktury</label>
-                <InputNumber
-                  id="number"
-                  v-model="invoiceNumber"
-                  class="border-green"
-                  mode="decimal"
-                  show-buttons
-                  :min="1"
-                  :max="100"
-                />
-              </div>
-              <div v-if="invoiceStore.loadingInvoiceNo" class="mt-4">
-                <ProgressSpinner
-                  class="ml-2 mt-1"
-                  style="width: 40px; height: 40px"
-                  stroke-width="5"
-                />
-              </div>
-              <!--                </div>-->
-              <!--              </div>-->
-              <!--              <div class="col">-->
-              <div class="flex flex-column col-12 col-md-6">
-                <label for="year">Rok faktury</label>
-                <InputNumber
-                  id="year"
-                  v-model="invoiceYear"
-                  mode="decimal"
-                  :use-grouping="false"
-                  show-buttons
-                  :min="2020"
-                  :max="2050"
-                />
-              </div>
-              <!--              </div>-->
-            </div>
-
             <!-- ROW-3  DATES  -->
-            <div class="flex-row flex grid">
-              <div class="flex flex-column col-12 col-md-6">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
+              <div class="flex flex-col w-full mt-4 sm:mt-0">
                 <label for="input">Data wystawienia:</label>
                 <Calendar
-                  v-model="invoiceDateTemp"
-                  show-icon
-                  date-format="yy-mm-dd"
+                    v-model="invoiceDateTemp"
+                    show-icon
+                    date-format="yy-mm-dd"
                 />
               </div>
-              <div class="flex flex-column col-12 col-md-6">
+              <div class="flex flex-col w-full">
                 <label for="input">Data sprzedaży:</label>
                 <Calendar
-                  v-model="sellDateTemp"
-                  show-icon
-                  date-format="yy-mm-dd"
+                    v-model="sellDateTemp"
+                    show-icon
+                    date-format="yy-mm-dd"
                 />
               </div>
             </div>
 
             <!-- ROW-4  LATE PAYMENT, PAYMENT_TYPE  -->
-            <div class="flex flex-row grid">
-              <div class="flex flex-column col-12 col-md-6">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
+              <div class="flex flex-col w-full mt-4 sm:mt-0">
                 <label for="input">Odroczenie płatności:</label>
                 <InputNumber
-                  id="input"
-                  v-model="paymentLate"
-                  class="border-green"
-                  mode="decimal"
-                  :use-grouping="false"
-                  show-buttons
-                  :min="0"
-                  :max="90"
+                    id="input"
+                    v-model="paymentLate"
+                    class="border-green"
+                    mode="decimal"
+                    :use-grouping="false"
+                    show-buttons
+                    :min="0"
+                    :max="90"
                 />
               </div>
-              <div class="flex flex-column col-12 col-md-6">
-                <label for="input-customer">Forma płatności:</label>
-                <Dropdown
-                  id="input-customer"
-                  v-model="invoice.paymentMethod"
-                  class="border-green"
-                  :options="invoiceStore.paymentTypes"
-                  option-label="viewName"
-                  required
-                />
-                <div v-if="invoiceStore.loadingPaymentType" class="mt-4">
-                  <ProgressSpinner
-                    class="ml-2 mt-1"
-                    style="width: 40px; height: 40px"
-                    stroke-width="5"
+              <div class="flex flex-row gap-4">
+                <div class="flex flex-col w-full">
+                  <label for="input-customer">Forma płatności:</label>
+                  <Select
+                      id="input-customer"
+                      v-model="invoice.paymentMethod"
+                      class="border-green"
+                      :options="invoiceStore.paymentTypes"
+                      option-label="viewName"
+                      required
                   />
                 </div>
+                  <div v-if="invoiceStore.loadingPaymentType" class="mt-6">
+                    <ProgressSpinner
+                        class="ml-2 mt-1"
+                        style="width: 30px; height: 30px"
+                        stroke-width="5"
+                    />
+                  </div>
               </div>
             </div>
 
             <!-- ROW-5  OTHER INFO  -->
-            <div class="flex-row flex grid">
+            <div class="flex-row flex mt-4">
               <!--              <div class="col">-->
-              <div class="flex flex-column col-12">
+              <div class="flex flex-col col-12 w-full">
                 <label for="input">Dodatkowe informacje:</label>
-                <Textarea v-model="invoice.otherInfo" rows="5" cols="30" />
+                <Textarea v-model="invoice.otherInfo" rows="4" cols="30" fluid/>
               </div>
               <!--              </div>-->
             </div>
-          </div>
+          </Fieldset>
 
           <!-- TABLE INVOIS_ITEMS -->
-          <div class="flex flex-column col-12 col-xl-6">
+          <Fieldset class="w-full " legend="Pozycje na fakturze">
             <DataTable :value="invoice.invoiceItems" class="border-green pt-2">
               <template #header>
                 <!--        input do filtrowania na razie tutaj. Potem przenieść do navbaru-->
-                <div class="flex justify-content-sm-between">
+                <div class="flex justify-between">
                   <OfficeButton
-                    v-tooltip.top="{
+                      v-tooltip.top="{
                       value: 'Podaj nową pozycję do faktury.',
                       showDelay: 1000,
                       hideDelay: 300,
                     }"
-                    text="Dodaj"
-                    btn-type="ahead"
-                    type="button"
-                    @click="newItem"
+                      text="Dodaj"
+                      btn-type="ahead"
+                      type="button"
+                      @click="newItem"
                   />
                 </div>
               </template>
-              <Column field="name" header="Nazwa" />
-              <Column field="jm" header="Jm" />
-              <Column field="quantity" header="Ilość" />
+              <Column field="name" header="Nazwa"/>
+              <Column field="jm" header="Jm"/>
+              <Column field="quantity" header="Ilość"/>
               <Column field="amount" header="Kwota">
                 <template #body="{ data, field }">
                   <div style="text-align: center">
@@ -559,7 +564,7 @@ const showErrorCustomer = () => {
                 <template #body="slotProps">
                   {{
                     formatCurrency(
-                      slotProps.data[slotProps.field] *
+                        slotProps.data[slotProps.field] *
                         slotProps.data["quantity"]
                     )
                   }}
@@ -571,27 +576,27 @@ const showErrorCustomer = () => {
 
               <!--                EDIT, DELETE-->
               <Column
-                header="Akcja"
-                :exportable="false"
-                style="min-width: 6rem"
+                  header="Akcja"
+                  :exportable="false"
+                  style="min-width: 6rem"
               >
                 <template #body="slotProps">
                   <div class="flex flex-row gap-1 justify-content-evenly">
                     <EditButton
-                      v-tooltip.top="{
+                        v-tooltip.top="{
                         value: 'Edytuj pozycję.',
                         showDelay: 1000,
                         hideDelay: 300,
                       }"
-                      @click="editItem(slotProps.data, slotProps.index)"
+                        @click="editItem(slotProps.data, slotProps.index)"
                     />
                     <DeleteButton
-                      v-tooltip.top="{
+                        v-tooltip.top="{
                         value: 'Usuń pozycję.',
                         showDelay: 1000,
                         hideDelay: 300,
                       }"
-                      @click="
+                        @click="
                         confirmDeleteItem(slotProps.data, slotProps.index)
                       "
                     />
@@ -601,8 +606,8 @@ const showErrorCustomer = () => {
               <ColumnGroup type="footer">
                 <Row>
                   <Column
-                    :colspan="5"
-                    footer-style="text-align:right; padding-right: 8px;"
+                      :colspan="5"
+                      footer-style="text-align:right; padding-right: 8px;"
                   >
                     <template #footer>
                       <h5 class="color-green">RAZEM:</h5>
@@ -618,22 +623,22 @@ const showErrorCustomer = () => {
                 </Row>
               </ColumnGroup>
             </DataTable>
-          </div>
+          </Fieldset>
         </div>
 
         <!-- ROW-6  BTN SAVE -->
-        <div class="flex flex-row">
-          <div class="flex col justify-content-center">
+        <div class="flex justify-center mt-6">
+<!--          <div class="flex col justify-center">-->
             <OfficeButton
-              text="zapisz"
-              btn-type="ahead-save"
-              type="submit"
-              :is-busy-icon="btnShowBusy"
-              :is-error-icon="btnShowError"
-              :is-ok-icon="btnShowOk"
-              :btn-disabled="isSaveBtnDisabled"
+                text="zapisz"
+                btn-type="ahead-save"
+                type="submit"
+                :is-busy-icon="btnShowBusy"
+                :is-error-icon="btnShowError"
+                :is-ok-icon="btnShowOk"
+                :btn-disabled="isSaveBtnDisabled"
             />
-          </div>
+<!--          </div>-->
         </div>
       </Panel>
     </form>

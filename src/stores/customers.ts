@@ -1,10 +1,10 @@
 import { defineStore } from "pinia";
 import httpCommon from "@/http-common";
 import { useAuthorizationStore } from "@/stores/authorization";
-import { Customer } from "@/assets/types/Customer";
-import { CustomerStatus } from "@/assets/types/CustomerStatus";
+import { Customer } from "@/types/Customer";
+import { CustomerStatus } from "@/types/CustomerStatus";
 import { ErrorService } from "@/service/ErrorService";
-import { CustomerType } from "@/assets/types/CustomerType";
+import { CustomerType } from "@/types/CustomerType";
 
 export const useCustomerStore = defineStore("customer", {
   state: () => ({
@@ -24,7 +24,7 @@ export const useCustomerStore = defineStore("customer", {
         return state.customers.find((customer) => customer.id === id);
       };
     },
-    getCustomerName: (state) => {
+    getCustomerNames: (state) => {
       return state.customers.map(
         (customer) => customer.firstName + " " + customer.name
       );
@@ -39,21 +39,13 @@ export const useCustomerStore = defineStore("customer", {
     async getCustomersFromDb(customerStatus: string, address: boolean) {
       console.log("START - getCustomersFromDb(" + customerStatus + ")");
       this.loadingCustomer = true;
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
         if (this.customers.length === 0) {
           const response = await httpCommon.get(
             `/goahead/customer?status=` +
               customerStatus +
               `&address=` +
-              address,
-            {
-              headers: authorization.accessToken !== "null" ? headers : {},
-            }
-          );
+              address);
           // JSON responses are automatically parsed.
           console.log("getCustomersFromDb() - size[]: " + response.data.length);
           this.customers = response.data;
@@ -72,6 +64,7 @@ export const useCustomerStore = defineStore("customer", {
         console.log("END - getCustomersFromDb(" + customerStatus + ")");
       }
     },
+
     //
     //GET  CUSTOMER FROM DB BY ID
     //
@@ -81,18 +74,9 @@ export const useCustomerStore = defineStore("customer", {
     ): Promise<Customer | undefined> {
       console.log("START - getCustomerFromDb(" + customerId + ")");
       this.loadingCustomer = true;
-
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
         const response = await httpCommon.get(
-          `/goahead/customer/` + customerId + `?isAddress=` + isAddress,
-          {
-            headers: authorization.accessToken !== "null" ? headers : {},
-          }
-        );
+          `/goahead/customer/` + customerId + `?isAddress=` + isAddress);
         return response.data;
       } catch (e) {
         if (ErrorService.isAxiosError(e)) {
@@ -106,24 +90,16 @@ export const useCustomerStore = defineStore("customer", {
         console.log("END - getCustomerFromDb()");
       }
     },
+
     //
     //CHANGE CUSTOMER_STATUS
     //
     async updateCustomerStatusDb(customerId: number, status: CustomerStatus) {
       console.log("START - updateCustomerStatusDb()");
-
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
         await httpCommon.put(
           `/goahead/customer/customerstatus/` + customerId,
-          { value: status.name },
-          {
-            headers: authorization.accessToken !== "null" ? headers : {},
-          }
-        );
+          { value: status.name });
         const customer = this.customers.find((item) => item.id === customerId);
         if (customer) {
           customer.customerStatus = status;
@@ -141,19 +117,14 @@ export const useCustomerStore = defineStore("customer", {
         console.log("END - updateCustomerStatusDb()");
       }
     },
+
     //
     //ADD CUSTOMER
     //
     async addCustomerDb(customer: Customer) {
       console.log("START - addCustomerDb()");
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
-        const response = await httpCommon.post(`/goahead/customer`, customer, {
-          headers: authorization.accessToken !== "null" ? headers : {},
-        });
+        const response = await httpCommon.post(`/goahead/customer`, customer);
         this.customers.push(response.data);
         return true;
       } catch (e) {
@@ -168,20 +139,14 @@ export const useCustomerStore = defineStore("customer", {
         console.log("END - addCustomerDb()");
       }
     },
+
     //
     //UPDATE CUSTOMER
     //
     async updateCustomerDb(customer: Customer) {
       console.log("START - updateCustomerDb()");
-
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
-        const response = await httpCommon.put(`/goahead/customer`, customer, {
-          headers: authorization.accessToken !== "null" ? headers : {},
-        });
+        const response = await httpCommon.put(`/goahead/customer`, customer);
         const index = this.customers.findIndex(
           (item) => item.id === customer.id
         );
@@ -199,19 +164,14 @@ export const useCustomerStore = defineStore("customer", {
         console.log("END - updateCustomerDb()");
       }
     },
+
     //
     //DELETE CUSTOMER
     //
     async deleteCustomerDb(customerId: number) {
       console.log("START - deleteCustomerDb()");
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
-        await httpCommon.delete(`/goahead/customer/` + customerId, {
-          headers: authorization.accessToken !== "null" ? headers : {},
-        });
+        await httpCommon.delete(`/goahead/customer/` + customerId);
         const index = this.customers.findIndex(
           (item) => item.id === customerId
         );
@@ -229,24 +189,17 @@ export const useCustomerStore = defineStore("customer", {
         console.log("END - deleteCustomerDb()");
       }
     },
+
     //
     //GET CUSTOMER TYPE
     //
     async getCustomerType() {
       console.log("START - getCustomerType()");
       this.loadingCustomerType = true;
-      const authorization = useAuthorizationStore();
-      const headers = {
-        Authorization: "Bearer " + authorization.accessToken,
-      };
       try {
         if (this.customerTypes.length === 0) {
           const response = await httpCommon.get(
-            `/goahead/customer/customertype`,
-            {
-              headers: authorization.accessToken !== "null" ? headers : {},
-            }
-          );
+            `/goahead/customer/customertype`);
           this.customerTypes = response.data;
         } else {
           console.log("getCustomerType() - BEZ GET");

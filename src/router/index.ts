@@ -6,6 +6,8 @@ import InvoicesView from "@/views/InvoicesView.vue";
 import InvoiceView from "@/views/InvoiceView.vue";
 import CustomersView from "@/views/CustomersView.vue";
 import CustomerView from "@/views/CustomerView.vue";
+import {useAuthorizationStore} from "@/stores/authorization.ts";
+import RefreshComponent from "@/components/RefreshComponent.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -22,6 +24,12 @@ const routes: Array<RouteRecordRaw> = [
     path: "/error",
     name: "Error503",
     component: Error503View,
+  },
+  {
+    path: '/refresh',
+    name:'refresh',
+    component: RefreshComponent,
+    props: true,
   },
   //GOAHEAD
   {
@@ -59,8 +67,21 @@ const routes: Array<RouteRecordRaw> = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
+  history: createWebHistory(),
   routes,
 });
-
+router.beforeEach((to, from, next) => {
+  const authStore= useAuthorizationStore();
+  console.log("ROUTE to: ",to,", from: ",from );
+  if (to.path) {
+    const history = JSON.parse(localStorage.getItem('navigationHistory') || '[]');
+    history.push(to.path);
+    localStorage.setItem('navigationHistory', JSON.stringify(history));
+  }
+  const refreshToken = localStorage.getItem('refreshToken') || null;
+  if (to.name !== 'login' && !authStore.isAuthenticated && refreshToken === null) {
+    next({name: 'login'})
+  } else
+    next()
+})
 export default router;

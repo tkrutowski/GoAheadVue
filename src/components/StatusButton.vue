@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import StatusType from "@/assets/types/StatusType";
+import StatusType from "@/types/StatusType";
+
 defineProps({
   btnType: {
     //dodanie typu
@@ -15,16 +16,16 @@ defineProps({
 </script>
 <template>
   <Button
-    text
-    rounded
-    size="small"
-    class="my-button"
-    :style="{ color: colorIcon }"
+      text
+      rounded
+      size="small"
+      class="my-button"
+      :style="{ color: colorIcon }"
   >
     <i
-      :class="{
-        'pi pi-check-square': btnType === 'PAID' || 'ACTIVE',
-        'pi pi-stop': btnType === 'TO_PAY' || 'INACTIVE',
+        :class="{
+        'pi pi-times-circle': btnType === 'TO_PAY' || btnType === 'INACTIVE',
+        'pi pi-check-circle': btnType === 'PAID' || btnType === 'ACTIVE',
       }"
     ></i>
   </Button>
@@ -32,6 +33,7 @@ defineProps({
 <style scoped>
 .my-button {
 }
+
 .my-button:hover {
   background-color: transparent !important;
   transform: scale(1.4);

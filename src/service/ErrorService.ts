@@ -21,6 +21,9 @@ export const ErrorService = {
       router.push({
         name: "Error503",
       });
+    } else {
+      // Jeśli nie wpadło w żaden warunek, rzuć wyjątek ponownie
+      throw e;
     }
   },
 

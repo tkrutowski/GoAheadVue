@@ -1,5 +1,5 @@
 <template>
-  <button
+  <Button
     class="btn"
     :class="{
       ahead: btnType === 'ahead',
@@ -26,11 +26,11 @@
       role="status"
       aria-hidden="true"
     ></span>
-  </button>
+  </Button>
 </template>
 
 <script setup lang="ts">
-import ButtonType from "@/assets/types/ButtonType";
+import ButtonType from "@/types/ButtonType";
 
 defineProps({
   btnType: {
@@ -72,17 +72,16 @@ defineProps({
 }
 
 .ahead {
-  display: block;
-  background-color: #2ca083;
-  color: rgb(232, 230, 227) !important;
-  border-color: #2da687 !important;
+  background-color: var(--office-color);
+  color: #332600 !important;
+  border-color: var(--office-color) !important;
   letter-spacing: 1.2px;
   text-transform: uppercase;
+  font-weight: bold;
 }
 
 .ahead:hover {
-  color: white !important;
-  background-color: rgba(35, 128, 104) !important;
+  background-color: var(--office-color-hoover)!important;
 }
 
 .ahead:disabled {
@@ -98,16 +97,17 @@ defineProps({
 .ahead-save {
   display: block;
   width: 150px;
-  background-color: rgba(220, 56, 72, 0.7) !important;
+  background-color: rgba(220, 56, 72) !important;
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: rgb(232, 230, 227) !important;
   border-color: rgb(38, 140, 115, 1) !important;
+  font-weight: bold;
 }
 
 .ahead-save:hover {
   color: white !important;
-  background-color: rgba(220, 56, 72) !important;
+  background-color: #ad1f2d !important;
 }
 
 .ahead-save:disabled {

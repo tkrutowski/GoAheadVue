@@ -3,6 +3,8 @@ import httpCommon from "@/http-common";
 import jwt_decode from "jwt-decode";
 import moment from "moment";
 import { ErrorService } from "@/service/ErrorService";
+import {useCustomerStore} from "@/stores/customers.ts";
+import {useInvoiceStore} from "@/stores/invoices.ts";
 
 export const useAuthorizationStore = defineStore("authorization", {
   state: () => ({
@@ -21,7 +23,7 @@ export const useAuthorizationStore = defineStore("authorization", {
   getters: {
     isAuthenticatedOrToken(): boolean {
       if (this.accessToken) {
-        const decoded: any = jwt_decode(this.accessToken);
+        const decoded: string = jwt_decode(this.accessToken);
         return (
           this.isAuthenticated || moment.unix(decoded.exp).isAfter(moment())
         );
@@ -51,7 +53,7 @@ export const useAuthorizationStore = defineStore("authorization", {
       this.accessToken = token;
       localStorage.setItem("accessToken", token);
       this.isAuthenticated = true;
-      const decoded: any = jwt_decode(this.accessToken);
+      const decoded: string = jwt_decode(this.accessToken);
       this.username = decoded.sub;
       localStorage.setItem("username", decoded.sub);
 
@@ -109,8 +111,15 @@ export const useAuthorizationStore = defineStore("authorization", {
     //
     logout(): void {
       console.log("START - logout()");
+      const customerStore = useCustomerStore();
+      const invoiceStore = useInvoiceStore();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("username");
       this.$reset(); //store reset
-      this.router.replace({ name: "Home" });
+      customerStore.customers = [];
+      invoiceStore.invoices = [];
+      this.router.replace({ name: "login" });
     },
     //
     //REFRESH

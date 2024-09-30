@@ -1,5 +1,5 @@
-import { CustomerType } from "@/assets/types/CustomerType";
-import { CustomerStatus } from "@/assets/types/CustomerStatus";
+import { CustomerType } from "@/types/CustomerType.ts";
+import { CustomerStatus } from "@/types/CustomerStatus.ts";
 
 export interface Customer {
   id: number;

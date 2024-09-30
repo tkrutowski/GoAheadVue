@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { InvoiceItem } from "@/assets/types/Invoice";
+import { InvoiceItem } from "@/types/Invoice";
 import { PropType } from "vue/dist/vue";
 import OfficeButton from "@/components/OfficeButton.vue";
 
@@ -71,19 +71,19 @@ const cancel = () => {
 </script>
 
 <template>
-  <Dialog modal class="p-fluid min-w-50vw" close-on-escape @abort="cancel">
+  <Dialog modal class="p-fluid min-w-40vw" close-on-escape @abort="cancel">
     <template #header>
-      <h4 class="color-green">
+      <h4>
         {{ isEdit ? "Edytuj pozycję" : "Dodaj nową pozycję" }}
       </h4>
     </template>
-    <div class="field mb-1">
+    <div class="flex flex-col w-full">
       <label class="mb-0" for="name">Nazwa towaru/usługi:</label>
       <!-- NAME -->
       <InputText
         id="name"
         v-model.trim="newItem.name"
-        :class="{ 'p-invalid': showErrorName() }"
+        :invalid="showErrorName()"
         required="true"
         autofocus
         maxlength="150"
@@ -93,12 +93,12 @@ const cancel = () => {
       }}</small>
     </div>
     <!-- JM -->
-    <div class="field mb-1">
+    <div class="flex flex-col w-full ">
       <label class="mb-0" for="jm">Jednostka miary:</label>
       <InputText
         id="jm"
         v-model.trim="newItem.jm"
-        :class="{ 'p-invalid': showErrorJm() }"
+        :invalid="showErrorJm()"
         required="true"
         maxlength="10"
       />
@@ -107,12 +107,12 @@ const cancel = () => {
       }}</small>
     </div>
     <!-- QUANTITY -->
-    <div class="field mb-1">
+    <div class="flex flex-col w-full ">
       <label class="mb-0" for="quantity">Ilość:</label>
       <InputNumber
         id="quantity"
         v-model.trim="newItem.quantity"
-        :class="{ 'p-invalid': showErrorQuantity() }"
+        :invalid="showErrorQuantity()"
         required="true"
         :min-fraction-digits="0"
         :max-fraction-digits="2"
@@ -122,13 +122,14 @@ const cancel = () => {
       }}</small>
     </div>
     <!-- AMOUNT -->
-    <div class="field mb-1">
+    <div class="flex flex-col w-full ">
       <label class="mb-0" for="amount">Kwota:</label>
       <InputNumber
         id="amount"
         v-model="newItem.amount"
-        :class="{ 'p-invalid': showErrorAmount() }"
+        :invalid="showErrorAmount()"
         required="true"
+        mode="currency" currency="PLN" locale="pl-PL"
         :min-fraction-digits="0"
         :max-fraction-digits="2"
       />
@@ -137,9 +138,9 @@ const cancel = () => {
       }}</small>
     </div>
     <template #footer>
-      <div class="flex flex-row justify-content-end">
-        <OfficeButton text="Anuluj" btn-type="ahead" @click="cancel" />
-        <OfficeButton text="Zapisz" btn-type="ahead-save" @click="submit" />
+      <div class="flex justify-around items-center gap-2">
+        <OfficeButton text="Anuluj" btn-type="ahead" @click="cancel"  style="width: 80px"/>
+        <OfficeButton text="Zapisz" btn-type="ahead-save" @click="submit"  style="width: 80px"/>
       </div>
     </template>
   </Dialog>

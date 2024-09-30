@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { FilterMatchMode } from "primevue/api";
+import { FilterMatchMode } from '@primevue/core/api';
 import OfficeButton from "@/components/OfficeButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
 import EditButton from "@/components/EditButton.vue";
@@ -8,27 +8,39 @@ import DeleteButton from "@/components/DeleteButton.vue";
 import router from "@/router";
 import StatusButton from "@/components/StatusButton.vue";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
-import { useToast } from "primevue/usetoast";
-import { Customer } from "@/assets/types/Customer";
+import { Customer } from "@/types/Customer";
 import { useInvoiceStore } from "@/stores/invoices";
-const toast = useToast();
 import { useCustomerStore } from "@/stores/customers";
-import { CustomerStatus } from "@/assets/types/CustomerStatus";
+import { CustomerStatus } from "@/types/CustomerStatus";
 import InformationDialog from "@/components/InformationDialog.vue";
 import LoadingDialog from "@/components/LoadingDialog.vue";
+import {useToast} from "primevue/usetoast";
+
 const invoiceStore = useInvoiceStore();
 const customerStore = useCustomerStore();
-const filters = ref({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  // name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-  // 'country.name': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-  // representative: { value: null, matchMode: FilterMatchMode.IN },
-  // status: { value: null, matchMode: FilterMatchMode.EQUALS },
-  // verified: { value: null, matchMode: FilterMatchMode.EQUALS }
-});
+const toast = useToast();
 const expandedRows = ref([]);
 const customerTemp = ref<Customer>();
 
+//filter
+const filters = ref();
+const initFilters = () => {
+  filters.value = {
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'address.street': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'address.city': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    // 'customerStatus.name': { value: null, matchMode: FilterMatchMode.IN },
+    // customerStatus: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+    // 'country.name': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    // representative: { value: null, matchMode: FilterMatchMode.IN },
+    // verified: { value: null, matchMode: FilterMatchMode.EQUALS },
+  };
+}
+initFilters();
+const clearFilter = () => {
+  initFilters();
+};
 //
 //---------------------------------------------STATUS CHANGE--------------------------------------------------
 //
@@ -42,7 +54,9 @@ const changeStatusConfirmationMessage = computed(() => {
     return `Czy chcesz zmienić status klienta  <b>${
       getCustomerFullName.value
     }</b>  na <b>${
-      customerTemp.value?.customerStatus === "ACTIVE" ? "Nieaktywny" : "Aktywny"
+      customerTemp.value?.customerStatus.name === "ACTIVE"
+        ? "Nieaktywny"
+        : "Aktywny"
     }</b>?`;
   return "No message";
 });
@@ -140,7 +154,6 @@ const getCustomerFullName = computed(() => {
 });
 </script>
 <template>
-  <Toast />
   <TheMenu />
   <LoadingDialog :visible="invoiceStore.loadingWait" />
   <ConfirmationDialog
@@ -166,12 +179,12 @@ const getCustomerFullName = computed(() => {
 
   <Panel class="my-5 mx-2">
     <template #header>
-      <div class="w-full flex justify-content-center">
+      <div class="w-full flex justify-center gap-4">
         <h3 class="color-green">LISTA KLIENTÓW</h3>
         <div v-if="customerStore.loadingCustomer">
           <ProgressSpinner
             class="ml-3"
-            style="width: 40px; height: 40px"
+            style="width: 35px; height: 35px"
             stroke-width="5"
           />
         </div>
@@ -180,7 +193,7 @@ const getCustomerFullName = computed(() => {
     <DataTable
       v-if="!customerStore.loadingCustomer"
       v-model:filters="filters"
-      v-model:expandedRows="expandedRows"
+      v-model:expanded-rows="expandedRows"
       :value="customerStore.customers"
       :loading="customerStore.loadingCustomer"
       striped-rows
@@ -189,7 +202,7 @@ const getCustomerFullName = computed(() => {
       :rows="10"
       :rows-per-page-options="[5, 10, 20, 50]"
       table-style="min-width: 50rem"
-      filter-display="row"
+      filter-display="menu"
       :global-filter-fields="[
         'firstName',
         'name',
@@ -199,7 +212,7 @@ const getCustomerFullName = computed(() => {
       ]"
     >
       <template #header>
-        <div class="flex justify-content-sm-between">
+        <div class="flex justify-between">
           <router-link
             :to="{
               name: 'Customer',
@@ -209,13 +222,16 @@ const getCustomerFullName = computed(() => {
           >
             <OfficeButton text="Nowy klient" btn-type="ahead" />
           </router-link>
-          <span class="p-input-icon-left">
-            <i class="pi pi-search" />
+          <Button type="button" icon="pi pi-filter-slash" label="Wyczyść" outlined @click="clearFilter()"/>
+          <IconField icon-position="left">
+            <InputIcon>
+              <i class="pi pi-search"/>
+            </InputIcon>
             <InputText
-              v-model="filters['global'].value"
-              placeholder="Keyword Search"
+                v-model="filters['global'].value"
+                placeholder="wpisz tutaj..."
             />
-          </span>
+          </IconField>
         </div>
       </template>
 
@@ -234,11 +250,23 @@ const getCustomerFullName = computed(() => {
       <Column
         field="name"
         header="Nazwisko/Nazwa"
-        sortable
+        :sortable="true"
         style="text-align: left"
-      ></Column>
-      <Column field="address.street" header="Ulica" sortable></Column>
-      <Column field="address.city" header="Miasto" sortable></Column>
+      >
+        <template #filter="{ filterModel }">
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+        </template>
+      </Column>
+      <Column field="address.street" header="Ulica" sortable>
+        <template #filter="{ filterModel }">
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+        </template>
+      </Column>
+      <Column field="address.city" header="Miasto" sortable>
+        <template #filter="{ filterModel }">
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+        </template>
+      </Column>
       <Column field="nip" header="NIP" sortable></Column>
 
       <!--  STATUS BUTTON    -->

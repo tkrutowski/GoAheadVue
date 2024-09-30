@@ -72,12 +72,7 @@ const items = ref([
   <div class="card relative z-2">
     <Menubar :model="items">
       <template #start>
-        <img
-          alt="logo"
-          src="@/assets/HomeOffice.png"
-          height="30"
-          class="mr-2"
-        />
+        <img alt="logo" src="@/assets/logo_mini.png" height="30" class="mr-2" />
       </template>
       <template #end>
         <div v-if="!authorizationStore.isAuthenticatedOrToken">
