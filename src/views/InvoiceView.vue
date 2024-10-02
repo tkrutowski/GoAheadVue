@@ -121,26 +121,35 @@ async function newInvoice() {
     btnSaveDisabled.value = true;
     invoice.value.invoiceNumber = invoiceYear.value + "/" + invoiceNumber.value;
 
-    const result = await invoiceStore.addInvoiceDb(invoice.value);
-
-    if (result) {
-      toast.add({
-        severity: "success",
-        summary: "Potwierdzenie",
-        detail: "Zapisano fakturę nr: " + invoice.value.invoiceNumber,
-        life: 3000,
-      });
-      btnShowOk.value = true;
-      setTimeout(() => {
-        router.push({name: "Invoices"});
-      }, 3000);
-    } else btnShowError.value = true;
-
-    // btnSaveDisabled.value = false;
-    setTimeout(() => {
-      btnShowError.value = false;
-      btnShowOk.value = false;
-    }, 5000);
+    await invoiceStore.addInvoiceDb(invoice.value)
+        .then(()=>{
+          toast.add({
+            severity: "success",
+            summary: "Potwierdzenie",
+            detail: "Zapisano fakturę nr: " + invoice.value.invoiceNumber,
+            life: 3000,
+          });
+          btnShowOk.value = true;
+          setTimeout(() => {
+            router.push({name: "Invoices"});
+          }, 3000);
+        })
+        .catch(() => {
+          toast.add({
+            severity: "error",
+            summary: "Błąd",
+            detail: "Błąd podczas zapisu faktury.",
+            life: 3000,
+          });
+          btnShowError.value = true;
+          btnSaveDisabled.value = false;
+          setTimeout(() => {
+                btnShowError.value = false;
+                btnShowOk.value = false;
+                btnShowError.value = false;
+              },
+              5000);
+        })
   }
 }
 
@@ -159,28 +168,35 @@ async function editInvoice() {
   } else {
     invoice.value.invoiceNumber = invoiceYear.value + "/" + invoiceNumber.value;
     btnSaveDisabled.value = true;
-    console.log("editInvoice()");
-    const result: boolean = await invoiceStore.updateInvoiceDb(invoice.value);
-
-    if (result) {
-      toast.add({
-        severity: "success",
-        summary: "Potwierdzenie",
-        detail: "Zaaktualizowano fakturę nr: " + invoice.value.invoiceNumber,
-        life: 3000,
-      });
-      btnShowOk.value = true;
-      setTimeout(() => {
-        router.push({name: "Invoices"});
-      }, 3000);
-    } else btnShowError.value = true;
-
-    // btnSaveDisabled.value = false;
-    setTimeout(() => {
-      btnShowError.value = false;
-      btnShowOk.value = false;
-      btnShowError.value = false;
-    }, 5000);
+    await invoiceStore.updateInvoiceDb(invoice.value)
+        .then(()=>{
+          toast.add({
+            severity: "success",
+            summary: "Potwierdzenie",
+            detail: "Zaaktualizowano fakturę nr: " + invoice.value.invoiceNumber,
+            life: 3000,
+          });
+          btnShowOk.value = true;
+          setTimeout(() => {
+            router.push({name: "Invoices"});
+          }, 3000);
+        })
+        .catch(() => {
+          toast.add({
+            severity: "error",
+            summary: "Błąd",
+            detail: "Błąd podczas edycji faktury.",
+            life: 3000,
+          });
+          btnShowError.value = true;
+          btnSaveDisabled.value = false;
+          setTimeout(() => {
+                btnShowError.value = false;
+                btnShowOk.value = false;
+                btnShowError.value = false;
+              },
+              5000);
+        })
   }
 }
 
@@ -191,8 +207,11 @@ function newItem() {
   const latestItem = invoiceStore.getLatestItemForCustomer(
       invoice.value.idCustomer
   );
+  resetEditItem();
+
   if (latestItem) {
-    invoiceItem.value = latestItem;
+    invoiceItem.value = JSON.parse(JSON.stringify(latestItem));
+    invoiceItem.value.id = 0;
     invoiceItem.value.idInvoice = invoice.value.idInvoice;
     invoiceItem.value.jm = latestItem.jm;
     invoiceItem.value.name = latestItem.name;
