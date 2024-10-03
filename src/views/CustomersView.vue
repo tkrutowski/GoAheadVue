@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { FilterMatchMode } from '@primevue/core/api';
+import {computed, onMounted, ref} from "vue";
+import {FilterMatchMode} from '@primevue/core/api';
 import OfficeButton from "@/components/OfficeButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
 import EditButton from "@/components/EditButton.vue";
@@ -8,10 +8,10 @@ import DeleteButton from "@/components/DeleteButton.vue";
 import router from "@/router";
 import StatusButton from "@/components/StatusButton.vue";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
-import { Customer } from "@/types/Customer";
-import { useInvoiceStore } from "@/stores/invoices";
-import { useCustomerStore } from "@/stores/customers";
-import { CustomerStatus } from "@/types/CustomerStatus";
+import {Customer} from "@/types/Customer";
+import {useInvoiceStore} from "@/stores/invoices";
+import {useCustomerStore} from "@/stores/customers";
+import {CustomerStatus} from "@/types/CustomerStatus";
 import InformationDialog from "@/components/InformationDialog.vue";
 import LoadingDialog from "@/components/LoadingDialog.vue";
 import {useToast} from "primevue/usetoast";
@@ -26,10 +26,10 @@ const customerTemp = ref<Customer>();
 const filters = ref();
 const initFilters = () => {
   filters.value = {
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'address.street': { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'address.city': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    global: {value: null, matchMode: FilterMatchMode.CONTAINS},
+    name: {value: null, matchMode: FilterMatchMode.CONTAINS},
+    'address.street': {value: null, matchMode: FilterMatchMode.CONTAINS},
+    'address.city': {value: null, matchMode: FilterMatchMode.CONTAINS},
     // 'customerStatus.name': { value: null, matchMode: FilterMatchMode.IN },
     // customerStatus: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
     // 'country.name': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
@@ -52,129 +52,144 @@ const confirmStatusChange = (customer: Customer) => {
 const changeStatusConfirmationMessage = computed(() => {
   if (customerTemp.value)
     return `Czy chcesz zmienić status klienta  <b>${
-      getCustomerFullName.value
+        getCustomerFullName.value
     }</b>  na <b>${
-      customerTemp.value?.customerStatus.name === "ACTIVE"
-        ? "Nieaktywny"
-        : "Aktywny"
+        customerTemp.value?.customerStatus.name === "ACTIVE"
+            ? "Nieaktywny"
+            : "Aktywny"
     }</b>?`;
   return "No message";
 });
 const submitChangeStatus = async () => {
-  if (customerTemp.value) {
-    let newStatus: CustomerStatus = {
-      name:
-        customerTemp.value?.customerStatus.name === "ACTIVE"
-          ? "INACTIVE"
-          : "ACTIVE",
-      viewName:
-        customerTemp.value?.customerStatus.viewName !== "ACTIVE"
-          ? "Aktywny"
-          : "Nieaktywny",
+      if (customerTemp.value) {
+        let newStatus: CustomerStatus = {
+          name:
+              customerTemp.value?.customerStatus.name === "ACTIVE"
+                  ? "INACTIVE"
+                  : "ACTIVE",
+          viewName:
+              customerTemp.value?.customerStatus.viewName !== "ACTIVE"
+                  ? "Aktywny"
+                  : "Nieaktywny",
+        };
+        await customerStore.updateCustomerStatusDb(
+            customerTemp.value?.id,
+            newStatus
+        ).then(() => {
+          toast.add({
+            severity: "success",
+            summary: "Potwierdzenie",
+            detail:
+                "Zaaktualizowano status klienta: " +
+                customerTemp.value?.firstName +
+                " " +
+                customerTemp.value?.name,
+            life: 3000,
+          });
+        }).catch(() => {
+          toast.add({
+            severity: "error",
+            summary: "Błąd",
+            detail: "Nie udało się zaaktualizować statusu klienta",
+            life: 3000,
+          });
+        });
+        showStatusChangeConfirmationDialog.value = false;
+      }
     };
-    const result = await customerStore.updateCustomerStatusDb(
-      customerTemp.value?.id,
-      newStatus
-    );
-    if (result)
-      toast.add({
-        severity: "success",
-        summary: "Potwierdzenie",
-        detail:
-          "Zaaktualizowano status klienta: " +
-          customerTemp.value?.firstName +
-          " " +
-          customerTemp.value?.name,
-        life: 3000,
-      });
-  }
-  showStatusChangeConfirmationDialog.value = false;
-};
 
 //
 //-------------------------------------------------DELETE CUSTOMER-------------------------------------------------
 //
-const showDeleteConfirmationDialog = ref<boolean>(false);
-const showDeleteInformationDialog = ref<boolean>(false);
-const hasInvoices = ref<boolean>(false);
+  const showDeleteConfirmationDialog = ref<boolean>(false);
+  const showDeleteInformationDialog = ref<boolean>(false);
+  const hasInvoices = ref<boolean>(false);
 
-const confirmDeleteInvoice = async (customer: Customer) => {
-  customerTemp.value = customer;
-  hasInvoices.value = await invoiceStore
-    .getCustomerInvoices(customerTemp.value?.id)
-    .then((value) => {
-      return value.length > 0;
-    });
-  if (!hasInvoices.value) showDeleteConfirmationDialog.value = true;
-  else showDeleteInformationDialog.value = true;
-};
+  const confirmDeleteInvoice = async (customer: Customer) => {
+    customerTemp.value = customer;
+    hasInvoices.value = await invoiceStore
+        .getCustomerInvoices(customerTemp.value?.id)
+        .then((value) => {
+          return value.length > 0;
+        });
+    if (!hasInvoices.value) showDeleteConfirmationDialog.value = true;
+    else showDeleteInformationDialog.value = true;
+  };
 
-const deleteConfirmationMessage = computed(() => {
-  if (customerTemp.value && !hasInvoices.value) {
-    return `Czy chcesz usunąc klienta: <b>${getCustomerFullName.value}</b>?`;
-  }
-  if (customerTemp.value && hasInvoices.value) {
-    return `Nie możesz usunąć klienta: <b>${getCustomerFullName.value}</b>, ponieważ są do niego przypisane faktury. <br><br>Najpierw usuń faktury`;
-  }
-  return "No message";
-});
-const submitDelete = async () => {
-  console.log("submitDelete()");
-  if (customerTemp.value) {
-    const result = await customerStore.deleteCustomerDb(customerTemp.value.id);
-    if (result)
-      toast.add({
-        severity: "success",
-        summary: "Potwierdzenie",
-        detail: "Usunięto klienta: " + getCustomerFullName.value,
-        life: 3000,
-      });
-  }
-  showDeleteConfirmationDialog.value = false;
-};
+  const deleteConfirmationMessage = computed(() => {
+    if (customerTemp.value && !hasInvoices.value) {
+      return `Czy chcesz usunąc klienta: <b>${getCustomerFullName.value}</b>?`;
+    }
+    if (customerTemp.value && hasInvoices.value) {
+      return `Nie możesz usunąć klienta: <b>${getCustomerFullName.value}</b>, ponieważ są do niego przypisane faktury. <br><br>Najpierw usuń faktury`;
+    }
+    return "No message";
+  });
+  const submitDelete = async () => {
+    console.log("submitDelete()");
+    if (customerTemp.value) {
+      await customerStore.deleteCustomerDb(customerTemp.value.id)
+          .then(() => {
+            toast.add({
+              severity: "success",
+              summary: "Potwierdzenie",
+              detail: "Usunięto klienta: " + getCustomerFullName.value,
+              life: 3000,
+            });
+          }).catch(() => {
+            toast.add({
+              severity: "error",
+              summary: "Błąd",
+              detail: "Nie udało się usunąć klienta",
+              life: 3000,
+            });
+          });
+    }
+    showDeleteConfirmationDialog.value = false;
+  };
 
 //
 //-------------------------------------------------EDIT CUSTOMER-------------------------------------------------
 //
-const editCustomer = (customer: Customer) => {
-  // console.log("EDIT CUSTOMER:", customer);
-  const customerTemp: Customer = JSON.parse(JSON.stringify(customer));
-  router.push({
-    name: "Customer",
-    params: { isEdit: "true", customerId: customerTemp.id },
+  const editCustomer = (customer: Customer) => {
+    // console.log("EDIT CUSTOMER:", customer);
+    const customerTemp: Customer = JSON.parse(JSON.stringify(customer));
+    router.push({
+      name: "Customer",
+      params: {isEdit: "true", customerId: customerTemp.id},
+    });
+  };
+
+  onMounted(() => {
+    customerStore.getCustomersFromDb("ALL", true);
   });
-};
 
-onMounted(() => {
-  customerStore.getCustomersFromDb("ALL", true);
-});
-
-const getCustomerFullName = computed(() => {
-  return customerTemp.value?.firstName + " " + customerTemp.value?.name;
-});
+  const getCustomerFullName = computed(() => {
+    return customerTemp.value?.firstName + " " + customerTemp.value?.name;
+  })
 </script>
 <template>
-  <TheMenu />
-  <LoadingDialog :visible="invoiceStore.loadingWait" />
+  <TheMenu/>
+  <LoadingDialog :visible="invoiceStore.loadingWait"/>
   <ConfirmationDialog
-    v-model:visible="showStatusChangeConfirmationDialog"
-    :msg="changeStatusConfirmationMessage"
-    @save="submitChangeStatus"
-    @cancel="showStatusChangeConfirmationDialog = false"
+      v-model:visible="showStatusChangeConfirmationDialog"
+      :msg="changeStatusConfirmationMessage"
+      @save="submitChangeStatus"
+      @cancel="showStatusChangeConfirmationDialog = false"
   />
 
   <ConfirmationDialog
-    v-model:visible="showDeleteConfirmationDialog"
-    :msg="deleteConfirmationMessage"
-    label="Usuń"
-    @save="submitDelete"
-    @cancel="showDeleteConfirmationDialog = false"
+      v-model:visible="showDeleteConfirmationDialog"
+      :msg="deleteConfirmationMessage"
+      label="Usuń"
+      @save="submitDelete"
+      @cancel="showDeleteConfirmationDialog = false"
   />
 
   <InformationDialog
-    v-model:visible="showDeleteInformationDialog"
-    :msg="deleteConfirmationMessage"
-    @cancel="showDeleteInformationDialog = false"
+      v-model:visible="showDeleteInformationDialog"
+      :msg="deleteConfirmationMessage"
+      @cancel="showDeleteInformationDialog = false"
   />
 
   <Panel class="my-5 mx-2">
@@ -183,27 +198,27 @@ const getCustomerFullName = computed(() => {
         <h3 class="color-green">LISTA KLIENTÓW</h3>
         <div v-if="customerStore.loadingCustomer">
           <ProgressSpinner
-            class="ml-3"
-            style="width: 35px; height: 35px"
-            stroke-width="5"
+              class="ml-3"
+              style="width: 35px; height: 35px"
+              stroke-width="5"
           />
         </div>
       </div>
     </template>
     <DataTable
-      v-if="!customerStore.loadingCustomer"
-      v-model:filters="filters"
-      v-model:expanded-rows="expandedRows"
-      :value="customerStore.customers"
-      :loading="customerStore.loadingCustomer"
-      striped-rows
-      removable-sort
-      paginator
-      :rows="10"
-      :rows-per-page-options="[5, 10, 20, 50]"
-      table-style="min-width: 50rem"
-      filter-display="menu"
-      :global-filter-fields="[
+        v-if="!customerStore.loadingCustomer"
+        v-model:filters="filters"
+        v-model:expanded-rows="expandedRows"
+        :value="customerStore.customers"
+        :loading="customerStore.loadingCustomer"
+        striped-rows
+        removable-sort
+        paginator
+        :rows="10"
+        :rows-per-page-options="[5, 10, 20, 50]"
+        table-style="min-width: 50rem"
+        filter-display="menu"
+        :global-filter-fields="[
         'firstName',
         'name',
         'nip',
@@ -214,13 +229,13 @@ const getCustomerFullName = computed(() => {
       <template #header>
         <div class="flex justify-between">
           <router-link
-            :to="{
+              :to="{
               name: 'Customer',
               params: { isEdit: 'false', customerId: 0 },
             }"
-            style="text-decoration: none"
+              style="text-decoration: none"
           >
-            <OfficeButton text="Nowy klient" btn-type="ahead" />
+            <OfficeButton text="Nowy klient" btn-type="ahead"/>
           </router-link>
           <Button type="button" icon="pi pi-filter-slash" label="Wyczyść" outlined @click="clearFilter()"/>
           <IconField icon-position="left">
@@ -245,26 +260,26 @@ const getCustomerFullName = computed(() => {
         <h4 class="color-green">Ładowanie danych. Proszę czekać...</h4>
       </template>
 
-      <Column expander style="width: 5rem" />
+      <Column expander style="width: 5rem"/>
       <Column field="firstName" header="Imię"></Column>
       <Column
-        field="name"
-        header="Nazwisko/Nazwa"
-        :sortable="true"
-        style="text-align: left"
+          field="name"
+          header="Nazwisko/Nazwa"
+          :sortable="true"
+          style="text-align: left"
       >
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
         </template>
       </Column>
       <Column field="address.street" header="Ulica" sortable>
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
         </template>
       </Column>
       <Column field="address.city" header="Miasto" sortable>
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
         </template>
       </Column>
       <Column field="nip" header="NIP" sortable></Column>
@@ -273,14 +288,14 @@ const getCustomerFullName = computed(() => {
       <Column field="customerStatus" header="Status" style="width: 100px">
         <template #body="{ data, field }">
           <StatusButton
-            v-tooltip.top="{
+              v-tooltip.top="{
               value: 'Zmień status klienta (Aktywny/Nieaktywny)',
               showDelay: 1000,
               hideDelay: 300,
             }"
-            :btn-type="data[field].name"
-            :color-icon="data[field].name === 'ACTIVE' ? '#2da687' : '#dc3545'"
-            @click="confirmStatusChange(data)"
+              :btn-type="data[field].name"
+              :color-icon="data[field].name === 'ACTIVE' ? '#2da687' : '#dc3545'"
+              @click="confirmStatusChange(data)"
           />
         </template>
       </Column>
@@ -289,20 +304,20 @@ const getCustomerFullName = computed(() => {
         <template #body="slotProps">
           <div class="flex flex-row gap-1 justify-content-end">
             <EditButton
-              v-tooltip.top="{
+                v-tooltip.top="{
                 value: 'Edytuj klienta',
                 showDelay: 1000,
                 hideDelay: 300,
               }"
-              @click="editCustomer(slotProps.data)"
+                @click="editCustomer(slotProps.data)"
             />
             <DeleteButton
-              v-tooltip.top="{
+                v-tooltip.top="{
                 value: 'Usuń klienta',
                 showDelay: 1000,
                 hideDelay: 300,
               }"
-              @click="confirmDeleteInvoice(slotProps.data)"
+                @click="confirmDeleteInvoice(slotProps.data)"
             />
           </div>
         </template>

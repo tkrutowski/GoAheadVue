@@ -8,6 +8,7 @@ import {useCustomerStore} from "@/stores/customers.ts";
 
 export const useInvoiceStore = defineStore("invoice", {
     state: () => ({
+        rowsPerPage: parseInt(localStorage.getItem("rowsPerPageInvoice") || "10", 10),
         loginError: false,
         btnDisabled: false,
         busyIcon: false,

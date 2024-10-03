@@ -113,22 +113,27 @@ async function editCustomer() {
     setTimeout(() => (btnShowError.value = false), 5000);
   } else {
     btnSaveDisabled.value = true;
-    const result: boolean = await customerStore.updateCustomerDb(
-        customer.value
-    );
-
-    if (result) {
-      toast.add({
-        severity: "success",
-        summary: "Potwierdzenie",
-        detail: "Zaaktualizowano dane klienta: " + getCustomerFullName.value,
-        life: 3000,
-      });
-      btnShowOk.value = true;
-      setTimeout(() => {
-        router.push({name: "Customers"});
-      }, 3000);
-    } else btnShowError.value = true;
+    await customerStore.updateCustomerDb(customer.value)
+        .then(()=>{
+          toast.add({
+            severity: "success",
+            summary: "Potwierdzenie",
+            detail: "Zaaktualizowano dane klienta: " + getCustomerFullName.value,
+            life: 3000,
+          });
+          btnShowOk.value = true;
+          setTimeout(() => {
+            router.push({name: "Customers"});
+          }, 3000);
+        }).catch(() => {
+          toast.add({
+            severity: "error",
+            summary: "Błąd",
+            detail: "Błąd podczas dodawania klienta.",
+            life: 3000,
+          });
+          btnShowError.value = true;
+        });
 
     // btnSaveDisabled.value = false;
     setTimeout(() => {

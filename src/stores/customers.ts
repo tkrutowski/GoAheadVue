@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import httpCommon from "@/http-common";
-import { useAuthorizationStore } from "@/stores/authorization";
 import { Customer } from "@/types/Customer";
 import { CustomerStatus } from "@/types/CustomerStatus";
 import { ErrorService } from "@/service/ErrorService";
@@ -29,6 +28,7 @@ export const useCustomerStore = defineStore("customer", {
         (customer) => customer.firstName + " " + customer.name
       );
     },
+    getCustomerActive: (state) => state.customers.filter((c) => c.customerStatus.name==='ACTIVE'),
   },
 
   //actions = metody w komponentach

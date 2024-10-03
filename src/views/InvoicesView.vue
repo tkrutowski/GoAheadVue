@@ -148,7 +148,6 @@ const downloadPdf = (idInvoice: number, invoiceNumber:string) => {
   console.log("START - downloadPdf for ",invoiceNumber)
    invoiceStore.getInvoicePdfFromDb(idInvoice)
       .then(response => {
-  console.log("then - downloadPdf for ",invoiceNumber)
         const fileURL = window.URL.createObjectURL(new Blob([response.data]));
         const fileLink = document.createElement("a");
         fileLink.href = fileURL;
@@ -158,7 +157,6 @@ const downloadPdf = (idInvoice: number, invoiceNumber:string) => {
         fileLink.click();
       })
       .catch(() => {
-  console.log("catch - downloadPdf for ",invoiceNumber)
         toast.add({
           severity: "error",
           summary: "Błąd",
@@ -184,6 +182,10 @@ const downloadPdf = (idInvoice: number, invoiceNumber:string) => {
     await customerStore.getCustomersFromDb("ALL", false);
     await invoiceStore.getInvoicesFromDb("ALL");
   });
+
+const handleRowsPerPageChange = (event) => {
+  localStorage.setItem("rowsPerPageInvoice", event.rows);
+};
 </script>
 <template>
   <TheMenu/>
@@ -226,11 +228,12 @@ const downloadPdf = (idInvoice: number, invoiceNumber:string) => {
         paginator
         sort-field="invoiceNumber"
         :sort-order="-1"
-        :rows="10"
+        :rows="invoiceStore.rowsPerPage"
         :rows-per-page-options="[5, 10, 20, 50]"
         table-style="min-width: 50rem"
         filter-display="menu"
         :global-filter-fields="['customer', 'invoiceNumber', 'sellDate']"
+        @page="handleRowsPerPageChange"
     >
       <template #header>
         <div class="flex justify-between">

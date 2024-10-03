@@ -307,7 +307,7 @@ onMounted(async () => {
   // console.log("onMounted EDIT", route.params);
   btnSaveDisabled.value = true;
   isEdit.value = route.params.isEdit === "true";
-  if (isEdit.value === false) {
+  if (!isEdit.value) {
     console.log("onMounted NEW INVOICE");
     const currentYear = new Date(Date.now()).getFullYear();
     invoiceNumber.value = await invoiceStore.findInvoiceNumber(currentYear);
@@ -407,17 +407,16 @@ const showErrorCustomer = () => {
         </template>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Fieldset class="w-full " legend="Dane faktury">
+
             <!-- ROW-1   CUSTOMER -->
-            <!--            <div class="row">-->
-            <!--              <div class="col">-->
-            <div class="flex flex-row gap-4">
+             <div class="flex flex-row gap-4">
               <div class="flex flex-col w-full">
                 <label for="input-customer">Wybierz klienta:</label>
                 <Select
                     id="input-customer"
                     v-model="selectedCustomer"
                     :class="{ 'p-invalid': showErrorCustomer() }"
-                    :options="customerStore.customers"
+                    :options="isEdit ? customerStore.customers : customerStore.getCustomerActive"
                     option-label="name"
                     :onchange="
                         (invoice.idCustomer = selectedCustomer
@@ -438,8 +437,6 @@ const showErrorCustomer = () => {
                 />
               </div>
             </div>
-            <!--              </div>-->
-            <!--            </div>-->
 
             <!-- ROW-2  INVOICE NUMBER/YEAR  -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -465,7 +462,6 @@ const showErrorCustomer = () => {
                   />
                 </div>
               </div>
-              <!--              </div>-->
               <div class="">
                 <div class="flex flex-col w-full">
                   <label for="year">Rok faktury</label>
