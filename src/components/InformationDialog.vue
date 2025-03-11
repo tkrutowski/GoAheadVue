@@ -27,7 +27,7 @@ const cancel = () => {
       <div class="flex flex-row gap-1 justify-content-end">
         <OfficeButton
           text="OK"
-          btn-type="ahead"
+          btn-type="office-regular"
           @click="cancel"
           @abort="cancel"
         ></OfficeButton>

@@ -37,14 +37,14 @@ const cancel = () => {
       <div class="flex flex-row gap-1 justify-content-end">
         <OfficeButton
           text="Anuluj"
-          btn-type="ahead"
+          btn-type="office-regular"
           style="width: 80px"
           @click="cancel"
           @abort="cancel"
         ></OfficeButton>
         <OfficeButton
           :text="label"
-          btn-type="ahead-save"
+          btn-type="office-save"
           style="width: 80px"
           @click="save"
         ></OfficeButton>

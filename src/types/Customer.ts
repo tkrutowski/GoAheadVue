@@ -1,5 +1,3 @@
-import { CustomerType } from "@/types/CustomerType.ts";
-import { CustomerStatus } from "@/types/CustomerStatus.ts";
 
 export interface Customer {
   id: number;
@@ -8,7 +6,7 @@ export interface Customer {
   nip: string;
   phone: string;
   mail: string;
-  customerType: CustomerType | undefined;
+  customerType: CustomerType;
   otherInfo: string;
   customerStatus: CustomerStatus;
   regon: string;
@@ -20,4 +18,15 @@ export interface Address {
   city: string;
   street: string;
   zip: string;
+}
+
+
+export enum CustomerStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+}
+
+export enum CustomerType {
+  CUSTOMER = "CUSTOMER",
+  COMPANY = "COMPANY",
 }

@@ -4,6 +4,8 @@ import TheMenu from "@/components/TheMenu.vue";
 import { useAuthorizationStore } from "@/stores/authorization";
 import {computed, onMounted, ref} from "vue";
 import {useInvoiceStore} from "@/stores/invoices.ts";
+import {FinanceService} from "@/service/FinanceService.ts";
+import type {Invoice} from "@/types/Invoice.ts";
 
 const invoiceStore = useInvoiceStore();
 const authorizationStore = useAuthorizationStore();
@@ -14,11 +16,11 @@ const chartOptions = ref();
 const data2023 = computed(() => {
   // Tablica do przechowywania sumy kwot za każdy miesiąc (indeks 0 = styczeń, 11 = grudzień)
   const monthlyTotals = new Array(12).fill(0);
-  invoiceStore.getInvoiceDtos
+  invoiceStore.invoices
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2023) // Filtrujemy faktury z roku 2023
       .forEach(invoice => {
-        const month = invoice.invoiceDate.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        monthlyTotals[month] += invoice.amount; // Dodajemy kwotę do odpowiedniego miesiąca
+        const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
+        month ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
 
   return monthlyTotals; // Zwracamy sumy za każdy miesiąc
@@ -27,11 +29,24 @@ const data2023 = computed(() => {
 const data2024 = computed(() => {
   // Tablica do przechowywania sumy kwot za każdy miesiąc (indeks 0 = styczeń, 11 = grudzień)
   const monthlyTotals = new Array(12).fill(0);
-  invoiceStore.getInvoiceDtos
+  invoiceStore.invoices
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2024) // Filtrujemy faktury z roku 2023
       .forEach(invoice => {
-        const month = invoice.invoiceDate.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        monthlyTotals[month] += invoice.amount; // Dodajemy kwotę do odpowiedniego miesiąca
+        const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
+        month ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+      });
+
+  return monthlyTotals; // Zwracamy sumy za każdy miesiąc
+})
+
+const data2025 = computed(() => {
+  // Tablica do przechowywania sumy kwot za każdy miesiąc (indeks 0 = styczeń, 11 = grudzień)
+  const monthlyTotals = new Array(12).fill(0);
+  invoiceStore.invoices
+      .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2025) // Filtrujemy faktury z roku 2023
+      .forEach((invoice: Invoice) => {
+        const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
+        month ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
 
   return monthlyTotals; // Zwracamy sumy za każdy miesiąc
@@ -60,6 +75,15 @@ const setChartData = () => {
         // yAxisID: 'y1',
         // tension: 0.4,
         data: data2024
+      },
+      {
+        label: '2025',
+        // fill: false,
+        backgroundColor: documentStyle.getPropertyValue('--office-color-300'),
+        borderColor: documentStyle.getPropertyValue('--office-color-300'),
+        // yAxisID: 'y1',
+        // tension: 0.4,
+        data: data2025
       }
     ]
   }

@@ -1,26 +1,42 @@
 <script setup lang="ts">
 import { useAuthorizationStore } from "@/stores/authorization";
-import { onMounted, ref } from "vue";
+import {onMounted, ref, watch} from "vue";
 import OfficeButton from "@/components/OfficeButton.vue";
 import router from "@/router";
 const authorizationStore = useAuthorizationStore();
+import {useToast} from 'primevue/usetoast'
 
 const username = ref<string>("");
 const password = ref<string>("");
+const toast = useToast()
 
 onMounted(() => {
   console.log("MOUNTED");
-  authorizationStore.loginError = false;
+  authorizationStore.loginError = null;
 });
 async function login() {
   let result = await authorizationStore.login(username.value, password.value);
-
   if (result) {
-    //TODO załadować karty kredytowe i inne
-    // router.back();
     goBack();
   }
 }
+
+watch(
+    () => authorizationStore.loginError,
+    (newValue) => {
+      if (newValue) {
+        console.log("watch",newValue);
+        toast.add({
+          severity: 'error',
+          summary: 'Logowanie',
+          detail: newValue,
+          life: 5000,
+        })
+      }
+    },
+    { immediate: true },
+)
+
 function goBack(): void {
   let history: string[] | [] = JSON.parse(
     localStorage.getItem("navigationHistory") || "[]"
@@ -40,11 +56,6 @@ function goBack(): void {
   <!--  <div class="bg-office">-->
   <form class="login-form mb-5 mt-1 mt-md-5" @submit.prevent="login()">
     <h2 class="mb-5 color-green text-center">Logowanie</h2>
-
-    <!-- ERROR -->
-    <div v-if="authorizationStore.loginError">
-      <p id="error">Niestety podałeś niewłaściwy login lub hasło.</p>
-    </div>
 
     <!-- USERNAME -->
     <FloatLabel class="">
@@ -79,7 +90,7 @@ function goBack(): void {
       text="zaloguj się"
       class="btn mt-3 mb-1"
       style="width: 100%"
-      btn-type="ahead"
+      btn-type="office-regular"
       type="submit"
       :disabled="authorizationStore.btnDisabled"
       :is-busy-icon="authorizationStore.busyIcon"
@@ -93,9 +104,6 @@ function goBack(): void {
   </form>
 </template>
 <style scoped>
-#error {
-  color: red;
-}
 
 /* unvisited link */
 .link:link {

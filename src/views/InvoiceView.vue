@@ -2,61 +2,42 @@
 import {useCustomerStore} from "@/stores/customers";
 import {useInvoiceStore} from "@/stores/invoices";
 import {useRoute} from "vue-router";
-import {computed, onMounted, ref, watch} from "vue";
-import {Customer} from "@/types/Customer";
-import {Invoice, InvoiceItem} from "@/types/Invoice";
+import {computed, onMounted, ref} from "vue";
+import {type Customer} from "@/types/Customer";
+import {type Invoice, type InvoiceItem, PaymentMethod, PaymentStatus} from "@/types/Invoice";
 import moment from "moment";
 import OfficeButton from "@/components/OfficeButton.vue";
-import AddInvoiceItemDialog from "@/components/AddEditInvoiceItemDialog.vue";
 import {useToast} from "primevue/usetoast";
-import EditButton from "@/components/EditButton.vue";
-import DeleteButton from "@/components/DeleteButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
 import router from "@/router";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
-import IconButton from "@/components/IconButton.vue";
+import OfficeIconButton from "@/components/OfficeIconButton.vue";
+import {UtilsService} from "@/service/UtilsService.ts";
+import type {DataTableCellEditCompleteEvent} from "primevue";
+import type {AxiosError} from "axios";
 
 const customerStore = useCustomerStore();
 const invoiceStore = useInvoiceStore();
 const route = useRoute();
 
 const toast = useToast();
-const selectedCustomer = ref<Customer>();
-const showNewItemModal = ref(false);
 const invoice = ref<Invoice>({
   idInvoice: 0,
-  idCustomer: 0,
+  customer: null,
   invoiceNumber: "",
-  sellDate: new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-      .format(new Date())
-      .split(".")
-      .reverse()
-      .join("-"),
-  invoiceDate: new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-      .format(new Date())
-      .split(".")
-      .reverse()
-      .join("-"),
-  paymentMethod: {name: "TRANSFER", viewName: "przelew"},
-  paymentStatus: {name: "TO_PAY", viewName: "Do zapłaty"},
+  sellDate: new Date(),
+  invoiceDate: new Date(),
+  paymentMethod: PaymentMethod.TRANSFER,
+  paymentStatus: PaymentStatus.TO_PAY,
   paymentDeadline: 14,
-  paymentDate: "",
+  paymentDate: null,
   otherInfo: "",
   invoiceItems: [],
-  customerName: "",
 });
 
 const invoiceItem = ref<InvoiceItem>({
   idInvoice: 0,
-  jm: "",
+  unit: "",
   id: 0,
   amount: 0,
   name: "",
@@ -64,20 +45,15 @@ const invoiceItem = ref<InvoiceItem>({
 });
 const invoiceNumber = ref<number>(0);
 const invoiceYear = ref<number>();
-const paymentLate = ref<number>();
-const btnShowError = ref<boolean>(false);
+const paymentDeadline = ref<number>();
 const btnShowBusy = ref<boolean>(false);
-const btnShowOk = ref<boolean>(false);
 const btnSaveDisabled = ref<boolean>(false);
 
-const formatCurrency = (value: number) => {
-  return value.toLocaleString("pl-PL", {style: "currency", currency: "PLN"});
-};
 const totalAmount = computed(() => {
   let total = invoice.value.invoiceItems.reduce((acc, item) => {
     return acc + item.quantity * item.amount;
   }, 0);
-  return formatCurrency(total);
+  return UtilsService.formatCurrency(total);
 });
 const isSaveBtnDisabled = computed(() => {
   return (
@@ -88,14 +64,7 @@ const isSaveBtnDisabled = computed(() => {
       btnSaveDisabled.value
   );
 });
-const invoiceDateTemp = ref<string>("");
-watch(invoiceDateTemp, (newDate: string) => {
-  invoice.value.invoiceDate = moment(new Date(newDate)).format("YYYY-MM-DD");
-});
-const sellDateTemp = ref<string>("");
-watch(sellDateTemp, (newDate: string) => {
-  invoice.value.sellDate = moment(new Date(newDate)).format("YYYY-MM-DD");
-});
+
 //
 //SAVE
 //
@@ -115,40 +84,31 @@ async function newInvoice() {
   console.log("newInvoice()");
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
-    btnShowError.value = true;
-    setTimeout(() => (btnShowError.value = false), 5000);
   } else {
     btnSaveDisabled.value = true;
+    const invoiceDate = moment(invoice.value.invoiceDate);
     invoice.value.invoiceNumber = invoiceYear.value + "/" + invoiceNumber.value;
-
+    invoice.value.paymentDate = invoiceDate.add(paymentDeadline.value, 'day').toDate()
     await invoiceStore.addInvoiceDb(invoice.value)
-        .then(()=>{
+        .then(() => {
           toast.add({
             severity: "success",
             summary: "Potwierdzenie",
             detail: "Zapisano fakturę nr: " + invoice.value.invoiceNumber,
             life: 3000,
           });
-          btnShowOk.value = true;
           setTimeout(() => {
             router.push({name: "Invoices"});
           }, 3000);
         })
-        .catch(() => {
+        .catch((reason: AxiosError) => {
           toast.add({
             severity: "error",
-            summary: "Błąd",
-            detail: "Błąd podczas zapisu faktury.",
-            life: 3000,
+            summary: "Błąd podczas zapisu faktury.",
+            detail: (reason?.response?.data as { message: string }).message,
+            life: 5000,
           });
-          btnShowError.value = true;
           btnSaveDisabled.value = false;
-          setTimeout(() => {
-                btnShowError.value = false;
-                btnShowOk.value = false;
-                btnShowError.value = false;
-              },
-              5000);
         })
   }
 }
@@ -157,45 +117,33 @@ async function newInvoice() {
 //-----------------------------------------------------EDIT INVOICE------------------------------------------------
 //
 const isEdit = ref<boolean>(false);
-const isEditItem = ref<boolean>(false);
-const editItemIndex = ref<number>(-1);
 
 async function editInvoice() {
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
-    btnShowError.value = true;
-    setTimeout(() => (btnShowError.value = false), 5000);
   } else {
     invoice.value.invoiceNumber = invoiceYear.value + "/" + invoiceNumber.value;
     btnSaveDisabled.value = true;
     await invoiceStore.updateInvoiceDb(invoice.value)
-        .then(()=>{
+        .then(() => {
           toast.add({
             severity: "success",
             summary: "Potwierdzenie",
             detail: "Zaaktualizowano fakturę nr: " + invoice.value.invoiceNumber,
             life: 3000,
           });
-          btnShowOk.value = true;
           setTimeout(() => {
             router.push({name: "Invoices"});
           }, 3000);
         })
-        .catch(() => {
-          toast.add({
-            severity: "error",
-            summary: "Błąd",
-            detail: "Błąd podczas edycji faktury.",
-            life: 3000,
-          });
-          btnShowError.value = true;
+        .catch((reason: AxiosError) => {
+            toast.add({
+              severity: "error",
+              summary: "Błąd podczas edycji faktury.",
+              detail: (reason?.response?.data as { message: string }).message,
+              life: 5000,
+            });
           btnSaveDisabled.value = false;
-          setTimeout(() => {
-                btnShowError.value = false;
-                btnShowOk.value = false;
-                btnShowError.value = false;
-              },
-              5000);
         })
   }
 }
@@ -205,70 +153,48 @@ async function editInvoice() {
 //
 function newItem() {
   const latestItem = invoiceStore.getLatestItemForCustomer(
-      invoice.value.idCustomer
+      invoice.value.customer?.id
   );
-  resetEditItem();
 
-  if (latestItem) {
+  if (latestItem !== null) {
     invoiceItem.value = JSON.parse(JSON.stringify(latestItem));
     invoiceItem.value.id = 0;
     invoiceItem.value.idInvoice = invoice.value.idInvoice;
-    invoiceItem.value.jm = latestItem.jm;
+    invoiceItem.value.unit = latestItem.unit;
     invoiceItem.value.name = latestItem.name;
     invoiceItem.value.amount = latestItem.amount;
     invoiceItem.value.quantity = latestItem.quantity;
   } else {
     invoiceItem.value.idInvoice = invoice.value.idInvoice;
-    invoiceItem.value.jm = "l";
+    invoiceItem.value.unit = "l";
     invoiceItem.value.name = "Kurs języka angielskiego ";
     invoiceItem.value.amount = 0;
     invoiceItem.value.quantity = 0;
 
-    invoiceItem.value = JSON.parse(JSON.stringify(invoiceItem.value));
   }
-  isEditItem.value = false;
-  showNewItemModal.value = true;
+  invoice.value.invoiceItems.push({...invoiceItem.value})
 }
 
 //
 //------------------------------------------------- EDIT INVOICE_ITEM---------------------------------------------------
 //
-const editItem = (item: InvoiceItem, index: number) => {
-  invoiceItem.value = JSON.parse(JSON.stringify(item));
-  editItemIndex.value = index;
-  isEditItem.value = true;
-  showNewItemModal.value = true;
-};
+const onCellEditComplete = (event: DataTableCellEditCompleteEvent) => {
+  let {data, newValue, field, originalEvent} = event;
+  console.log("onCellEditComplete event",event);
 
-function saveInvoiceItem(item: InvoiceItem) {
-  if (isEditItem.value && editItemIndex.value != -1) {
-    invoice.value.invoiceItems[editItemIndex.value] = {...item};
-  } else {
-    // invoice.value.invoiceItems.push(JSON.parse(JSON.stringify(item)));
-    invoice.value.invoiceItems.push({...item});
+  switch (field) {
+    case 'amount':
+    case 'quantity':
+      if (UtilsService.isPositiveFloat(newValue)) data[field] = newValue;
+      else originalEvent.preventDefault();
+      break;
+
+    default:
+      if (newValue && newValue.trim().length > 0) data[field] = newValue;
+      else originalEvent.preventDefault();
+      break;
   }
-  //reset
-  resetEditItem();
-  showNewItemModal.value = false;
-}
-
-function resetEditItem() {
-  invoiceItem.value.jm = "l";
-  invoiceItem.value.name = "Kurs języka angielskiego ";
-  invoiceItem.value.amount = 0;
-  invoiceItem.value.quantity = 0;
-  invoiceItem.value.id = 0;
-  invoiceItem.value.idInvoice = 0;
-  isEditItem.value = false;
-}
-
-//
-// ADD/EDIT INVOICEITEM MODAL
-function hideNewItemModal() {
-  //reset
-  resetEditItem();
-  showNewItemModal.value = false;
-}
+};
 
 //
 //DELETE INVOICE ITEM MODAL
@@ -298,7 +224,7 @@ const submitDelete = async () => {
 onMounted(() => {
   console.log("onMounted GET");
   btnSaveDisabled.value = true;
-  customerStore.getCustomersFromDb("ALL", false);
+  if (customerStore.customers.length <= 1) customerStore.getCustomersFromDb("ALL");
   invoiceStore.getPaymentType();
   btnSaveDisabled.value = false;
 });
@@ -312,9 +238,7 @@ onMounted(async () => {
     const currentYear = new Date(Date.now()).getFullYear();
     invoiceNumber.value = await invoiceStore.findInvoiceNumber(currentYear);
     invoiceYear.value = currentYear;
-    paymentLate.value = 14;
-    invoiceDateTemp.value = invoice.value.invoiceDate;
-    sellDateTemp.value = invoice.value.sellDate;
+    paymentDeadline.value = 14;
   } else {
     console.log("onMounted EDIT INVOICE");
     const invoiceId = Number(route.params.invoiceId as string);
@@ -323,16 +247,19 @@ onMounted(async () => {
         .then((data) => {
           if (data) {
             invoice.value = data;
-            selectedCustomer.value = customerStore.getCustomerById(
-                invoice.value.idCustomer
-            );
+            if (data.paymentDate && data.invoiceDate) {
+              const paymentDate = moment(data.paymentDate);
+              const invoiceDate = moment(data.invoiceDate);
+
+              paymentDeadline.value = paymentDate.diff(invoiceDate, 'days');
+            } else {
+              paymentDeadline.value = 0;
+            }
+
             invoiceNumber.value = Number(
                 invoice.value.invoiceNumber.split("/")[1]
             );
             invoiceYear.value = Number(invoice.value.invoiceNumber.split("/")[0]);
-            paymentLate.value = invoice.value.paymentDeadline;
-            invoiceDateTemp.value = invoice.value.invoiceDate;
-            sellDateTemp.value = invoice.value.sellDate;
           }
         })
         .catch((error) => {
@@ -356,24 +283,26 @@ const showError = (msg: string) => {
   });
 };
 const isValid = () => {
-  return invoice.value.idCustomer > 0 && invoice.value.invoiceItems.length > 0;
+  return (
+      invoice.value.customer !== null &&
+      invoice.value.invoiceItems.length > 0 &&
+      invoice.value.invoiceItems.every(item => item.quantity > 0 && item.amount > 0)
+  );
 };
+
 const showErrorCustomer = () => {
-  return submitted.value && invoice.value.idCustomer <= 0;
+  return submitted.value && invoice.value.customer === null;
 };
+
+const getCustomerLabel = (option: Customer) => {
+  console.log("getCustomerLabel", option);
+  return `${option.name} ${option.firstName}`;
+}
 </script>
 
 <template>
   <Toast/>
   <TheMenu/>
-  <AddInvoiceItemDialog
-      v-model:visible="showNewItemModal"
-      :item="invoiceItem"
-      :is-edit="isEditItem"
-      @save="saveInvoiceItem"
-      @cancel="hideNewItemModal"
-  />
-
   <ConfirmationDialog
       v-model:visible="showDeleteConfirmationDialog"
       :msg="deleteConfirmationMessage"
@@ -384,15 +313,14 @@ const showErrorCustomer = () => {
 
   <div class="m-4">
     <form @submit.stop.prevent="saveInvoice">
+      {{isEdit}}
+      {{invoice.customer}}
+      {{customerStore.getCustomerActive.length}}
       <Panel>
         <template #header>
-          <IconButton
-              v-tooltip.right="{
-              value: 'Powrót do listy faktur',
-              showDelay: 500,
-              hideDelay: 300,
-            }"
-              icon="pi-fw pi-list"
+          <OfficeIconButton
+              title="Powrót do listy faktur"
+              icon="pi pi-fw pi-table"
               @click="() => router.push({ name: 'Invoices' })"
           />
           <div class="w-full flex justify-center">
@@ -409,32 +337,21 @@ const showErrorCustomer = () => {
           <Fieldset class="w-full " legend="Dane faktury">
 
             <!-- ROW-1   CUSTOMER -->
-             <div class="flex flex-row gap-4">
+            <div class="flex flex-row gap-4">
               <div class="flex flex-col w-full">
                 <label for="input-customer">Wybierz klienta:</label>
                 <Select
                     id="input-customer"
-                    v-model="selectedCustomer"
-                    :class="{ 'p-invalid': showErrorCustomer() }"
+                    v-model="invoice.customer"
+                    :invalid="showErrorCustomer()"
                     :options="isEdit ? customerStore.customers : customerStore.getCustomerActive"
-                    option-label="name"
-                    :onchange="
-                        (invoice.idCustomer = selectedCustomer
-                          ? selectedCustomer.id
-                          : 0)
-                      "
+                    :option-label="getCustomerLabel"
                     required
+                    :loading="customerStore.loadingCustomer"
                 />
                 <small class="p-error">{{
                     showErrorCustomer() ? "Pole jest wymagane." : "&nbsp;"
                   }}</small>
-              </div>
-              <div v-if="customerStore.loadingCustomer" class="mt-5">
-                <ProgressSpinner
-                    class=""
-                    style="width: 35px; height: 35px"
-                    stroke-width="5"
-                />
               </div>
             </div>
 
@@ -447,16 +364,16 @@ const showErrorCustomer = () => {
                   <InputNumber
                       id="number"
                       v-model="invoiceNumber"
-                      class="border-green"
                       mode="decimal"
                       show-buttons
                       :min="1"
                       :max="100"
+
                   />
                 </div>
                 <div v-if="invoiceStore.loadingInvoiceNo" class="mt-6">
                   <ProgressSpinner
-                      class="ml-2 mt-1"
+                      class="mt-1"
                       style="width: 30px; height: 30px"
                       stroke-width="5"
                   />
@@ -483,7 +400,7 @@ const showErrorCustomer = () => {
               <div class="flex flex-col w-full mt-4 sm:mt-0">
                 <label for="input">Data wystawienia:</label>
                 <Calendar
-                    v-model="invoiceDateTemp"
+                    v-model="invoice.invoiceDate"
                     show-icon
                     date-format="yy-mm-dd"
                 />
@@ -491,7 +408,7 @@ const showErrorCustomer = () => {
               <div class="flex flex-col w-full">
                 <label for="input">Data sprzedaży:</label>
                 <Calendar
-                    v-model="sellDateTemp"
+                    v-model="invoice.sellDate"
                     show-icon
                     date-format="yy-mm-dd"
                 />
@@ -504,8 +421,7 @@ const showErrorCustomer = () => {
                 <label for="input">Odroczenie płatności:</label>
                 <InputNumber
                     id="input"
-                    v-model="paymentLate"
-                    class="border-green"
+                    v-model="paymentDeadline"
                     mode="decimal"
                     :use-grouping="false"
                     show-buttons
@@ -519,19 +435,13 @@ const showErrorCustomer = () => {
                   <Select
                       id="input-customer"
                       v-model="invoice.paymentMethod"
-                      class="border-green"
-                      :options="invoiceStore.paymentTypes"
-                      option-label="viewName"
+                      :options="UtilsService.getPaymentMethodsOption()"
+                      option-label="label"
+                      option-value="value"
                       required
+                      :loading="invoiceStore.loadingPaymentType"
                   />
                 </div>
-                  <div v-if="invoiceStore.loadingPaymentType" class="mt-6">
-                    <ProgressSpinner
-                        class="ml-2 mt-1"
-                        style="width: 30px; height: 30px"
-                        stroke-width="5"
-                    />
-                  </div>
               </div>
             </div>
 
@@ -548,45 +458,71 @@ const showErrorCustomer = () => {
 
           <!-- TABLE INVOIS_ITEMS -->
           <Fieldset class="w-full " legend="Pozycje na fakturze">
-            <DataTable :value="invoice.invoiceItems" class="border-green pt-2">
+            <DataTable :value="invoice.invoiceItems" class="pt-2" size="small"
+                       editMode="cell" dataKey="id" @cell-edit-complete="onCellEditComplete">
               <template #header>
                 <!--        input do filtrowania na razie tutaj. Potem przenieść do navbaru-->
                 <div class="flex justify-between">
                   <OfficeButton
-                      v-tooltip.top="{
-                      value: 'Podaj nową pozycję do faktury.',
-                      showDelay: 1000,
-                      hideDelay: 300,
-                    }"
+                      title="Podaj nową pozycję do faktury."
                       text="Dodaj"
-                      btn-type="ahead"
+                      btn-type="office-regular"
                       type="button"
                       @click="newItem"
                   />
                 </div>
               </template>
-              <Column field="name" header="Nazwa"/>
-              <Column field="jm" header="Jm"/>
-              <Column field="quantity" header="Ilość"/>
-              <Column field="amount" header="Kwota">
-                <template #body="{ data, field }">
-                  <div style="text-align: center">
-                    {{ formatCurrency(data[field]) }}
-                  </div>
+              <!-- NAME -->
+              <Column field="name" header="Nazwa"
+                      class="min-w-52 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+                <template #editor="{ data, field }">
+                  <InputText v-model="data[field]" fluid maxlength="200"/>
                 </template>
               </Column>
-              <Column field="amount" header="Razem">
-                <template #body="slotProps">
+
+              <!-- JM -->
+              <Column field="unit" header="Jm"
+                      class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+                <template #editor="{ data, field }">
+                  <InputText v-model="data[field]" fluid maxlength="10"/>
+                </template>
+              </Column>
+
+
+              <!-- QUANTITY -->
+              <Column field="quantity" header="Ilość"
+                      class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+                <template #editor="{ data, field }">
+                  <InputNumber v-model="data[field]" :min="0" mode="decimal" fluid @focus="UtilsService.selectText"/>
+                </template>
+              </Column>
+
+
+              <!-- AMOUNT NET-->
+              <Column field="amount" header="Kwota"
+                      class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+                <template #body="{ data }">
+                  <div style="text-align: center">
+                    {{ UtilsService.formatCurrency(data.amount) }}
+                  </div>
+                </template>
+                <template #editor="{ data, field }">
+                  <InputNumber v-model="data[field]" mode="currency" currency="PLN" locale="pl-PL" fluid
+                               @focus="UtilsService.selectText"/>
+                </template>
+              </Column>
+
+
+              <!-- TOTAL AMOUNT NETT-->
+              <Column field="amount" header="Razem" class="min-w-16">
+                <template #body="{ data }">
                   {{
-                    formatCurrency(
-                        slotProps.data[slotProps.field] *
-                        slotProps.data["quantity"]
-                    )
+                    UtilsService.formatCurrency(data.amount * data["quantity"])
                   }}
                 </template>
               </Column>
               <template #empty>
-                <span class="color-red">Uzupełnij dane..</span>
+                <span class="text-red-500">Uzupełnij dane..</span>
               </template>
 
               <!--                EDIT, DELETE-->
@@ -597,20 +533,10 @@ const showErrorCustomer = () => {
               >
                 <template #body="slotProps">
                   <div class="flex flex-row gap-1 justify-content-evenly">
-                    <EditButton
-                        v-tooltip.top="{
-                        value: 'Edytuj pozycję.',
-                        showDelay: 1000,
-                        hideDelay: 300,
-                      }"
-                        @click="editItem(slotProps.data, slotProps.index)"
-                    />
-                    <DeleteButton
-                        v-tooltip.top="{
-                        value: 'Usuń pozycję.',
-                        showDelay: 1000,
-                        hideDelay: 300,
-                      }"
+                    <OfficeIconButton
+                        title="Usuń pozycję."
+                        icon="pi pi-trash"
+                        severity="danger"
                         @click="
                         confirmDeleteItem(slotProps.data, slotProps.index)
                       "
@@ -625,14 +551,14 @@ const showErrorCustomer = () => {
                       footer-style="text-align:right; padding-right: 8px;"
                   >
                     <template #footer>
-                      <h5 class="color-green">RAZEM:</h5>
+                      <p class="font-semibold">RAZEM:</p>
                     </template>
                   </Column>
                   <Column footer-style="padding-left: 0">
                     <template #footer>
-                      <h5 class="color-green">
+                      <p class="">
                         {{ totalAmount }}
-                      </h5>
+                      </p>
                     </template>
                   </Column>
                 </Row>
@@ -643,17 +569,13 @@ const showErrorCustomer = () => {
 
         <!-- ROW-6  BTN SAVE -->
         <div class="flex justify-center mt-6">
-<!--          <div class="flex col justify-center">-->
-            <OfficeButton
-                text="zapisz"
-                btn-type="ahead-save"
-                type="submit"
-                :is-busy-icon="btnShowBusy"
-                :is-error-icon="btnShowError"
-                :is-ok-icon="btnShowOk"
-                :btn-disabled="isSaveBtnDisabled"
-            />
-<!--          </div>-->
+          <OfficeButton
+              text="zapisz"
+              btn-type="office-save"
+              type="submit"
+              :loading="btnShowBusy"
+              :btn-disabled="isSaveBtnDisabled"
+          />
         </div>
       </Panel>
     </form>

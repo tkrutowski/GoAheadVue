@@ -3,18 +3,17 @@ import {computed, onMounted, ref} from "vue";
 import {FilterMatchMode} from '@primevue/core/api';
 import OfficeButton from "@/components/OfficeButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
-import EditButton from "@/components/EditButton.vue";
-import DeleteButton from "@/components/DeleteButton.vue";
 import router from "@/router";
 import StatusButton from "@/components/StatusButton.vue";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
-import {Customer} from "@/types/Customer";
+import {type Customer, CustomerStatus} from "@/types/Customer";
 import {useInvoiceStore} from "@/stores/invoices";
 import {useCustomerStore} from "@/stores/customers";
-import {CustomerStatus} from "@/types/CustomerStatus";
 import InformationDialog from "@/components/InformationDialog.vue";
 import LoadingDialog from "@/components/LoadingDialog.vue";
 import {useToast} from "primevue/usetoast";
+import OfficeIconButton from "@/components/OfficeIconButton.vue";
+import type {AxiosError} from "axios";
 
 const invoiceStore = useInvoiceStore();
 const customerStore = useCustomerStore();
@@ -54,7 +53,7 @@ const changeStatusConfirmationMessage = computed(() => {
     return `Czy chcesz zmienić status klienta  <b>${
         getCustomerFullName.value
     }</b>  na <b>${
-        customerTemp.value?.customerStatus.name === "ACTIVE"
+        customerTemp.value?.customerStatus === CustomerStatus.ACTIVE
             ? "Nieaktywny"
             : "Aktywny"
     }</b>?`;
@@ -62,16 +61,10 @@ const changeStatusConfirmationMessage = computed(() => {
 });
 const submitChangeStatus = async () => {
       if (customerTemp.value) {
-        let newStatus: CustomerStatus = {
-          name:
-              customerTemp.value?.customerStatus.name === "ACTIVE"
-                  ? "INACTIVE"
-                  : "ACTIVE",
-          viewName:
-              customerTemp.value?.customerStatus.viewName !== "ACTIVE"
-                  ? "Aktywny"
-                  : "Nieaktywny",
-        };
+        let newStatus: CustomerStatus = customerTemp.value?.customerStatus === CustomerStatus.ACTIVE
+                  ? CustomerStatus.INACTIVE
+                  : CustomerStatus.ACTIVE
+
         await customerStore.updateCustomerStatusDb(
             customerTemp.value?.id,
             newStatus
@@ -86,12 +79,12 @@ const submitChangeStatus = async () => {
                 customerTemp.value?.name,
             life: 3000,
           });
-        }).catch(() => {
+        }).catch((reason: AxiosError) => {
           toast.add({
             severity: "error",
-            summary: "Błąd",
+            summary: reason.message,
             detail: "Nie udało się zaaktualizować statusu klienta",
-            life: 3000,
+            life: 5000,
           });
         });
         showStatusChangeConfirmationDialog.value = false;
@@ -161,7 +154,7 @@ const submitChangeStatus = async () => {
   };
 
   onMounted(() => {
-    customerStore.getCustomersFromDb("ALL", true);
+    if (customerStore.customers.length <= 1)customerStore.getCustomersFromDb("ALL");
   });
 
   const getCustomerFullName = computed(() => {
@@ -195,7 +188,6 @@ const submitChangeStatus = async () => {
   <Panel class="my-5 mx-2">
     <template #header>
       <div class="w-full flex justify-center gap-4">
-        <h3 class="color-green">LISTA KLIENTÓW</h3>
         <div v-if="customerStore.loadingCustomer">
           <ProgressSpinner
               class="ml-3"
@@ -235,23 +227,31 @@ const submitChangeStatus = async () => {
             }"
               style="text-decoration: none"
           >
-            <OfficeButton text="Nowy klient" btn-type="ahead"/>
+            <OfficeButton text="Nowy klient" btn-type="office-regular"/>
           </router-link>
-          <Button type="button" icon="pi pi-filter-slash" label="Wyczyść" outlined @click="clearFilter()"/>
-          <IconField icon-position="left">
-            <InputIcon>
-              <i class="pi pi-search"/>
-            </InputIcon>
-            <InputText
-                v-model="filters['global'].value"
-                placeholder="wpisz tutaj..."
+          <div class="flex gap-4">
+            <IconField icon-position="left">
+              <InputIcon>
+                <i class="pi pi-search"/>
+              </InputIcon>
+              <InputText class="!max-w-32"
+                         v-model="filters['global'].value"
+                         placeholder="wyszukaj..."
+              />
+            </IconField>
+            <Button
+                type="button"
+                icon="pi pi-filter-slash"
+                outlined size="small"
+                title="Wyczyść filtry"
+                @click="clearFilter()"
             />
-          </IconField>
+          </div>
         </div>
       </template>
 
       <template #empty>
-        <h4 v-if="!customerStore.loadingCustomer" class="color-red">
+        <h4 v-if="!customerStore.loadingCustomer" class="text-red-500">
           Nie znaleziono klientów...
         </h4>
       </template>
@@ -288,13 +288,9 @@ const submitChangeStatus = async () => {
       <Column field="customerStatus" header="Status" style="width: 100px">
         <template #body="{ data, field }">
           <StatusButton
-              v-tooltip.top="{
-              value: 'Zmień status klienta (Aktywny/Nieaktywny)',
-              showDelay: 1000,
-              hideDelay: 300,
-            }"
-              :btn-type="data[field].name"
-              :color-icon="data[field].name === 'ACTIVE' ? '#2da687' : '#dc3545'"
+              title="Zmień status klienta (Aktywny/Nieaktywny)"
+              :btn-type="data[field]"
+              :color-icon="data[field] === 'ACTIVE' ? '#2da687' : '#dc3545'"
               @click="confirmStatusChange(data)"
           />
         </template>
@@ -303,20 +299,15 @@ const submitChangeStatus = async () => {
       <Column header="Akcja" :exportable="false" style="min-width: 8rem">
         <template #body="slotProps">
           <div class="flex flex-row gap-1 justify-content-end">
-            <EditButton
-                v-tooltip.top="{
-                value: 'Edytuj klienta',
-                showDelay: 1000,
-                hideDelay: 300,
-              }"
+            <OfficeIconButton
+                title="Edytuj klienta"
+                icon="pi pi-file-edit"
                 @click="editCustomer(slotProps.data)"
             />
-            <DeleteButton
-                v-tooltip.top="{
-                value: 'Usuń klienta',
-                showDelay: 1000,
-                hideDelay: 300,
-              }"
+            <OfficeIconButton
+                title="Usuń klienta"
+                icon="pi pi-trash"
+                severity="danger"
                 @click="confirmDeleteInvoice(slotProps.data)"
             />
           </div>

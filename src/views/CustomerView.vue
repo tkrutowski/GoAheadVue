@@ -2,19 +2,19 @@
 import {useCustomerStore} from "@/stores/customers";
 import {useRoute} from "vue-router";
 import {computed, onMounted, ref} from "vue";
-import {Customer} from "@/types/Customer";
+import {type Customer, CustomerStatus, CustomerType} from "@/types/Customer";
 import OfficeButton from "@/components/OfficeButton.vue";
 import {useToast} from "primevue/usetoast";
 import TheMenu from "@/components/TheMenu.vue";
 import router from "@/router";
-import {CustomerType} from "@/types/CustomerType";
-import IconButton from "@/components/IconButton.vue";
+import OfficeIconButton from "@/components/OfficeIconButton.vue";
+import {UtilsService} from "@/service/UtilsService.ts";
+import type {AxiosError} from "axios";
 
 const customerStore = useCustomerStore();
 const route = useRoute();
 
 const toast = useToast();
-let selectedCustomerType = ref<CustomerType | undefined>();
 const customer = ref<Customer>({
   id: 0,
   name: "",
@@ -22,9 +22,9 @@ const customer = ref<Customer>({
   nip: "",
   phone: "",
   mail: "",
-  customerType: undefined,
+  customerType: CustomerType.COMPANY,
   otherInfo: "",
-  customerStatus: {name: "ACTIVE", viewName: "Aktywny"},
+  customerStatus: CustomerStatus.ACTIVE,
   regon: "",
   address: {
     id: 0,
@@ -35,13 +35,10 @@ const customer = ref<Customer>({
 });
 
 const btnSaveDisabled = ref<boolean>(false);
-const btnShowError = ref<boolean>(false);
 const btnShowBusy = ref<boolean>(false);
-const btnShowOk = ref<boolean>(false);
 
 const isSaveBtnDisabled = computed(() => {
   return (
-      customerStore.loadingCustomerType ||
       customerStore.loadingCustomer ||
       btnSaveDisabled.value
   );
@@ -65,11 +62,8 @@ async function newCustomer() {
   console.log("newCustomer()");
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
-    btnShowError.value = true;
-    setTimeout(() => (btnShowError.value = false), 5000);
   } else {
     btnSaveDisabled.value = true;
-
     await customerStore.addCustomerDb(customer.value).then(() => {
       toast.add({
         severity: "success",
@@ -77,27 +71,21 @@ async function newCustomer() {
         detail: "Zapisano klienta: " + getCustomerFullName.value,
         life: 3000,
       });
-      btnShowOk.value = true;
       setTimeout(() => {
+        btnSaveDisabled.value = false
         router.push({name: "Customers"});
       }, 3000);
-    }).catch(() => {
+    }).catch((reason: AxiosError) => {
       toast.add({
         severity: "error",
-        summary: "Błąd",
-        detail: "Błąd podczas dodawania klienta.",
-        life: 3000,
+        summary: "Błąd podczas dodawania klienta.",
+        detail: (reason?.response?.data as { message: string }).message,
+        life: 5000,
       });
-      btnShowError.value = true;
-    });
-
-    btnSaveDisabled.value = false;
-    btnShowBusy.value = false;
+    }).finally(() => {
+      btnShowBusy.value = false;
+    })
     submitted.value = false;
-    setTimeout(() => {
-      btnShowError.value = false;
-      btnShowOk.value = false;
-    }, 5000);
   }
 }
 
@@ -109,8 +97,6 @@ const isEdit = ref<boolean>(false);
 async function editCustomer() {
   if (!isValid()) {
     showError("Uzupełnij brakujące elementy");
-    btnShowError.value = true;
-    setTimeout(() => (btnShowError.value = false), 5000);
   } else {
     btnSaveDisabled.value = true;
     await customerStore.updateCustomerDb(customer.value)
@@ -121,51 +107,34 @@ async function editCustomer() {
             detail: "Zaaktualizowano dane klienta: " + getCustomerFullName.value,
             life: 3000,
           });
-          btnShowOk.value = true;
           setTimeout(() => {
             router.push({name: "Customers"});
           }, 3000);
-        }).catch(() => {
+        }).catch((reason: AxiosError) => {
           toast.add({
             severity: "error",
-            summary: "Błąd",
-            detail: "Błąd podczas dodawania klienta.",
-            life: 3000,
+            summary: "Błąd podczas edycji klienta.",
+            detail: (reason?.response?.data as { message: string }).message,
+            life: 5000,
           });
-          btnShowError.value = true;
         });
-
-    // btnSaveDisabled.value = false;
-    setTimeout(() => {
-      btnShowError.value = false;
-      btnShowOk.value = false;
-      btnShowError.value = false;
-    }, 5000);
   }
 }
-
-onMounted(() => {
-  console.log("onMounted GET");
-  btnSaveDisabled.value = true;
-  customerStore.getCustomerType();
-  btnSaveDisabled.value = false;
-});
 
 onMounted(async () => {
   console.log("onMounted EDIT", route.params);
   btnSaveDisabled.value = true;
   isEdit.value = route.params.isEdit === "true";
-  if (isEdit.value === false) {
+  if (!isEdit.value) {
     console.log("onMounted NEW CUSTOMER");
   } else {
     console.log("onMounted EDIT CUSTOMER");
     const customerId = Number(route.params.customerId as string);
     customerStore
-        .getCustomerFromDb(customerId, true)
+        .getCustomerFromDb(customerId)
         .then((data) => {
           if (data) {
             customer.value = data;
-            selectedCustomerType.value = customer.value.customerType;
           }
         })
         .catch((error) => {
@@ -185,17 +154,17 @@ const showError = (msg: string) => {
     severity: "error",
     summary: "Error Message",
     detail: msg,
-    life: 3000,
+    life: 5000,
   });
 };
 const getCustomerFullName = computed(() => {
   return customer.value?.firstName + " " + customer.value?.name;
 });
 const isCompanyType = computed(() => {
-  return selectedCustomerType.value?.name === "COMPANY";
+  return customer.value.customerType === CustomerType.COMPANY;
 });
 const isValid = () => {
-  if (selectedCustomerType.value?.name === "CUSTOMER") {
+  if (customer.value.customerType === CustomerType.CUSTOMER) {
     return (
         customer.value.customerType &&
         customer.value.firstName.length > 0 &&
@@ -204,7 +173,7 @@ const isValid = () => {
         customer.value.address.zip.length > 0 &&
         customer.value.address.city.length > 0
     );
-  } else if (selectedCustomerType.value?.name === "COMPANY") {
+  } else if (customer.value.customerType === CustomerType.COMPANY) {
     return (
         customer.value.customerType &&
         customer.value.name.length > 0 &&
@@ -215,9 +184,7 @@ const isValid = () => {
     );
   } else return false;
 };
-const showErrorCustomerType = () => {
-  return submitted.value && selectedCustomerType.value == undefined;
-};
+
 const showErrorFirstName = () => {
   if (isCompanyType.value) return false;
   return submitted.value && customer.value.firstName.length <= 0;
@@ -282,20 +249,15 @@ const showErrorPhone = () => {
     >
       <Panel>
         <template #header>
-          <IconButton
-              v-tooltip.right="{
-              value: 'Powrót do listy klientów',
-              showDelay: 500,
-              hideDelay: 300,
-              class: 'pl-2',
-            }"
-              icon="pi-fw pi-list"
+          <OfficeIconButton
+              title="Powrót do listy klientów"
+              icon="pi pi-fw pi-table"
               @click="() => router.push({ name: 'Customers' })"
           />
           <div class="w-full flex justify-center gap-4">
-            <h2>
+             <span class="text-3xl">
               {{ isEdit ? `Edycja danych klienta` : "Nowy klient" }}
-            </h2>
+            </span>
             <div v-if="customerStore.loadingCustomer">
               <ProgressSpinner
                   class="ml-3"
@@ -310,28 +272,13 @@ const showErrorPhone = () => {
         <div class="flex flex-row grid">
           <div class="flex flex-col">
             <label for="input-customer">Typ klienta:</label>
-            <Dropdown
+            <Select
                 id="input-customer"
-                v-model="selectedCustomerType"
-                :class="{ 'p-invalid': showErrorCustomerType() }"
-                :options="customerStore.customerTypes"
-                option-label="viewName"
-                :onchange="
-                (customer.customerType = selectedCustomerType
-                  ? selectedCustomerType
-                  : undefined)
-              "
+                v-model="customer.customerType"
+                :options="UtilsService.getCustomerTypeOption()"
+                option-label="label"
+                option-value="value"
                 required
-            />
-            <small class="p-error">{{
-                showErrorCustomerType() ? "Pole jest wymagane." : "&nbsp;"
-              }}</small>
-          </div>
-          <div v-if="customerStore.loadingCustomerType" class="mt-4">
-            <ProgressSpinner
-                class="ml-2 mt-1"
-                style="width: 40px; height: 40px"
-                stroke-width="5"
             />
           </div>
         </div>
@@ -344,7 +291,7 @@ const showErrorPhone = () => {
                 id="input"
                 v-model="customer.firstName"
                 class="border-green"
-                :class="{ 'p-invalid': showErrorFirstName() }"
+                :invalid="showErrorFirstName()"
                 :disabled="isCompanyType"
                 maxlength="40"
             />
@@ -360,7 +307,7 @@ const showErrorPhone = () => {
                 id="input"
                 v-model="customer.name"
                 maxlength="100"
-                :class="{ 'p-invalid': showErrorName() }"
+                :invalid="showErrorName()"
             />
             <small class="p-error">{{
                 showErrorName() ? "Pole jest wymagane." : "&nbsp;"
@@ -376,7 +323,7 @@ const showErrorPhone = () => {
                 id="nip"
                 v-model="customer.nip"
                 class="border-green"
-                :class="{ 'p-invalid': showErrorNip() }"
+                :invalid="showErrorNip()"
                 maxlength="100"
             />
             <small class="p-error">{{
@@ -389,7 +336,7 @@ const showErrorPhone = () => {
             <InputText
                 id="regon"
                 v-model="customer.regon"
-                :class="{ 'p-invalid': showErrorRegon() }"
+                :invalid="showErrorRegon()"
                 maxlength="100"
                 :disabled="!isCompanyType"
             />
@@ -407,7 +354,7 @@ const showErrorPhone = () => {
                 id="street"
                 v-model="customer.address.street"
                 class="border-green"
-                :class="{ 'p-invalid': showErrorStreet() }"
+                :invalid="showErrorStreet()"
                 maxlength="100"
             />
             <small class="p-error">{{
@@ -420,7 +367,7 @@ const showErrorPhone = () => {
                 id="zip"
                 v-model="customer.address.zip"
                 maxlength="6"
-                :class="{ 'p-invalid': showErrorZip() }"
+                :invalid="showErrorZip()"
             />
             <small class="p-error">{{
                 showErrorZip() ? "Format 61754 lub 61-754." : "&nbsp;"
@@ -432,7 +379,7 @@ const showErrorPhone = () => {
                 id="city"
                 v-model="customer.address.city"
                 maxlength="100"
-                :class="{ 'p-invalid': showErrorCity() }"
+                :invalid="showErrorCity()"
             />
             <small class="p-error">{{
                 showErrorCity() ? "Pole jest wymagane." : "&nbsp;"
@@ -448,7 +395,7 @@ const showErrorPhone = () => {
                 id="mail"
                 v-model="customer.mail"
                 class="border-green"
-                :class="{ 'p-invalid': showErrorMail() }"
+                :invalid="showErrorMail()"
                 maxlength="100"
             />
             <small class="p-error">{{
@@ -461,7 +408,7 @@ const showErrorPhone = () => {
                 id="phone"
                 v-model="customer.phone"
                 maxlength="15"
-                :class="{ 'p-invalid': showErrorPhone() }"
+                :invalid="showErrorPhone()"
             />
             <small class="p-error">{{
                 showErrorPhone() ? "Niepoprawny format." : "&nbsp;"
@@ -481,11 +428,9 @@ const showErrorPhone = () => {
         <div class="flex mt-5 justify-center">
           <OfficeButton
               text="zapisz"
-              btn-type="ahead-save"
+              btn-type="office-save"
               type="submit"
               :is-busy-icon="btnShowBusy"
-              :is-error-icon="btnShowError"
-              :is-ok-icon="btnShowOk"
               :btn-disabled="isSaveBtnDisabled"
           />
         </div>

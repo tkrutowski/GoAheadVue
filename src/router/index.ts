@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
+import { createRouter, createWebHistory,type RouteRecordRaw } from "vue-router";
 import HomeView from "../views/HomeView.vue";
 import LoginView from "@/views/LoginView.vue";
 import Error503View from "@/views/Error503View.vue";
@@ -8,6 +8,7 @@ import CustomersView from "@/views/CustomersView.vue";
 import CustomerView from "@/views/CustomerView.vue";
 import {useAuthorizationStore} from "@/stores/authorization.ts";
 import RefreshComponent from "@/components/RefreshComponent.vue";
+import Error403View from "@/views/Error403View.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -24,6 +25,11 @@ const routes: Array<RouteRecordRaw> = [
     path: "/error",
     name: "Error503",
     component: Error503View,
+  },
+  {
+    path: '/error403',
+    name: 'Error403',
+    component: Error403View,
   },
   {
     path: '/refresh',

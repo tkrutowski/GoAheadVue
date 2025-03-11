@@ -1,14 +1,11 @@
+<script setup lang="ts">
+</script>
+
 <template>
   <div id="footer">
     <!-- <p class=" d-none d-md-block "> ⓒ 2022 ProgasOffice </p> -->
   </div>
 </template>
-
-<script>
-export default {
-  name: "TheFooter",
-};
-</script>
 
 <style>
 #footer {

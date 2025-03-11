@@ -7,7 +7,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AddEditInvoiceItemDialog: typeof import('./src/components/AddEditInvoiceItemDialog.vue')['default']
     Button: typeof import('primevue/button')['default']
     Calendar: typeof import('primevue/calendar')['default']
     Chart: typeof import('primevue/chart')['default']
@@ -16,14 +15,9 @@ declare module 'vue' {
     ConfirmationDialog: typeof import('./src/components/ConfirmationDialog.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     DatePicker: typeof import('primevue/datepicker')['default']
-    DeleteButton: typeof import('./src/components/DeleteButton.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
-    Dropdown: typeof import('primevue/dropdown')['default']
-    EditButton: typeof import('./src/components/EditButton.vue')['default']
     Fieldset: typeof import('primevue/fieldset')['default']
-    FileButton: typeof import('./src/components/FileButton.vue')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
-    IconButton: typeof import('./src/components/IconButton.vue')['default']
     IconField: typeof import('primevue/iconfield')['default']
     InformationDialog: typeof import('./src/components/InformationDialog.vue')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
@@ -31,7 +25,9 @@ declare module 'vue' {
     InputText: typeof import('primevue/inputtext')['default']
     LoadingDialog: typeof import('./src/components/LoadingDialog.vue')['default']
     Menubar: typeof import('primevue/menubar')['default']
+    MultiSelect: typeof import('primevue/multiselect')['default']
     OfficeButton: typeof import('./src/components/OfficeButton.vue')['default']
+    OfficeIconButton: typeof import('./src/components/OfficeIconButton.vue')['default']
     Panel: typeof import('primevue/panel')['default']
     Password: typeof import('primevue/password')['default']
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
@@ -47,8 +43,5 @@ declare module 'vue' {
     TheMenu: typeof import('./src/components/TheMenu.vue')['default']
     ThemeSwitcher: typeof import('./src/components/ThemeSwitcher.vue')['default']
     Toast: typeof import('primevue/toast')['default']
-  }
-  export interface ComponentCustomProperties {
-    Tooltip: typeof import('primevue/tooltip')['default']
   }
 }

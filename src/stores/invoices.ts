@@ -1,10 +1,7 @@
 import {defineStore} from "pinia";
-import httpCommon from "@/http-common";
-import {Invoice, InvoiceDto} from "@/types/Invoice";
-import {PaymentStatus} from "@/types/PaymentStatus";
-import {PaymentMethod} from "@/types/PaymentMethod";
-import {ErrorService} from "@/service/ErrorService";
-import {useCustomerStore} from "@/stores/customers.ts";
+import httpCommon from "@/config/http-common.ts";
+import {type Invoice, PaymentMethod, PaymentStatus} from "@/types/Invoice";
+import moment from "moment";
 
 export const useInvoiceStore = defineStore("invoice", {
     state: () => ({
@@ -25,31 +22,6 @@ export const useInvoiceStore = defineStore("invoice", {
     getters: {
         getSortedInvoices: (state) =>
             state.invoices.sort((a, b) => a.idInvoice - b.idInvoice),
-        getInvoiceDtos: (state) => {
-            const customerStore=useCustomerStore();
-            const invoicesDtos = JSON.parse(JSON.stringify(state.invoices));
-            const dtos = invoicesDtos.map(invoice => {
-                const dto: InvoiceDto = {};
-                dto.idInvoice = invoice.idInvoice;
-                dto.amount = invoice.amount;
-                dto.invoiceDate = new Date(invoice.invoiceDate);
-                dto.invoiceItems = invoice.invoiceItems;
-                dto.invoiceNumber = invoice.invoiceNumber;
-                dto.customer = customerStore.getCustomerById(invoice.idCustomer)?.firstName + " " + customerStore.getCustomerById(invoice.idCustomer)?.name;
-                dto.otherInfo = invoice.otherInfo;
-                dto.paymentDate = new Date(invoice.paymentDate);
-                dto.paymentDeadline = invoice.paymentDeadline;
-                dto.paymentMethod = invoice.paymentMethod.viewName;
-                dto.paymentStatus = invoice.paymentStatus.name;
-                dto.sellDate = new Date(invoice.sellDate);
-                return dto;
-            })
-            return dtos;
-        },
-        // getCustomerName: (state) => {
-        //   const all = state.invoices.map((inv) => inv.customerName);
-        //   return [...new Set(all)];
-        // },
     },
     //actions = metody w komponentach
     actions: {
@@ -66,7 +38,7 @@ export const useInvoiceStore = defineStore("invoice", {
                 console.log("Downloaded Invoices ", this.invoices.length);
             }
             const result = this.invoices.filter(
-                (invoice) => invoice.idCustomer === customerId
+                (invoice: Invoice) => invoice.customer !== null && invoice.customer.id === customerId
             );
             console.log("geCustomerInvoices() size: ", result.length);
             return result;
@@ -75,18 +47,25 @@ export const useInvoiceStore = defineStore("invoice", {
         //
         //GET LATEST INVOICE ITEM
         //
-        getLatestItemForCustomer(customerId: number) {
+        getLatestItemForCustomer(customerId: number | undefined) {
             console.log("getLatestItemForCustomer() ", customerId);
+            if (customerId === undefined) {
+                return null;
+            }
             const itemsForId = this.invoices.filter(
-                (invoice) => invoice.idCustomer === customerId
+                (invoice) => invoice.customer?.id === customerId
             );
             if (itemsForId.length === 0) {
                 return null;
             }
             itemsForId.sort(
-                (a, b) =>
-                    new Date(b.sellDate).getTime() - new Date(a.sellDate).getTime()
+                (a: Invoice, b: Invoice) => {
+                    const dateA = a.sellDate ? new Date(a.sellDate).getTime() : 0;
+                    const dateB = b.sellDate ? new Date(b.sellDate).getTime() : 0;
+                    return dateB - dateA;
+                }
             );
+
 
             return itemsForId[0].invoiceItems[0];
         },
@@ -97,33 +76,13 @@ export const useInvoiceStore = defineStore("invoice", {
         async getInvoicesFromDb(paymentStatus: string): Promise<void> {
             console.log("START - getInvoicesFromDb(" + paymentStatus + ")");
             this.loadingInvoices = true;
-            try {
-                if (this.invoices.length === 0) {
-                    const response = await httpCommon.get(`/goahead/invoice?status=` + paymentStatus);
-                    console.log(
-                        "getInvoicesFromDb() - Ilosc faktur[]: " + response.data.length
-                    );
-                    this.invoices = response.data.map((invoice: any) => ({
-                        ...invoice,
-                        invoiceDate: new Date(invoice.invoiceDate), // Konwersja na obiekt Date
-                        sellDate: invoice.sellDate ? new Date(invoice.sellDate) : undefined, // Konwersja jeśli data istnieje
-                        paymentDate: invoice.paymentDate ? new Date(invoice.paymentDate) : undefined, // Konwersja jeśli data istnieje
-                    }));
-                    console.log("getInvoicesFromDb()", this.invoices);
-                } else {
-                    console.log("getCustomersFromDb() - BEZ GET");
-                }
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR getInvoicesFromDb(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-            } finally {
-                this.loadingInvoices = false;
-                console.log("END - getInvoicesFromDb(" + paymentStatus + ")");
-            }
+            const response = await httpCommon.get(`/goahead/invoice?status=` + paymentStatus);
+            console.log(
+                "getInvoicesFromDb() - Ilosc faktur[]: " + response.data.length
+            );
+            this.invoices = response.data.map((invoice: any) => this.convertResponse(invoice));
+            this.loadingInvoices = false;
+            console.log("END - getInvoicesFromDb(" + paymentStatus + ")");
         },
 
         //
@@ -132,20 +91,10 @@ export const useInvoiceStore = defineStore("invoice", {
         async getInvoiceFromDb(invoiceId: number): Promise<Invoice | undefined> {
             console.log("START - getInvoiceFromDb(" + invoiceId + ")");
             this.loadingInvoices = true;
-            try {
-                const response = await httpCommon.get(`/goahead/invoice/` + invoiceId);
-                return response.data;
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR getInvoicesFromDb(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-            } finally {
-                this.loadingInvoices = false;
-                console.log("END - getInvoiceFromDb()");
-            }
+            const response = await httpCommon.get(`/goahead/invoice/` + invoiceId);
+            this.loadingInvoices = false;
+            console.log("END - getInvoiceFromDb()");
+            return this.convertResponse(response.data);
         },
 
         //
@@ -153,24 +102,11 @@ export const useInvoiceStore = defineStore("invoice", {
         //
         async updateInvoiceStatusDb(invoiceId: number, status: PaymentStatus) {
             console.log("START - updateInvoiceStatusDb()");
-            try {
-                await httpCommon.put(
-                    `/goahead/invoice/paymentstatus/` + invoiceId,{value: status.name});
-                const inv = this.invoices.find((inv) => inv.idInvoice === invoiceId);
-                if (inv) {
-                    inv.paymentStatus = status;
-                }
-                return true;
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR updateInvoiceStatusDb(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-                return false;
-            } finally {
-                console.log("END - updateInvoiceStatusDb()");
+            await httpCommon.put(
+                `/goahead/invoice/paymentstatus/` + invoiceId, {value: status});
+            const inv = this.invoices.find((inv) => inv.idInvoice === invoiceId);
+            if (inv) {
+                inv.paymentStatus = status;
             }
         },
 
@@ -178,22 +114,17 @@ export const useInvoiceStore = defineStore("invoice", {
         //ADD INVOICE
         //
         async addInvoiceDb(invoice: Invoice) {
-            console.log("START - addInvoiceDb()");
-            try {
-                const response = await httpCommon.post(`/goahead/invoice`, invoice);
-                this.invoices.push(response.data);
-                return true;
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR: ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-                return false;
-            } finally {
-                console.log("END - addInvoiceDb()");
-            }
+            console.log("START - addInvoiceDb()", invoice);
+            const payload = {
+                ...invoice,
+                invoiceDate: invoice.invoiceDate ? moment(invoice.invoiceDate).format("YYYY-MM-DD") : null,
+                sellDate: invoice.sellDate ? moment(invoice.sellDate).format("YYYY-MM-DD") : null,
+                paymentDate: invoice.paymentDate ? moment(invoice.paymentDate).format("YYYY-MM-DD") : null,
+            };
+            console.log("payload", payload);
+            const response = await httpCommon.post(`/goahead/invoice`, payload);
+            this.invoices.push(this.convertResponse(response.data));
+            console.log("END - addInvoiceDb()");
         },
 
         //
@@ -201,24 +132,18 @@ export const useInvoiceStore = defineStore("invoice", {
         //
         async updateInvoiceDb(invoice: Invoice) {
             console.log("START - updateInvoiceDb()");
-            try {
-                const response = await httpCommon.put(`/goahead/invoice`, invoice);
-                const index = this.invoices.findIndex(
-                    (inv) => inv.idInvoice === invoice.idInvoice
-                );
-                if (index !== -1) this.invoices.splice(index, 1, response.data);
-                return true;
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR updateInvoiceStatusDb(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-                return false;
-            } finally {
-                console.log("END - updateInvoiceStatusDb()");
-            }
+            const payload = {
+                ...invoice,
+                invoiceDate: invoice.invoiceDate ? moment(invoice.invoiceDate).format("YYYY-MM-DD") : null,
+                sellDate: invoice.sellDate ? moment(invoice.sellDate).format("YYYY-MM-DD") : null,
+                paymentDate: invoice.paymentDate ? moment(invoice.paymentDate).format("YYYY-MM-DD") : null,
+            };
+            const response = await httpCommon.put(`/goahead/invoice`, payload);
+            const index = this.invoices.findIndex(
+                (inv) => inv.idInvoice === invoice.idInvoice
+            );
+            if (index !== -1) this.invoices.splice(index, 1, this.convertResponse(response.data));
+            console.log("END - updateInvoiceStatusDb()");
         },
 
         //
@@ -226,24 +151,12 @@ export const useInvoiceStore = defineStore("invoice", {
         //
         async deleteInvoiceDb(invoiceId: number) {
             console.log("START - deleteInvoiceDb()");
-            try {
-                await httpCommon.delete(`/goahead/invoice/` + invoiceId);
-                const index = this.invoices.findIndex(
-                    (inv) => inv.idInvoice === invoiceId
-                );
-                if (index !== -1) this.invoices.splice(index, 1);
-                return true;
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR deleteInvoiceDb(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-                return false;
-            } finally {
-                console.log("END - deleteInvoiceDb()");
-            }
+            await httpCommon.delete(`/goahead/invoice/` + invoiceId);
+            const index = this.invoices.findIndex(
+                (inv) => inv.idInvoice === invoiceId
+            );
+            if (index !== -1) this.invoices.splice(index, 1);
+            console.log("END - deleteInvoiceDb()");
         },
 
         //
@@ -273,25 +186,14 @@ export const useInvoiceStore = defineStore("invoice", {
         //
         async getPaymentType() {
             console.log("START - getPaymentType()");
+            if (this.paymentTypes.length === 0) {
             this.loadingPaymentType = true;
-            try {
-                if (this.paymentTypes.length === 0) {
-                    const response = await httpCommon.get(
-                        `/goahead/invoice/paymenttype`);
-                    this.paymentTypes = response.data;
-                } else {
-                    console.log("getPaymentType() - BEZ GET");
-                }
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR getPaymentType(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-            } finally {
-                this.loadingPaymentType = false;
-                console.log("END - getPaymentType()");
+                const response = await httpCommon.get(
+                    `/goahead/invoice/paymenttype`)
+                    .finally(() => this.loadingPaymentType = false);
+                this.paymentTypes = response.data;
+            } else {
+                console.log("getPaymentType() - BEZ GET");
             }
         },
 
@@ -301,30 +203,30 @@ export const useInvoiceStore = defineStore("invoice", {
         async getInvoicePdfFromDb(invoiceID: number) {
             console.log("START - getInvoicePdfFromDb()");
             this.loadingFile = true;
-            try {
-                 const response = await httpCommon.get(
-                    `/goahead/invoice/pdf/` + invoiceID,
-                    {
-                        responseType: "blob",
-                    }
-                );
-                 console.log("getInvoicePdfFromDb",response);
-                // Sprawdzenie, czy odpowiedź jest prawidłowa
-                if (response.status !== 200) {
-                    throw new Error(`Błąd serwera: ${response.status}`);
+            const response = await httpCommon.get(
+                `/goahead/invoice/pdf/` + invoiceID,
+                {
+                    responseType: "blob",
                 }
-                return response
-            } catch (e) {
-                if (ErrorService.isAxiosError(e)) {
-                    console.log("ERROR getInvoicePdfFromDb(): ", e);
-                    ErrorService.validateError(e);
-                } else {
-                    console.log("An unexpected error occurred: ", e);
-                }
-            } finally {
-                this.loadingFile = false;
-                console.log("END - getInvoicePdfFromDb()");
+            );
+            console.log("getInvoicePdfFromDb", response);
+            // Sprawdzenie, czy odpowiedź jest prawidłowa
+            if (response.status !== 200) {
+                throw new Error(`Błąd serwera: ${response.status}`);
             }
+            this.loadingFile = false;
+            console.log("END - getInvoicePdfFromDb()");
+            return response
         },
+
+        convertResponse(invoice: Invoice) {
+            // console.log("getInvoicesFromDb()", invoice);
+            return {
+                ...invoice,
+                invoiceDate: invoice.invoiceDate ? new Date(invoice.invoiceDate) : null,
+                sellDate: invoice.sellDate ? new Date(invoice.sellDate) : null,
+                paymentDate: invoice.paymentDate ? new Date(invoice.paymentDate) : null,
+            }
+        }
     },
 });

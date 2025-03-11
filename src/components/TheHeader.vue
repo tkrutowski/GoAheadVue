@@ -1,32 +1,26 @@
 <script lang="ts" setup>
 import {useAuthorizationStore} from "@/stores/authorization.ts";
+import ThemeSwitcher from './ThemeSwitcher.vue'
 
 const authStore = useAuthorizationStore();
 </script>
 <template>
-  <div class="flex flex-row">
+  <div class="grid grid-cols-2 bg-primary-500 mb-2">
 
-  <div class="top-logo text-ahead-light mb-3 w-full">
-    <div class="flex flex-row justify-between">
-    <h1 class="text-left pl-3">GO AHEAD</h1>
-    <theme-switcher class="ml-3" size="large"/>
+      <div class="flex flex-col ml-2">
+        <p class="text-left text-4xl pl-3 text-surface-300">GO AHEAD</p>
+        <p class="text-left text-xl pl-3 text-surface-300">usługi językowe</p>
+        <p class="text-left text-3xl pl-3 mt-3 text-surface-300">Agnieszka Krutowska</p>
 
+      </div>
+      <div class=" flex flex-col h-full content-between " style="align-items: flex-end !important;">
+        <theme-switcher/>
+        <p
+            v-if="authStore.isAuthenticatedOrToken"
+            class="grow text-surface-300 content-end font-bold pr-1 "
+        >
+          Użytkownik: {{ authStore.username }}
+        </p>
     </div>
-    <h4 class="text-left pl-3">usługi językowe</h4>
-    <h3 class="text-left pl-3 mt-5">Agnieszka Krutowska</h3>
-  <div class="flex flex-col align-items-end pt-0">
-    <p v-if="authStore.isAuthenticatedOrToken" class="flex justify-end text-2xl font-bold pr-10 mb-10">Użytkownik:
-      {{ authStore.username }}</p>
-  </div>
-  </div>
   </div>
 </template>
-
-<style scoped>
-.top-logo {
-  height: 170px;
-  padding-top: 18px;
-  background-color: #2da687;
-  color: #e4e1d8;
-}
-</style>

@@ -1,36 +1,5 @@
-<template>
-  <Button
-    class="btn"
-    :class="{
-      ahead: btnType === 'ahead',
-      'ahead-save': btnType === 'ahead-save',
-    }"
-    :disabled="btnDisabled"
-  >
-    {{ text }}
-    <span
-      v-if="isBusyIcon"
-      class="spinner-border spinner-border-sm"
-      role="status"
-      aria-hidden="true"
-    ></span>
-    <span
-      v-if="isErrorIcon"
-      class="pi pi-times color-red"
-      role="status"
-      aria-hidden="true"
-    ></span>
-    <span
-      v-if="isOkIcon"
-      class="pi pi-check color-green"
-      role="status"
-      aria-hidden="true"
-    ></span>
-  </Button>
-</template>
-
 <script setup lang="ts">
-import ButtonType from "@/types/ButtonType";
+import type {ButtonType} from '@/types/ButtonType'
 
 defineProps({
   btnType: {
@@ -40,82 +9,80 @@ defineProps({
   },
   text: {
     type: String,
-    required: true,
+    required: false,
   },
   btnDisabled: {
     type: Boolean,
     required: false,
   },
-  isBusyIcon: {
+  loading: {
     type: Boolean,
     required: false,
   },
-  isErrorIcon: {
-    type: Boolean,
-    required: false,
-  },
-  isOkIcon: {
-    type: Boolean,
-    required: false,
-  },
-});
+})
 </script>
-
+<template>
+  <Button
+      type="button"
+      class="disabled:bg-surface-500 hover:disabled:!bg-surface-500"
+      :class="{
+      'font-bold uppercase tracking-widest border bg-primary hover:!bg-primary-700 border-primary-900 hover:!border-primary-900':
+        btnType === 'office-regular',
+      'font-bold uppercase tracking-widest border bg-red-600 hover:!bg-red-800 border-red-900 hover:!border-red-900':
+        btnType === 'office-save',
+    }"
+      :disabled="btnDisabled"
+      :loading="loading"
+      icon-pos="right"
+      :label="text"
+      size="small"
+  >
+  </Button>
+</template>
 <style scoped>
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.ahead {
+.office-regular {
   background-color: var(--office-color);
   color: #332600 !important;
   border-color: var(--office-color) !important;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   font-weight: bold;
 }
 
-.ahead:hover {
-  background-color: var(--office-color-hoover)!important;
+.office-regular:hover {
+  background-color: var(--office-color-hoover) !important;
 }
 
-.ahead:disabled {
+.office-regular:disabled {
   color: white !important;
   background-color: gray !important;
 }
 
-.ahead:focus {
+.office-regular:focus {
   outline: none !important;
   box-shadow: none !important;
 }
 
-.ahead-save {
-  display: block;
-  width: 150px;
-  background-color: rgba(220, 56, 72) !important;
-  letter-spacing: 1.2px;
+.office-save {
+  background-color: rgba(220, 56, 72, 0.7) !important;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: rgb(232, 230, 227) !important;
-  border-color: rgb(38, 140, 115, 1) !important;
   font-weight: bold;
+  color: rgb(232, 230, 227) !important;
+  border-color: rgb(128, 123, 0, 1) !important;
 }
 
-.ahead-save:hover {
+.office-save:hover {
   color: white !important;
-  background-color: #ad1f2d !important;
+  background-color: rgba(220, 56, 72) !important;
 }
 
-.ahead-save:disabled {
+.office-save:disabled {
   color: white !important;
   background-color: gray !important;
 }
 
-.ahead-save:focus {
+.office-save:focus {
   outline: none !important;
   box-shadow: none !important;
 }

@@ -1,23 +1,15 @@
-import "primeicons/primeicons.css";
-import "./style.css";
-import "./flags.css";
-
-import { createApp, markRaw } from "vue";
 import PrimeVue from "primevue/config";
+import { createApp, markRaw } from "vue";
+import "./style.css";
+import './assets/tailwind.css'
+import App from "./App.vue";
+import "primeicons/primeicons.css";
+import type { Router } from "vue-router";
+import router from "./router";
 import ConfirmationService from 'primevue/confirmationservice';
 import DialogService from 'primevue/dialogservice'
 import ToastService from "primevue/toastservice";
-
-import App from "./App.vue";
-// @ts-ignore
-import AppState from '@/plugins/appState.js';
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue';
-// @ts-ignore
-import Noir from './presets/Noir.js';
-import type { Router } from "vue-router";
-import router from "./router";
 import { createPinia } from "pinia";
-
 
 declare module "pinia" {
     export interface PiniaCustomProperties {
@@ -33,17 +25,10 @@ pinia.use(({ store }) => {
 
 const app = createApp(App);
 
-app.use(pinia);
+app.use(createPinia());
 app.use(router);
 app.use(PrimeVue,{
-    theme: {
-        preset: Noir,
-        options: {
-            prefix: 'p',
-            darkModeSelector: '.p-dark' ,
-            cssLayer: false
-        }
-    },
+    theme: 'none',
     locale:{
         "accept": "Tak",
         "addRule": "Dodaj regułę",
@@ -245,10 +230,8 @@ app.use(PrimeVue,{
     }
 }});
 
-app.use(AppState);
 app.use(ConfirmationService);
 app.use(ToastService);
 app.use(DialogService);
 
-app.component('ThemeSwitcher', ThemeSwitcher);
 app.mount("#app");

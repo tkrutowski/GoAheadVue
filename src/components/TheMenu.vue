@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import {computed, ref} from "vue";
 import { useAuthorizationStore } from "@/stores/authorization";
-import OfficeButton from "@/components/OfficeButton.vue";
 import router from "@/router";
+import {useRoute} from 'vue-router';
 
-const authorizationStore = useAuthorizationStore();
+const route = useRoute();
+const authorizationStore = useAuthorizationStore()
+const activeMenu = computed(() => {
+  // console.log('activeMenu', route.path)
+  if (route.path.includes('/home')) return 'home';
+  if (route.path.includes('/customer')) return 'customer';
+  if (route.path.includes('/invoice')) return 'finance';
+  return null; // Jeśli nie pasuje do żadnego menu
+});
+
 const items = ref([
   {
     label: "Home",
     icon: "pi pi-fw pi-home",
+    class: `${activeMenu.value === 'home' ? 'active' : ''}`,
     disabled: !authorizationStore.hasAccessGoAhead,
     // to: { name: "Home" },
     command: () => {
@@ -18,6 +28,7 @@ const items = ref([
   {
     label: "Finanse",
     icon: "pi pi-fw pi-euro",
+    class: `${activeMenu.value === 'finance' ? 'active' : ''}`,
     disabled: !authorizationStore.hasAccessGoAhead,
     items: [
       {
@@ -44,6 +55,7 @@ const items = ref([
   {
     label: "Klienci",
     icon: "pi pi-fw pi-users",
+    class: `${activeMenu.value === 'customer' ? 'active' : ''}`,
     disabled: !authorizationStore.hasAccessGoAhead,
     items: [
       {
@@ -75,24 +87,22 @@ const items = ref([
         <img alt="logo" src="@/assets/logo_mini.png" height="30" class="mr-2" />
       </template>
       <template #end>
-        <div v-if="!authorizationStore.isAuthenticatedOrToken">
-          <router-link :to="{ name: 'login' }" style="text-decoration: none">
-            <OfficeButton
-              size="sm"
-              class="my-2 ml-2 my-sm-0"
-              btn-type="ahead"
-              text="zaloguj się"
-            />
-          </router-link>
-        </div>
-        <div v-else>
-          <OfficeButton
-            size="sm"
-            class="my-2 ml-2 my-sm-0"
-            btn-type="ahead"
-            text="wyloguj"
-            :onclick="authorizationStore.logout"
-          />
+        <div class="flex items-center">
+          <p class="px-5 mr-10 text-lg md:hidden text-primary font-bold">{{ activeMenu }}</p>
+          <div v-if="!authorizationStore.isAuthenticatedOrToken">
+            <router-link :to="{ name: 'login' }" style="text-decoration: none">
+              <Button class="font-bold uppercase tracking-wider" size="small" outlined>zaloguj</Button>
+            </router-link>
+          </div>
+          <div v-else>
+            <Button
+                class="font-bold uppercase tracking-wider"
+                outlined
+                size="small"
+                :onclick="authorizationStore.logout"
+            >wyloguj
+            </Button>
+          </div>
         </div>
       </template>
     </Menubar>
