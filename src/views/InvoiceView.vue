@@ -313,9 +313,6 @@ const getCustomerLabel = (option: Customer) => {
 
   <div class="m-4">
     <form @submit.stop.prevent="saveInvoice">
-      {{isEdit}}
-      {{invoice.customer}}
-      {{customerStore.getCustomerActive.length}}
       <Panel>
         <template #header>
           <OfficeIconButton
@@ -493,7 +490,7 @@ const getCustomerLabel = (option: Customer) => {
               <Column field="quantity" header="Ilość"
                       class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
                 <template #editor="{ data, field }">
-                  <InputNumber v-model="data[field]" :min="0" mode="decimal" fluid @focus="UtilsService.selectText"/>
+                  <InputNumber v-model="data[field]" :min="0" mode="decimal" :maxFractionDigits="2" fluid @focus="UtilsService.selectText"/>
                 </template>
               </Column>
 

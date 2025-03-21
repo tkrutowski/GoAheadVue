@@ -6,6 +6,7 @@ import {computed, onMounted, ref} from "vue";
 import {useInvoiceStore} from "@/stores/invoices.ts";
 import {FinanceService} from "@/service/FinanceService.ts";
 import type {Invoice} from "@/types/Invoice.ts";
+import {UtilsService} from "../service/UtilsService.ts";
 
 const invoiceStore = useInvoiceStore();
 const authorizationStore = useAuthorizationStore();
@@ -13,6 +14,7 @@ const authorizationStore = useAuthorizationStore();
 const chartData = ref();
 const chartOptions = ref();
 
+const sum2023 = ref<number>(0)
 const data2023 = computed(() => {
   // Tablica do przechowywania sumy kwot za każdy miesiąc (indeks 0 = styczeń, 11 = grudzień)
   const monthlyTotals = new Array(12).fill(0);
@@ -20,12 +22,15 @@ const data2023 = computed(() => {
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2023) // Filtrujemy faktury z roku 2023
       .forEach(invoice => {
         const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        month ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+        month && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
-
+  sum2023.value = monthlyTotals.reduce((acc, item) => {
+    return acc + item;
+  }, 0);
   return monthlyTotals; // Zwracamy sumy za każdy miesiąc
 })
 
+const sum2024 = ref<number>(0)
 const data2024 = computed(() => {
   // Tablica do przechowywania sumy kwot za każdy miesiąc (indeks 0 = styczeń, 11 = grudzień)
   const monthlyTotals = new Array(12).fill(0);
@@ -33,12 +38,15 @@ const data2024 = computed(() => {
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2024) // Filtrujemy faktury z roku 2023
       .forEach(invoice => {
         const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        month ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+        month && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
-
+  sum2024.value = monthlyTotals.reduce((acc, item) => {
+    return acc + item;
+  }, 0);
   return monthlyTotals; // Zwracamy sumy za każdy miesiąc
 })
 
+const sum2025 = ref<number>(0)
 const data2025 = computed(() => {
   // Tablica do przechowywania sumy kwot za każdy miesiąc (indeks 0 = styczeń, 11 = grudzień)
   const monthlyTotals = new Array(12).fill(0);
@@ -46,9 +54,12 @@ const data2025 = computed(() => {
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2025) // Filtrujemy faktury z roku 2023
       .forEach((invoice: Invoice) => {
         const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        month ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+        month && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
 
+  sum2025.value = monthlyTotals.reduce((acc, item) => {
+    return acc + item;
+  }, 0);
   return monthlyTotals; // Zwracamy sumy za każdy miesiąc
 })
 
@@ -167,10 +178,22 @@ onMounted(() => {
 
   <div v-else class="card" style="margin: 20px">
 <!--    <Chart type="line" :data="chartData" :options="chartOptions" style="height: 50vh;" />-->
+    <div class="w-full flex justify-center gap-4">
+      <div v-if="invoiceStore.loadingInvoices">
+        <ProgressSpinner
+            class="ml-3"
+            style="width: 35px; height: 35px"
+            stroke-width="5"
+        />
+      </div>
+    </div>
     <Chart type="bar" :data="chartData" :options="chartOptions" style="height: 50vh;" />
   </div>
 
+  <div class="ml-5 text-primary">
+    <p class="">2023 - {{UtilsService.formatCurrency(sum2023)}}</p>
+    <p class="">2024 - {{UtilsService.formatCurrency(sum2024)}}</p>
+    <p class="">2025 - {{UtilsService.formatCurrency(sum2025)}}</p>
+  </div>
   <TheFooter />
 </template>
-
-<style scoped></style>
