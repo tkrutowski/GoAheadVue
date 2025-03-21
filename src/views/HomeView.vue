@@ -22,7 +22,7 @@ const data2023 = computed(() => {
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2023) // Filtrujemy faktury z roku 2023
       .forEach(invoice => {
         const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        month && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+        month != undefined && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
   sum2023.value = monthlyTotals.reduce((acc, item) => {
     return acc + item;
@@ -38,7 +38,7 @@ const data2024 = computed(() => {
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2024) // Filtrujemy faktury z roku 2023
       .forEach(invoice => {
         const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        month && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+        month != undefined && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
   sum2024.value = monthlyTotals.reduce((acc, item) => {
     return acc + item;
@@ -54,7 +54,7 @@ const data2025 = computed(() => {
       .filter(invoice => invoice.invoiceDate && invoice.invoiceDate.getFullYear() === 2025) // Filtrujemy faktury z roku 2023
       .forEach((invoice: Invoice) => {
         const month = invoice.invoiceDate?.getMonth(); // Pobieramy numer miesiąca (0 - styczeń, 11 - grudzień)
-        month && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
+        month != undefined && month >= 0 ? monthlyTotals[month] += FinanceService.getInvoiceAmount(invoice) : 0; // Dodajemy kwotę do odpowiedniego miesiąca
       });
 
   sum2025.value = monthlyTotals.reduce((acc, item) => {

@@ -2,7 +2,7 @@
 import {useCustomerStore} from "@/stores/customers";
 import {useInvoiceStore} from "@/stores/invoices";
 import {useRoute} from "vue-router";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 import {type Customer} from "@/types/Customer";
 import {type Invoice, type InvoiceItem, PaymentMethod, PaymentStatus} from "@/types/Invoice";
 import moment from "moment";
@@ -48,6 +48,11 @@ const invoiceYear = ref<number>();
 const paymentDeadline = ref<number>();
 const btnShowBusy = ref<boolean>(false);
 const btnSaveDisabled = ref<boolean>(false);
+
+watch(invoiceYear, async (newValue) => {
+  if (!isEdit.value && newValue)
+    invoiceNumber.value = await invoiceStore.findInvoiceNumber(newValue);
+})
 
 const totalAmount = computed(() => {
   let total = invoice.value.invoiceItems.reduce((acc, item) => {
@@ -365,7 +370,6 @@ const getCustomerLabel = (option: Customer) => {
                       show-buttons
                       :min="1"
                       :max="100"
-
                   />
                 </div>
                 <div v-if="invoiceStore.loadingInvoiceNo" class="mt-6">
