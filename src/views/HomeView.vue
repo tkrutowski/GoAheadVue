@@ -161,7 +161,7 @@ const setChartOptions = () => {
 
 onMounted(() => {
   // await customerStore.getCustomersFromDb("ALL", false);
-  invoiceStore.getInvoicesFromDb("ALL");
+  // invoiceStore.getInvoicesFromDb("ALL");
   chartData.value = setChartData();
   chartOptions.value = setChartOptions();
 });
