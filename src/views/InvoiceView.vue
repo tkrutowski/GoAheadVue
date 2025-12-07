@@ -322,7 +322,7 @@ const getCustomerLabel = (option: Customer) => {
         <template #header>
           <OfficeIconButton
               title="Powrót do listy faktur."
-              class="text-primary-400 font-bold"
+              class="text-primary-400"
               icon="pi pi-arrow-left"
               @click="() => router.push({ name: 'Invoices' })"
           />
@@ -587,7 +587,7 @@ const getCustomerLabel = (option: Customer) => {
 
         <template #footer>
         <!-- ROW-6  BTN SAVE -->
-        <div class="flex justify-end py-6 bg-surface-100 dark:bg-surface-800">
+        <div class="flex justify-end py-6 bg-surface-100 dark:bg-surface-800 rounded-xl">
           <OfficeButton
               text="zapisz"
               class="mr-6"
