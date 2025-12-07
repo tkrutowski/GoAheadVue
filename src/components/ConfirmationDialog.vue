@@ -38,14 +38,12 @@ const cancel = () => {
         <OfficeButton
           text="Anuluj"
           btn-type="office-regular"
-          style="width: 80px"
           @click="cancel"
           @abort="cancel"
         ></OfficeButton>
         <OfficeButton
           :text="label"
           btn-type="office-save"
-          style="width: 80px"
           @click="save"
         ></OfficeButton>
       </div>

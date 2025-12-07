@@ -5,7 +5,6 @@ import {type Invoice, PaymentStatus} from "@/types/Invoice";
 import OfficeButton from "@/components/OfficeButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
 import router from "@/router";
-import StatusButton from "@/components/StatusButton.vue";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 import {useToast} from "primevue/usetoast";
 import {useCustomerStore} from "@/stores/customers";
@@ -200,20 +199,9 @@ const dataTableRef = ref(null);
   />
 
   <Panel>
-    <template #header>
-      <div class="w-full flex justify-center gap-4">
-        <div v-if="invoiceStore.loadingInvoices">
-          <ProgressSpinner
-              class="ml-3"
-              style="width: 35px; height: 35px"
-              stroke-width="5"
-          />
-        </div>
-      </div>
-    </template>
+
     <DataTable
         ref="dataTableRef"
-        v-if="!invoiceStore.loadingInvoices"
         v-model:expanded-rows="expandedRows"
         v-model:filters="filters"
         :value="invoiceStore.invoices"
@@ -232,13 +220,20 @@ const dataTableRef = ref(null);
         size="small"
     >
       <template #header>
-        <div class="flex justify-between">
+        <div class="flex justify-between py-3">
           <router-link
               :to="{ name: 'Invoice', params: { isEdit: 'false', invoiceId: 0 } }"
               style="text-decoration: none"
           >
             <OfficeButton text="Nowa faktura" btn-type="office-regular"/>
           </router-link>
+          <div v-if="invoiceStore.loadingInvoices">
+          <ProgressSpinner
+              class="ml-3"
+              style="width: 35px; height: 35px"
+              stroke-width="5"
+          />
+        </div>
           <div class="flex gap-4">
             <IconField icon-position="left">
               <InputIcon>
@@ -348,13 +343,15 @@ const dataTableRef = ref(null);
           <InputNumber v-model="filterModel.value" mode="currency" currency="PLN" locale="pl-PL"/>
         </template>
       </Column>
-      <Column field="paymentStatus" header="Status" style="width: 100px">
+      <Column field="paymentStatus" header="Status" style="width: 150px">
         <template #body="{ data, field }">
-          <StatusButton
-              title="Zmień status faktury (Zapłacona/Do zapłaty)"
-              :btn-type="data[field]"
-              :color-icon="data[field] === 'PAID' ? '#2da687' : '#dc3545'"
+          <Tag rounded
+              :value="data[field] === 'PAID' ? 'Zapłacona' : 'Do zapłaty'"
+              :severity="data[field] === 'PAID' ? 'success' : 'danger'"
+              :icon="data[field] === 'PAID' ? 'pi pi-check-circle' : 'pi pi-times-circle'"
+              class="cursor-pointer hover:opacity-80 transition-opacity"
               @click="confirmStatusChange(data)"
+              :title="'Zmień status faktury (Zapłacona/Do zapłaty)'"
           />
         </template>
       </Column>
@@ -363,6 +360,7 @@ const dataTableRef = ref(null);
         <template #body="slotProps">
           <div class="flex flex-row gap-1 justify-content-end">
             <OfficeIconButton
+                class="text-orange-500"
                 title="Pobierz PDF"
                 icon="pi pi-file-pdf"
                 :btn-disabled="invoiceStore.loadingFile"
@@ -374,6 +372,7 @@ const dataTableRef = ref(null);
               "
             />
             <OfficeIconButton
+            class="text-orange-500"
                 title="Edytuj fakturę"
                 icon="pi pi-file-edit"
                 @click="editItem(slotProps.data)"
@@ -381,7 +380,7 @@ const dataTableRef = ref(null);
             <OfficeIconButton
                 title="Usuń fakturę"
                 icon="pi pi-trash"
-                severity="danger"
+                class="text-red-500"
                 @click="confirmDeleteInvoice(slotProps.data)"
             />
           </div>
@@ -454,4 +453,8 @@ const dataTableRef = ref(null);
 .p-datatable .p-datatable-tbody > tr > td {
   text-align: center !important;
 }
+
+:deep(.p-panel-header) {
+    padding: 0;
+  }
 </style>

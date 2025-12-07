@@ -44,6 +44,7 @@ const props = defineProps({
 
 .icon-only :deep(.p-button-icon) {
   transition: transform 0.3s ease;
+  font-size: 1.2rem;
 }
 
 .icon-only:disabled {
