@@ -105,7 +105,7 @@ export const useAuthorizationStore = defineStore("authorization", {
             this.$reset(); //store reset
             customerStore.customers = [];
             invoiceStore.invoices = [];
-            this.router.replace({name: "login"});
+            // Przekierowanie obsługiwane przez komponent wywołujący
         },
         //
         //REFRESH

@@ -321,18 +321,19 @@ const getCustomerLabel = (option: Customer) => {
       <Panel>
         <template #header>
           <OfficeIconButton
-              title="Powrót do listy faktur"
-              icon="pi pi-fw pi-table"
+              title="Powrót do listy faktur."
+              class="text-primary-400 font-bold"
+              icon="pi pi-arrow-left"
               @click="() => router.push({ name: 'Invoices' })"
           />
           <div class="w-full flex justify-center">
-            <h3 class="">
+            <span class=" text-3xl font-bold text-surface-500 dark:text-surface-400">
               {{
                 isEdit
                     ? `Edycja faktury nr: ${invoice.invoiceNumber}`
                     : "Nowa faktura"
               }}
-            </h3>
+            </span>
           </div>
         </template>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -341,8 +342,9 @@ const getCustomerLabel = (option: Customer) => {
             <!-- ROW-1   CUSTOMER -->
             <div class="flex flex-row gap-4">
               <div class="flex flex-col w-full">
-                <label for="input-customer">Wybierz klienta:</label>
+                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input-customer">Wybierz klienta:</label>
                 <Select
+                    class="text-red-200"
                     id="input-customer"
                     v-model="invoice.customer"
                     :invalid="showErrorCustomer()"
@@ -350,6 +352,7 @@ const getCustomerLabel = (option: Customer) => {
                     :option-label="getCustomerLabel"
                     required
                     :loading="customerStore.loadingCustomer"
+                    size="large"
                 />
                 <small class="p-error">{{
                     showErrorCustomer() ? "Pole jest wymagane." : "&nbsp;"
@@ -362,7 +365,7 @@ const getCustomerLabel = (option: Customer) => {
               <!--              <div class="col">-->
               <div class="flex flex-row gap-4">
                 <div class="flex flex-col w-full ">
-                  <label for="number">Numer faktury</label>
+                  <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="number">Numer faktury</label>
                   <InputNumber
                       id="number"
                       v-model="invoiceNumber"
@@ -370,6 +373,7 @@ const getCustomerLabel = (option: Customer) => {
                       show-buttons
                       :min="1"
                       :max="100"
+                      size="large"
                   />
                 </div>
                 <div v-if="invoiceStore.loadingInvoiceNo" class="mt-6">
@@ -382,7 +386,7 @@ const getCustomerLabel = (option: Customer) => {
               </div>
               <div class="">
                 <div class="flex flex-col w-full">
-                  <label for="year">Rok faktury</label>
+                  <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="year">Rok faktury</label>
                   <InputNumber
                       id="year"
                       v-model="invoiceYear"
@@ -391,6 +395,7 @@ const getCustomerLabel = (option: Customer) => {
                       show-buttons
                       :min="2020"
                       :max="2050"
+                      size="large"
                   />
                 </div>
               </div>
@@ -399,19 +404,21 @@ const getCustomerLabel = (option: Customer) => {
             <!-- ROW-3  DATES  -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
               <div class="flex flex-col w-full mt-4 sm:mt-0">
-                <label for="input">Data wystawienia:</label>
+                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Data wystawienia:</label>
                 <Calendar
                     v-model="invoice.invoiceDate"
                     show-icon
                     date-format="yy-mm-dd"
+                    size="large"
                 />
               </div>
               <div class="flex flex-col w-full">
-                <label for="input">Data sprzedaży:</label>
+                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Data sprzedaży:</label>
                 <Calendar
                     v-model="invoice.sellDate"
                     show-icon
                     date-format="yy-mm-dd"
+                    size="large"
                 />
               </div>
             </div>
@@ -419,7 +426,7 @@ const getCustomerLabel = (option: Customer) => {
             <!-- ROW-4  LATE PAYMENT, PAYMENT_TYPE  -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
               <div class="flex flex-col w-full mt-4 sm:mt-0">
-                <label for="input">Odroczenie płatności:</label>
+                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Odroczenie płatności:</label>
                 <InputNumber
                     id="input"
                     v-model="paymentDeadline"
@@ -428,11 +435,12 @@ const getCustomerLabel = (option: Customer) => {
                     show-buttons
                     :min="0"
                     :max="90"
+                    size="large"
                 />
               </div>
               <div class="flex flex-row gap-4">
                 <div class="flex flex-col w-full">
-                  <label for="input-customer">Forma płatności:</label>
+                  <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input-customer">Forma płatności:</label>
                   <Select
                       id="input-customer"
                       v-model="invoice.paymentMethod"
@@ -441,6 +449,7 @@ const getCustomerLabel = (option: Customer) => {
                       option-value="value"
                       required
                       :loading="invoiceStore.loadingPaymentType"
+                      size="large"
                   />
                 </div>
               </div>
@@ -450,7 +459,7 @@ const getCustomerLabel = (option: Customer) => {
             <div class="flex-row flex mt-4">
               <!--              <div class="col">-->
               <div class="flex flex-col col-12 w-full">
-                <label for="input">Dodatkowe informacje:</label>
+                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Dodatkowe informacje:</label>
                 <Textarea v-model="invoice.otherInfo" rows="4" cols="30" fluid/>
               </div>
               <!--              </div>-->
@@ -459,11 +468,11 @@ const getCustomerLabel = (option: Customer) => {
 
           <!-- TABLE INVOIS_ITEMS -->
           <Fieldset class="w-full " legend="Pozycje na fakturze">
-            <DataTable :value="invoice.invoiceItems" class="pt-2" size="small"
+            <DataTable :value="invoice.invoiceItems" class="pt-2 invoice-items-table" size="small" 
                        editMode="cell" dataKey="id" @cell-edit-complete="onCellEditComplete">
               <template #header>
                 <!--        input do filtrowania na razie tutaj. Potem przenieść do navbaru-->
-                <div class="flex justify-between">
+                <div class="flex justify-end mb-3">
                   <OfficeButton
                       title="Podaj nową pozycję do faktury."
                       text="Dodaj"
@@ -475,15 +484,21 @@ const getCustomerLabel = (option: Customer) => {
               </template>
               <!-- NAME -->
               <Column field="name" header="Nazwa"
-                      class="min-w-52 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+                      class="min-w-52"
+                      headerStyle="padding-left: 1.5rem"
+                      bodyStyle="padding-left: 1.5rem; cursor: pointer">
                 <template #editor="{ data, field }">
-                  <InputText v-model="data[field]" fluid maxlength="200"/>
+                  <InputText v-model="data[field]" fluid maxlength="200" />
                 </template>
               </Column>
 
               <!-- JM -->
-              <Column field="unit" header="Jm"
-                      class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+              <Column field="unit"
+                      class="min-w-16"
+                      bodyStyle="text-align: center; cursor: pointer">
+                <template #header>
+                  <div class="w-full" style="text-align: center">Jm</div>
+                </template>
                 <template #editor="{ data, field }">
                   <InputText v-model="data[field]" fluid maxlength="10"/>
                 </template>
@@ -491,8 +506,12 @@ const getCustomerLabel = (option: Customer) => {
 
 
               <!-- QUANTITY -->
-              <Column field="quantity" header="Ilość"
-                      class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+              <Column field="quantity"
+                      class="min-w-16"
+                      bodyStyle="text-align: center; cursor: pointer">
+                <template #header>
+                  <div class="w-full" style="text-align: center">Ilość</div>
+                </template>
                 <template #editor="{ data, field }">
                   <InputNumber v-model="data[field]" :min="0" mode="decimal" :maxFractionDigits="2" fluid @focus="UtilsService.selectText"/>
                 </template>
@@ -500,8 +519,12 @@ const getCustomerLabel = (option: Customer) => {
 
 
               <!-- AMOUNT NET-->
-              <Column field="amount" header="Kwota"
-                      class="min-w-16 hover:cursor-pointer dark:hover:bg-green-950 hover:bg-green-100">
+              <Column field="amount"
+                      class="min-w-16"
+                      bodyStyle="text-align: center; cursor: pointer">
+                <template #header>
+                  <div class="w-full" style="text-align: center">Kwota</div>
+                </template>
                 <template #body="{ data }">
                   <div style="text-align: center">
                     {{ UtilsService.formatCurrency(data.amount) }}
@@ -515,29 +538,38 @@ const getCustomerLabel = (option: Customer) => {
 
 
               <!-- TOTAL AMOUNT NETT-->
-              <Column field="amount" header="Razem" class="min-w-16">
+              <Column field="amount" class="min-w-16"
+                      bodyStyle="text-align: center">
+                <template #header>
+                  <div class="w-full" style="text-align: center">Razem</div>
+                </template>
                 <template #body="{ data }">
-                  {{
-                    UtilsService.formatCurrency(data.amount * data["quantity"])
-                  }}
+                  <div style="text-align: center">
+                    {{
+                      UtilsService.formatCurrency(data.amount * data["quantity"])
+                    }}
+                  </div>
                 </template>
               </Column>
               <template #empty>
                 <span class="text-red-500">Uzupełnij dane..</span>
               </template>
 
-              <!--                EDIT, DELETE-->
+              <!--          DELETE         -->
               <Column
-                  header="Akcja"
                   :exportable="false"
-                  style="min-width: 6rem"
+                  style="width: 6rem"
+                  bodyStyle="text-align: center"
               >
+                <template #header>
+                  <div class="w-full" style="text-align: center">Akcja</div>
+                </template>
                 <template #body="slotProps">
-                  <div class="flex flex-row gap-1 justify-content-evenly">
+                  <div class="flex flex-row gap-1 justify-center">
                     <OfficeIconButton
                         title="Usuń pozycję."
+                        class="text-red-500"
                         icon="pi pi-trash"
-                        severity="danger"
                         @click="
                         confirmDeleteItem(slotProps.data, slotProps.index)
                       "
@@ -545,42 +577,50 @@ const getCustomerLabel = (option: Customer) => {
                   </div>
                 </template>
               </Column>
-              <ColumnGroup type="footer">
-                <Row>
-                  <Column
-                      :colspan="5"
-                      footer-style="text-align:right; padding-right: 8px;"
-                  >
-                    <template #footer>
-                      <p class="font-semibold">RAZEM:</p>
-                    </template>
-                  </Column>
-                  <Column footer-style="padding-left: 0">
-                    <template #footer>
-                      <p class="">
-                        {{ totalAmount }}
-                      </p>
-                    </template>
-                  </Column>
-                </Row>
-              </ColumnGroup>
+
             </DataTable>
+            <div class="invoice-items-summary flex justify-end mt-4 pt-4 border-t border-surface-500 dark:border-surface-400">
+              <p class="font-bold text-xl">RAZEM: {{ totalAmount }}</p>
+            </div>
           </Fieldset>
         </div>
 
+        <template #footer>
         <!-- ROW-6  BTN SAVE -->
-        <div class="flex justify-center mt-6">
+        <div class="flex justify-end py-6 bg-surface-100 dark:bg-surface-800">
           <OfficeButton
               text="zapisz"
+              class="mr-6"
               btn-type="office-save"
               type="submit"
               :loading="btnShowBusy"
               :btn-disabled="isSaveBtnDisabled"
           />
         </div>
+        </template>
       </Panel>
     </form>
   </div>
 </template>
+<style scoped>
+  :deep(.p-panel-header) {
+    padding-bottom: 0;
+  }
+</style>
+<style>
+/* Light mode hover styles - only for invoice items table */
+.invoice-items-table .p-datatable-tbody > tr > td:nth-child(1):hover,
+.invoice-items-table .p-datatable-tbody > tr > td:nth-child(2):hover,
+.invoice-items-table .p-datatable-tbody > tr > td:nth-child(3):hover,
+.invoice-items-table .p-datatable-tbody > tr > td:nth-child(4):hover {
+  background-color: rgb(220 252 231) !important; /* green-100 */
+}
 
-<style scoped></style>
+/* Dark mode hover styles - only for invoice items table */
+html.dark .invoice-items-table .p-datatable-tbody > tr > td:nth-child(1):hover,
+html.dark .invoice-items-table .p-datatable-tbody > tr > td:nth-child(2):hover,
+html.dark .invoice-items-table .p-datatable-tbody > tr > td:nth-child(3):hover,
+html.dark .invoice-items-table .p-datatable-tbody > tr > td:nth-child(4):hover {
+  background-color: rgb(5 46 22) !important; /* green-950 */
+}
+</style>

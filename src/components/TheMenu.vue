@@ -94,6 +94,11 @@ const navigateTo = (routeName: string, params?: Record<string, string | number>)
   openSubmenu.value = null;
 };
 
+const handleLogout = () => {
+  authorizationStore.logout();
+  router.push({ name: 'login' });
+};
+
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
   if (!target.closest('.menu-item-container')) {
@@ -171,7 +176,7 @@ onUnmounted(() => {
         <button
             v-if="authorizationStore.isAuthenticatedOrToken"
             class="rounded-full px-5 py-1.5 bg-[#3a4147] border border-primary-100 text-[#bbbbbb] font-bold uppercase tracking-[0.15em] text-base transition-all duration-200 hover:bg-[#4a5157] hover:border-primary-600 hover:text-white"
-            @click="authorizationStore.logout"
+            @click="handleLogout"
         >
           WYLOGUJ
         </button>

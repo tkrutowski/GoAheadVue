@@ -205,8 +205,8 @@
 }
 
 .p-datatable-header {
-  @apply py-3 px-4 border-b border-surface-200 dark:border-surface-700
-        bg-surface-0 dark:bg-surface-900
+  @apply py-3 px-4 border-surface-200 dark:border-surface-700
+        bg-surface-0 dark:bg-surface-800
         text-surface-700 dark:text-surface-0;
 }
 
@@ -217,10 +217,22 @@
 }
 
 .p-datatable-header-cell {
-  @apply py-3 px-4 font-normal text-left transition-colors duration-200
+  @apply py-3 px-4 font-semibold text-left text-lg transition-colors duration-200
+        border-none
+        bg-surface-300 dark:bg-[#2f363c]
+        text-surface-700 dark:text-surface-400;
+        /* @apply py-3 px-4 font-normal text-left transition-colors duration-200 
         border-b border-surface-200 dark:border-surface-700
         bg-surface-0 dark:bg-surface-900
-        text-surface-700 dark:text-surface-0;
+        text-surface-700 dark:text-surface-0;*/
+}
+
+.p-datatable-thead > tr:first-child > th:first-child {
+  @apply rounded-tl-lg;
+}
+
+.p-datatable-thead > tr:first-child > th:last-child {
+  @apply rounded-tr-lg;
 }
 
 .p-datatable-column-title {
@@ -228,7 +240,7 @@
 }
 
 .p-datatable-tbody > tr {
-  @apply bg-surface-0 dark:bg-surface-900 text-surface-700 dark:text-surface-0 transition-colors duration-200;
+  @apply bg-surface-0 dark:bg-surface-800 text-surface-700 dark:text-surface-0 transition-colors duration-200;
 }
 
 .p-datatable-tbody > tr > td {
@@ -375,7 +387,7 @@
 }
 
 .p-datatable.p-datatable-sm .p-datatable-thead > tr > th {
-  @apply py-1 px-2;
+  @apply py-3 px-2;
 }
 
 .p-datatable.p-datatable-sm .p-datatable-tbody > tr > td {
