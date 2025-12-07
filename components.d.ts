@@ -37,6 +37,7 @@ declare module 'vue' {
     Row: typeof import('primevue/row')['default']
     Select: typeof import('primevue/select')['default']
     StatusButton: typeof import('./src/components/StatusButton.vue')['default']
+    Tag: typeof import('primevue/tag')['default']
     Textarea: typeof import('primevue/textarea')['default']
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
     TheHeader: typeof import('./src/components/TheHeader.vue')['default']
