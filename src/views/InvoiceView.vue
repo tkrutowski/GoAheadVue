@@ -240,9 +240,7 @@ onMounted(async () => {
   isEdit.value = route.params.isEdit === "true";
   if (!isEdit.value) {
     console.log("onMounted NEW INVOICE");
-    const currentYear = new Date(Date.now()).getFullYear();
-    invoiceNumber.value = await invoiceStore.findInvoiceNumber(currentYear);
-    invoiceYear.value = currentYear;
+    invoiceYear.value = new Date(Date.now()).getFullYear();
     paymentDeadline.value = 14;
   } else {
     console.log("onMounted EDIT INVOICE");

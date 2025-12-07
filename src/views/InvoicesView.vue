@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from "vue";
-import {FilterMatchMode, FilterOperator} from '@primevue/core/api';
+import {computed, onMounted, ref, watch} from "vue";
+import {FilterMatchMode} from '@primevue/core/api';
 import {type Invoice, PaymentStatus} from "@/types/Invoice";
 import OfficeButton from "@/components/OfficeButton.vue";
 import TheMenu from "@/components/TheMenu.vue";
@@ -28,17 +28,18 @@ const initFilters = () => {
   filters.value = {
     global: {value: null, matchMode: FilterMatchMode.CONTAINS},
     customer: {value: null, matchMode: FilterMatchMode.IN},
-    sellDate: {operator: FilterOperator.AND, constraints: [{value: null, matchMode: FilterMatchMode.DATE_IS}]},
-    invoiceDate: {operator: FilterOperator.AND, constraints: [{value: null, matchMode: FilterMatchMode.DATE_IS}]},
-    paymentDate: {operator: FilterOperator.AND, constraints: [{value: null, matchMode: FilterMatchMode.DATE_IS}]},
-    amount: {operator: FilterOperator.AND, constraints: [{value: null, matchMode: FilterMatchMode.EQUALS}]},
-    invoiceNumber: {value: null, matchMode: FilterMatchMode.CONTAINS},
-
+    sellDate: {constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }],},
+    invoiceDate: {constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }],},
+    paymentDate: {constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }],},
+    amount: {constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }],},
+    number: {value: null, matchMode: FilterMatchMode.CONTAINS},
+    paymentStatus: {value: null, matchMode: FilterMatchMode.EQUALS},
   };
 }
 initFilters();
-const clearFilter = () => {
+const clearFilter = async () => {
   initFilters();
+  await invoiceStore.filterInvoices(filters.value);
 };
 
 const expandedRows = ref([]);
@@ -150,6 +151,10 @@ const downloadPdf = (idInvoice: number, invoiceNumber: string) => {
           detail: "Nie udało się utworzyć PDF dla faktury nr: " + invoiceNumber,
           life: 3000,
         });
+      })
+      .finally(() => {
+        invoiceStore.loadingFile = false;
+        console.log("END - downloadPdf for ", invoiceNumber)
       });
 }
 
@@ -165,19 +170,52 @@ const editItem = (item: Invoice) => {
   });
 };
 
-onMounted( () => {
-  if (customerStore.customers.length <=1 ) customerStore.getCustomersFromDb("ALL");
-  if (invoiceStore.invoices.length <= 1) invoiceStore.getInvoicesFromDb("ALL");
+onMounted( async () => {
+  if (customerStore.customers.length <= 1) customerStore.getCustomersFromDb("ALL");
+  if (invoiceStore.invoices.length === 0 && !invoiceStore.loadingInvoices) {
+    await invoiceStore.filterInvoices(filters.value);
+  }
 });
 
-const handleRowsPerPageChange = (event: DataTablePageEvent) => {
-  localStorage.setItem("rowsPerPageInvoice", event.rows.toString());
+const handlePageChange = async (event: DataTablePageEvent) => {
+  console.log('handlePageChange()', event);
+  invoiceStore.updateRowsPerPage(event.rows);
+  await invoiceStore.getInvoicesFromDb(event.page, event.rows);
+};
+
+const handleSort = async (event: any) => {
+  console.log('handleSort()', event);
+  await invoiceStore.sortInvoices(event.sortField, event.sortOrder);
+};
+
+const handleFilter = async () => {
+  console.log('handleFilter()', filters.value);
+  await invoiceStore.filterInvoices(filters.value);
 };
 
 const getCustomerLabel = (customer: Customer) => {
   return `${customer.name} ${customer.firstName}`;
 }
 
+// Obsługa wyszukiwania globalnego z debounce
+let searchTimeout: NodeJS.Timeout | null = null;
+
+watch(
+  () => filters.value.global.value,
+  newValue => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Search when value has more than 3 letters or is empty
+    if (!newValue || newValue.length >= 3) {
+      searchTimeout = setTimeout(async () => {
+        console.log('Global search:', newValue);
+        await invoiceStore.filterInvoices(filters.value);
+      }, 500); // 500ms debounce
+    }
+  }
+);
 
 const dataTableRef = ref(null);
 </script>
@@ -209,14 +247,21 @@ const dataTableRef = ref(null);
         striped-rows
         removable-sort
         paginator
-        sort-field="invoiceNumber"
-        :sort-order="-1"
+        lazy
+        :sort-mode="'single'"
+        :sort-field="invoiceStore.sortField"
+        :sort-order="invoiceStore.sortOrder"
         :rows="invoiceStore.rowsPerPage"
+        :total-records="invoiceStore.totalInvoices"
         :rows-per-page-options="[5, 10, 20, 50]"
         table-style="min-width: 50rem"
         filter-display="menu"
-        :global-filter-fields="['customer.name', 'invoiceNumber', 'sellDate']"
-        @page="handleRowsPerPageChange"
+        :global-filter-fields="['customer.name', 'number', 'sellDate']"
+        @page="handlePageChange"
+        @sort="handleSort"
+        @filter="handleFilter"
+        paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink RowsPerPageDropdown"
+        current-page-report-template="Od {first} do {last} (Wszystkich faktur: {totalRecords})"
         size="small"
     >
       <template #header>
@@ -256,7 +301,7 @@ const dataTableRef = ref(null);
       </template>
 
       <template #empty>
-        <h4 class="color-red" v-if="!invoiceStore.loadingInvoices">
+        <h4 class="text-red-500" v-if="!invoiceStore.loadingInvoices">
           Nie znaleziono faktur...
         </h4>
       </template>
@@ -267,7 +312,7 @@ const dataTableRef = ref(null);
 
       <Column expander style="width: 5rem"/>
       <!--      INVOICE NUMBER  -->
-      <Column field="invoiceNumber" header="Nr faktury" :sortable="true">
+      <Column field="invoiceNumber" header="Nr faktury" :sortable="true" sort-field="number">
         <template #filter="{ filterModel }">
           <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
         </template>
@@ -298,7 +343,13 @@ const dataTableRef = ref(null);
         </template>
       </Column>
       <!--      SELL DATE-->
-      <Column field="sellDate" header="Data sprzedaży" :sortable="true" data-type="date">
+      <Column 
+        field="sellDate" 
+        header="Data sprzedaży" 
+        :sortable="true" 
+        data-type="date"
+        :show-filter-match-modes="true"
+      >
         <template #body="{ data }">
           {{ UtilsService.formatDateToString(data.sellDate) }}
         </template>
@@ -335,7 +386,15 @@ const dataTableRef = ref(null);
       </Column>
 
       <!--      AMOUNT-->
-      <Column field="amount" header="Wartość" style="min-width: 120px" dataType="numeric">
+      <Column 
+        field="amount" 
+        header="Wartość" 
+        style="min-width: 120px" 
+        dataType="numeric"
+        filter-field="amount"
+        :show-filter-match-modes="true"
+        :show-filter-operator="true"
+      >
         <template #body="{data}">
           {{ UtilsService.formatCurrency(FinanceService.getInvoiceAmount(data)) }}
         </template>
@@ -343,7 +402,13 @@ const dataTableRef = ref(null);
           <InputNumber v-model="filterModel.value" mode="currency" currency="PLN" locale="pl-PL"/>
         </template>
       </Column>
-      <Column field="paymentStatus" header="Status" style="width: 150px">
+      <Column 
+        field="paymentStatus" 
+        header="Status" 
+        style="width: 150px"
+        filter-field="paymentStatus"
+        :show-filter-match-modes="false"
+      >
         <template #body="{ data, field }">
           <Tag rounded
               :value="data[field] === 'PAID' ? 'Zapłacona' : 'Do zapłaty'"
@@ -352,6 +417,19 @@ const dataTableRef = ref(null);
               class="cursor-pointer hover:opacity-80 transition-opacity"
               @click="confirmStatusChange(data)"
               :title="'Zmień status faktury (Zapłacona/Do zapłaty)'"
+          />
+        </template>
+        <template #filter="{ filterModel }">
+          <Select
+            v-model="filterModel.value"
+            :options="[
+              { label: 'Zapłacona', value: 'PAID' },
+              { label: 'Do zapłaty', value: 'TO_PAY' }
+            ]"
+            option-label="label"
+            option-value="value"
+            placeholder="Wybierz..."
+            class="p-column-filter"
           />
         </template>
       </Column>
