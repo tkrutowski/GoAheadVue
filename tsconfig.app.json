@@ -7,17 +7,19 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
+
 
     /* Bundler mode */
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "preserve",
+    "paths": {
+      "vue-router": ["./node_modules/vue-router/dist/vue-router.d.mts"],
+      "@/*": ["./src/*"]
+    },
 
     /* Linting */
     "strict": true,
@@ -26,11 +28,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "types": ["node"]
+    "types": ["node", "vue-router"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "extends": [
-    "@tsconfig/node22/tsconfig.json",
     "@vue/tsconfig/tsconfig.json"
   ],
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {useCustomerStore} from "@/stores/customers";
 import {useInvoiceStore} from "@/stores/invoices";
-import {useRoute} from "vue-router";
+import {useRoute, useRouter} from "vue-router";
 import {computed, onMounted, ref, watch} from "vue";
 import {type Customer} from "@/types/Customer";
 import {type Invoice, type InvoiceItem, PaymentMethod, PaymentStatus} from "@/types/Invoice";
@@ -9,7 +9,6 @@ import moment from "moment";
 import OfficeButton from "@/components/OfficeButton.vue";
 import {useToast} from "primevue/usetoast";
 import TheMenu from "@/components/TheMenu.vue";
-import router from "@/router";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 import OfficeIconButton from "@/components/OfficeIconButton.vue";
 import {UtilsService} from "@/service/UtilsService.ts";
@@ -19,6 +18,7 @@ import type {AxiosError} from "axios";
 const customerStore = useCustomerStore();
 const invoiceStore = useInvoiceStore();
 const route = useRoute();
+const router = useRouter();
 
 const toast = useToast();
 const invoice = ref<Invoice>({

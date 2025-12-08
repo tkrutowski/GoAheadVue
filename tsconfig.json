@@ -5,10 +5,9 @@
     { "path": "./tsconfig.node.json" }
   ],
   "extends": [
-    "@tsconfig/node22/tsconfig.json",
     "@vue/tsconfig/tsconfig.json"
   ],
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node", "vue-router"]
   }
 }

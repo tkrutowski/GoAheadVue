@@ -217,7 +217,6 @@ watch(
   }
 );
 
-const dataTableRef = ref(null);
 </script>
 <template>
   <TheMenu/>
@@ -239,7 +238,6 @@ const dataTableRef = ref(null);
   <Panel>
 
     <DataTable
-        ref="dataTableRef"
         v-model:expanded-rows="expandedRows"
         v-model:filters="filters"
         :value="invoiceStore.invoices"
