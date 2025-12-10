@@ -319,6 +319,28 @@ export const useInvoiceStore = defineStore("invoice", {
             }
         },
 
+        async getStatistics() {
+            console.log("START - getStatistics()");
+            this.loadingInvoices = true;
+            const response = await httpCommon.get(
+                `/goahead/invoice/status`);
+            console.log("getStatistics", response);
+            this.loadingInvoices = false;
+            console.log("END - getStatistics()");
+            return response.data;
+        },
+
+        async getStatisticsByCustomer(year: number) {
+            console.log("START - getStatisticsByCustomer()");
+            this.loadingInvoices = true;
+            const response = await httpCommon.get(
+                `/goahead/invoice/status/${year}`);
+            console.log("getStatisticsByCustomer", response);
+            this.loadingInvoices = false;
+            console.log("END - getStatisticsByCustomer()");
+            return response.data;
+        },
+
         //
         // DOWNLOAD PDF
         //

@@ -11,7 +11,7 @@ const authStore = useAuthorizationStore();
     <div class="flex justify-between items-center px-4 py-2 min-h-[70px]">
       <!-- Left side - title in one line -->
       <div class="flex items-end gap-3 text-surface-300">
-        <p class="text-5xl font-bold uppercase m-0 font-sans tracking-wider">GO AHEAD</p>
+        <p class="text-4xl font-bold uppercase m-0 font-sans tracking-wider">GO AHEAD</p>
         <p class="text-xl m-0 font-sans">usługi językowe</p>
         <p class="text-xl m-0 font-sans">Agnieszka Krutowska</p>
       </div>
