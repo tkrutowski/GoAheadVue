@@ -5,7 +5,8 @@ import router from "@/router";
 const apiClient: AxiosInstance = axios.create({
   // baseURL: "https://goahead.focikhome.synology.me/api",
   // baseURL: "http://localhost:8077/api",
-    baseURL: 'https://pxcm6vnuy9.execute-api.eu-central-1.amazonaws.com/prod/api',
+    // baseURL: 'https://pxcm6vnuy9.execute-api.eu-central-1.amazonaws.com/prod/api',
+  baseURL: 'https://api.homeoffice.focik.net/api',
   headers: {
     "Content-type": "application/json",
   },
