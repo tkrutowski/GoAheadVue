@@ -439,7 +439,7 @@ watch(
                 class="text-orange-500"
                 title="Pobierz PDF"
                 icon="pi pi-file-pdf"
-                :btn-disabled="invoiceStore.loadingFile"
+                :loading="invoiceStore.loadingFile"
                 @click="
                 downloadPdf(
                   slotProps.data.idInvoice,
