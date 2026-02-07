@@ -1,23 +1,66 @@
 <script setup lang="ts">
 import { useAuthorizationStore } from "@/stores/authorization";
-import {onMounted, ref, watch} from "vue";
+import { onMounted, ref, watch } from "vue";
 import OfficeButton from "@/components/OfficeButton.vue";
 import router from "@/router";
+import { useToast } from "primevue/usetoast";
+import ProgressBar from "primevue/progressbar";
+import { useEc2Control } from "@/composables/useEc2Control";
+import { EC2_INSTANCE_ID } from "@/config/ec2";
+
 const authorizationStore = useAuthorizationStore();
-import {useToast} from 'primevue/usetoast'
+const toast = useToast();
+const { ensureInstanceRunning } = useEc2Control();
 
 const username = ref<string>("");
 const password = ref<string>("");
-const toast = useToast()
+
+type LoginPhase = "idle" | "checking" | "starting" | "waiting" | "waiting_app" | "logging_in";
+const loginPhase = ref<LoginPhase>("idle");
+
+const phaseMessage: Record<Exclude<LoginPhase, "idle">, string> = {
+  checking: "Sprawdzam serwer…",
+  starting: "Uruchamiam serwer…",
+  waiting: "Oczekiwanie na uruchomienie (może zająć 1–2 min)…",
+  waiting_app: "Czekam na gotowość aplikacji…",
+  logging_in: "Logowanie…",
+};
 
 onMounted(() => {
-  console.log("MOUNTED");
   authorizationStore.loginError = null;
 });
+
 async function login() {
-  let result = await authorizationStore.login(username.value, password.value);
-  if (result) {
-    goBack();
+  loginPhase.value = "checking";
+  authorizationStore.btnDisabled = true;
+
+  try {
+    await ensureInstanceRunning(EC2_INSTANCE_ID, {
+      onPhase: (p) => {
+        loginPhase.value = p;
+      },
+      waitForAppPing: async () => {
+        await authorizationStore.testPing();
+      },
+    });
+
+    loginPhase.value = "logging_in";
+    const result = await authorizationStore.login(username.value, password.value);
+    if (result) {
+      goBack();
+    }
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Nie udało się uruchomić serwera.";
+    toast.add({
+      severity: "error",
+      summary: "Logowanie",
+      detail: message,
+      life: 5000,
+    });
+  } finally {
+    loginPhase.value = "idle";
+    authorizationStore.btnDisabled = false;
   }
 }
 
@@ -92,10 +135,22 @@ function goBack(): void {
       style="width: 100%"
       btn-type="office-regular"
       type="submit"
-      :disabled="authorizationStore.btnDisabled"
+      :disabled="loginPhase !== 'idle' || authorizationStore.btnDisabled"
       :is-busy-icon="authorizationStore.busyIcon"
       >Zaloguj się
     </office-button>
+
+    <!-- EC2 / login progress -->
+    <div
+      v-if="loginPhase !== 'idle'"
+      class="mt-2 mb-2 w-full"
+    >
+      <p class="text-sm text-surface-600 dark:text-surface-400 mb-1">
+        {{ phaseMessage[loginPhase] }}
+      </p>
+      <ProgressBar mode="indeterminate" class="w-full" />
+    </div>
+
     <p class="text-right mb-4">
       <router-link class="color-gray link" to="/forgot-password"
         >Nie pamiętam hasła</router-link

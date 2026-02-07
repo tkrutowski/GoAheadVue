@@ -1,6 +1,8 @@
 <script lang="ts" setup>
-import {useAuthorizationStore} from "@/stores/authorization.ts";
-import ThemeSwitcher from './ThemeSwitcher.vue'
+import { useAuthorizationStore } from "@/stores/authorization.ts";
+import ThemeSwitcher from "./ThemeSwitcher.vue";
+import InstanceControl from "@/components/InstanceControl.vue";
+import { EC2_INSTANCE_ID, EC2_INSTANCE_NAME } from "@/config/ec2";
 
 const authStore = useAuthorizationStore();
 </script>
@@ -24,7 +26,10 @@ const authStore = useAuthorizationStore();
             <i class="pi pi-user text-[#666666] text-2xl"></i>
           </div>
         </div>
-        <ThemeSwitcher/>
+        <div class="flex justify-end items-center">
+          <InstanceControl :idInstance="EC2_INSTANCE_ID" :nameInstance="EC2_INSTANCE_NAME" />
+          <ThemeSwitcher/>
+        </div>
       </div>
     </div>
   </div>

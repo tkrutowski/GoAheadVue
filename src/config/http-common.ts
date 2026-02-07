@@ -2,11 +2,15 @@ import axios, { type AxiosInstance } from "axios";
 import { useAuthorizationStore } from "@/stores/authorization.ts";
 import router from "@/router";
 
+/** Timeout żądań (ms). Gdy EC2 jest wyłączony, requesty wiszą w pending – po tym czasie dostajemy błąd i przekierowanie na 503. */
+const REQUEST_TIMEOUT_MS = 15000;
+
 const apiClient: AxiosInstance = axios.create({
   // baseURL: "https://goahead.focikhome.synology.me/api",
   // baseURL: "http://localhost:8077/api",
     // baseURL: 'https://pxcm6vnuy9.execute-api.eu-central-1.amazonaws.com/prod/api',
   baseURL: 'https://api.homeoffice.focik.net/api',
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     "Content-type": "application/json",
   },
@@ -63,16 +67,23 @@ apiClient.interceptors.response.use(
             }
         }
 
-        // SERVER OFFLINE
-        else if (error.code == 'ERR_NETWORK' || error.code == 'ERR_CONNECTION_REFUSED') {
-            console.log('NETWORK ERROR')
+        // Serwer w ogóle nie odpowiedział (brak połączenia / timeout), nie 4xx/5xx – np. EC2 wyłączony
+        else if (
+            !error.response &&
+            (error.code === 'ERR_NETWORK' ||
+                error.code === 'ERR_CONNECTION_REFUSED' ||
+                error.code === 'ECONNABORTED')
+        ) {
+            const intendedPath = router.currentRoute.value.fullPath;
+            const isErrorPage = intendedPath.startsWith('/error');
             router.push({
                 name: 'Error503',
-            })
+                query: intendedPath && !isErrorPage ? { redirectTo: intendedPath } : undefined,
+            });
         }
-        //FORBIDDEN
-        else if (error.code == 'ERR_BAD_REQUEST' && error.message.toString().includes('403')) {
-            console.log('ERR_BAD_REQUEST', error)
+        // FORBIDDEN
+        else if (error.response?.status === 403) {
+            console.log('Forbidden (403)', error)
             router.push({
                 name: 'Error403',
             })
