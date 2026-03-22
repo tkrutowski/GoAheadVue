@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onMounted, ref, watch} from "vue";
 import {FilterMatchMode} from '@primevue/core/api';
 import {type Invoice, PaymentStatus} from "@/types/Invoice";
 import TheMenu from "@/components/TheMenu.vue";
@@ -15,6 +15,9 @@ import {AxiosError} from "axios";
 import {TranslationService} from "../service/TranslationService.ts";
 import {FinanceService} from "../service/FinanceService.ts";
 import type {DataTablePageEvent} from "primevue";
+import type {DataTableRowContextMenuEvent} from "primevue/datatable";
+import type {MenuItem} from "primevue/menuitem";
+import ContextMenu from "primevue/contextmenu";
 
 const customerStore = useCustomerStore();
 
@@ -421,6 +424,86 @@ const handleDownloadUpo = async () => {
   }
 };
 
+//
+//-------------------------------------------------CONTEXT MENU (wiersz)----------------------------------------------
+//
+const invoiceRowContextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
+const contextMenuInvoice = ref<Invoice | null>(null);
+
+const onInvoiceContextMenuHide = () => {
+  contextMenuInvoice.value = null;
+};
+
+const onInvoiceRowContextMenu = async (event: DataTableRowContextMenuEvent) => {
+  const row = event.data as Invoice;
+  const inSelection = selectedInvoices.value.some((i) => i.idInvoice === row.idInvoice);
+  if (!inSelection) {
+    selectedInvoices.value = [row];
+  }
+  contextMenuInvoice.value = row;
+  await nextTick();
+  invoiceRowContextMenu.value?.show(event.originalEvent);
+};
+
+const invoiceRowMenuModel = computed((): MenuItem[] => [
+  {
+    label: "Edytuj",
+    icon: "pi pi-pencil",
+    disabled: !canEdit.value,
+    command: () => {
+      if (selectedInvoice.value) editItem(selectedInvoice.value);
+    },
+  },
+  {
+    label: "Usuń",
+    icon: "pi pi-trash",
+    disabled: !canDelete.value,
+    command: () => confirmDeleteInvoices(),
+  },
+  {
+    label: "Generuj PDF",
+    icon: "pi pi-file-export",
+    disabled: !canGeneratePdf.value || invoiceStore.loadingFile,
+    command: () => {
+      if (selectedInvoice.value) {
+        generatePdfDownload(selectedInvoice.value.idInvoice, selectedInvoice.value.invoiceNumber);
+      }
+    },
+  },
+  { separator: true },
+  {
+    label: "KSeF",
+    icon: "pi pi-send",
+    disabled: !canKsef.value,
+    command: () => handleSendToKsef(),
+  },
+  {
+    label: "UPO",
+    icon: "pi pi-download",
+    disabled: !canUpo.value,
+    command: () => handleDownloadUpo(),
+  },
+  { separator: true },
+  {
+    label: "PDF",
+    icon: "pi pi-file-pdf",
+    disabled: !canPreviewPdfUrl.value,
+    command: () => handleOpenInvoicePdfUrls(),
+  },
+  {
+    label: "KSeF PDF",
+    icon: "pi pi-file-pdf",
+    disabled: !canKsefPdf.value,
+    command: () => handleOpenKsefPdfs(),
+  },
+  {
+    label: "UPO PDF",
+    icon: "pi pi-file-pdf",
+    disabled: !canUpoPdf.value,
+    command: () => handleOpenUpoPdfs(),
+  },
+]);
+
 </script>
 <template>
   <TheMenu/>
@@ -437,6 +520,12 @@ const handleDownloadUpo = async () => {
       label="Usuń"
       @save="submitDelete"
       @cancel="showDeleteConfirmationDialog = false"
+  />
+
+  <ContextMenu
+      ref="invoiceRowContextMenu"
+      :model="invoiceRowMenuModel"
+      @hide="onInvoiceContextMenuHide"
   />
 
   <Panel>
@@ -530,10 +619,12 @@ const handleDownloadUpo = async () => {
 
     <DataTable
         v-model:selection="selectedInvoices"
+        v-model:context-menu-selection="contextMenuInvoice"
         v-model:expanded-rows="expandedRows"
         v-model:filters="filters"
         :value="invoiceStore.invoices"
         :loading="invoiceStore.loadingInvoices"
+        context-menu
         selection-mode="multiple"
         data-key="idInvoice"
         striped-rows
@@ -552,6 +643,7 @@ const handleDownloadUpo = async () => {
         @page="handlePageChange"
         @sort="handleSort"
         @filter="handleFilter"
+        @row-contextmenu="onInvoiceRowContextMenu"
         paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink RowsPerPageDropdown"
         current-page-report-template="Od {first} do {last} (Wszystkich faktur: {totalRecords})"
         size="small"
