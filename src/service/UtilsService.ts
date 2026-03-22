@@ -120,6 +120,11 @@ export const UtilsService = {
         return `${count} miesięcy`;
     },
 
+    /** Usuwa znaki niebędące cyframi; pierwsze 10 cyfr (NIP). */
+    normalizeNipDigits(raw: string): string {
+        return String(raw).replace(/\D/g, "").slice(0, 10);
+    },
+
      hexToRgba (hex: string, alpha: number): string  {
         let r = 0, g = 0, b = 0;
 

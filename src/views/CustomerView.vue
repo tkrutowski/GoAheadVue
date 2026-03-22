@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {useCustomerStore} from "@/stores/customers";
+import {useCompanyLookupStore} from "@/stores/companyLookup";
 import {useRoute, useRouter} from "vue-router";
 import {computed, onMounted, ref} from "vue";
 import {type Customer, CustomerStatus, CustomerType} from "@/types/Customer";
@@ -11,6 +12,7 @@ import {UtilsService} from "@/service/UtilsService.ts";
 import type {AxiosError} from "axios";
 
 const customerStore = useCustomerStore();
+const companyLookupStore = useCompanyLookupStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -157,6 +159,45 @@ const showError = (msg: string) => {
     life: 5000,
   });
 };
+
+async function lookupCompanyByNip() {
+  if (!isCompanyType.value) {
+    showError("Wyszukiwanie jest dostępne dla typu firma.");
+    return;
+  }
+  const digits = UtilsService.normalizeNipDigits(customer.value.nip);
+  if (digits.length !== 10) {
+    showError("Podaj NIP jako 10 cyfr.");
+    return;
+  }
+  try {
+    const result = await companyLookupStore.lookupByNip(digits);
+    customer.value.nip = result.nip;
+    customer.value.name = result.name;
+    if (result.regon) {
+      customer.value.regon = result.regon;
+    }
+    customer.value.address.street = result.street;
+    customer.value.address.zip = result.zip;
+    customer.value.address.city = result.city;
+    toast.add({
+      severity: "success",
+      summary: "Potwierdzenie",
+      detail: "Uzupełniono dane firmy na podstawie NIP.",
+      life: 3000,
+    });
+  } catch (reason) {
+    const err = reason as AxiosError;
+    toast.add({
+      severity: "error",
+      summary: "Wyszukiwanie po NIP",
+      detail:
+          (err?.response?.data as { message?: string })?.message ??
+          "Nie udało się pobrać danych.",
+      life: 5000,
+    });
+  }
+}
 const getCustomerFullName = computed(() => {
   return customer.value?.firstName + " " + customer.value?.name;
 });
@@ -323,14 +364,27 @@ const showErrorPhone = () => {
         <div class="flex-row flex gap-4">
           <div class="flex flex-col w-full">
             <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="nip">NIP</label>
-            <InputText
-                id="nip"
-                v-model="customer.nip"
-                class="border-green"
-                :invalid="showErrorNip()"
-                maxlength="100"
-                size="large"
-            />
+            <div class="flex flex-row flex-wrap gap-2 items-end">
+              <InputText
+                  id="nip"
+                  v-model="customer.nip"
+                  class="flex-1 min-w-[12rem] border-green"
+                  :invalid="showErrorNip()"
+                  maxlength="100"
+                  size="large"
+              />
+              <span
+                  class="inline-flex shrink-0 mb-0.5 items-center [&_.p-button-icon]:text-green-600 dark:[&_.p-button-icon]:text-green-600 [&_.loading-spinner]:text-green-600 dark:[&_.loading-spinner]:text-green-600"
+                  title="Wyszukaj firmę po NIP"
+              >
+                <OfficeIconButton
+                    icon="pi pi-search"
+                    :btn-disabled="!isCompanyType || companyLookupStore.loadingLookup"
+                    :loading="companyLookupStore.loadingLookup"
+                    @click="lookupCompanyByNip"
+                />
+              </span>
+            </div>
             <small class="p-error">{{
                 showErrorNip() ? "Pole NIP musi mieć 10 znaków." : "&nbsp;"
               }}</small>

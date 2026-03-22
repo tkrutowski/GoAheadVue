@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSupplierStore } from "@/stores/suppliers";
+import { useCompanyLookupStore } from "@/stores/companyLookup";
 import { useRoute, useRouter } from "vue-router";
 import { computed, onMounted, ref } from "vue";
 import { CustomerStatus } from "@/types/Customer";
@@ -8,9 +9,11 @@ import OfficeButton from "@/components/OfficeButton.vue";
 import { useToast } from "primevue/usetoast";
 import TheMenu from "@/components/TheMenu.vue";
 import OfficeIconButton from "@/components/OfficeIconButton.vue";
+import { UtilsService } from "@/service/UtilsService.ts";
 import type { AxiosError } from "axios";
 
 const supplierStore = useSupplierStore();
+const companyLookupStore = useCompanyLookupStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -147,6 +150,38 @@ const showError = (msg: string) => {
   });
 };
 
+async function lookupSupplierByNip() {
+  const digits = UtilsService.normalizeNipDigits(supplier.value.nip);
+  if (digits.length !== 10) {
+    showError("Podaj NIP jako 10 cyfr.");
+    return;
+  }
+  try {
+    const result = await companyLookupStore.lookupByNip(digits);
+    supplier.value.nip = result.nip;
+    supplier.value.firstName = result.name;
+    supplier.value.address.street = result.street;
+    supplier.value.address.zip = result.zip;
+    supplier.value.address.city = result.city;
+    toast.add({
+      severity: "success",
+      summary: "Potwierdzenie",
+      detail: "Uzupełniono dane dostawcy na podstawie NIP.",
+      life: 3000,
+    });
+  } catch (reason) {
+    const err = reason as AxiosError;
+    toast.add({
+      severity: "error",
+      summary: "Wyszukiwanie po NIP",
+      detail:
+        (err?.response?.data as { message?: string })?.message ??
+        "Nie udało się pobrać danych.",
+      life: 5000,
+    });
+  }
+}
+
 const isValid = () => {
   return (
     supplier.value.firstName.length > 0 &&
@@ -255,14 +290,27 @@ const showErrorPhone = () => {
               for="nip"
               >NIP</label
             >
-            <InputText
-              id="nip"
-              v-model="supplier.nip"
-              class="border-green"
-              :invalid="showErrorNip()"
-              maxlength="10"
-              size="large"
-            />
+            <div class="flex flex-row flex-wrap gap-2 items-end">
+              <InputText
+                id="nip"
+                v-model="supplier.nip"
+                class="flex-1 min-w-[10rem] border-green"
+                :invalid="showErrorNip()"
+                maxlength="10"
+                size="large"
+              />
+              <span
+                class="inline-flex shrink-0 mb-0.5 items-center [&_.p-button-icon]:text-green-600 dark:[&_.p-button-icon]:text-green-600 [&_.loading-spinner]:text-green-600 dark:[&_.loading-spinner]:text-green-600"
+                title="Wyszukaj firmę po NIP"
+              >
+                <OfficeIconButton
+                  icon="pi pi-search"
+                  :btn-disabled="companyLookupStore.loadingLookup"
+                  :loading="companyLookupStore.loadingLookup"
+                  @click="lookupSupplierByNip"
+                />
+              </span>
+            </div>
             <small class="p-error">{{
               showErrorNip() ? "Pole NIP musi mieć 10 cyfr." : "\u00A0"
             }}</small>
