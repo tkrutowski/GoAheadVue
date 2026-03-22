@@ -72,11 +72,13 @@ export const UtilsService = {
             return "VAT_0"; // Domyślna wartość, jeśli `vat` jest null lub undefined
         }
 
+        if (vat.viewValue === "5%") return "VAT_5";
         if (vat.viewValue === "8%") return "VAT_8";
         if (vat.viewValue === "23%") return "VAT_23";
+        if (vat.viewValue === "ZW") return "VAT_ZW";
 
-        // Dodaj inne mapowania w zależności od wymagań
-        return "VAT_0"; // Domyślna wartość
+        // Domyślnie traktujemy jako 0%
+        return "VAT_0";
     },
 
     getPaymentMethodsOption() {

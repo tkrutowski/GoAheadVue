@@ -32,6 +32,10 @@ const invoice = ref<Invoice>({
   paymentDeadline: 14,
   paymentDate: null,
   otherInfo: "",
+  ksefNumber: "",
+  upoUrl: "",
+  ksefUrl: "",
+  pdfUrl: "",
   invoiceItems: [],
 });
 

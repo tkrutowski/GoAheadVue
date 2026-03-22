@@ -286,14 +286,15 @@ onMounted(() => {
         <template #body="slotProps">
           <div class="flex flex-row gap-1 justify-content-end">
             <OfficeIconButton
+              class="text-orange-500"
               title="Edytuj dostawcę"
               icon="pi pi-file-edit"
               @click="editSupplier(slotProps.data)"
             />
             <OfficeIconButton
+              class="text-red-500"
               title="Usuń dostawcę"
               icon="pi pi-trash"
-              severity="danger"
               @click="confirmDeleteSupplier(slotProps.data)"
             />
           </div>

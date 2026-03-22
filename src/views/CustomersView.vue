@@ -300,14 +300,15 @@ const submitChangeStatus = async () => {
         <template #body="slotProps">
           <div class="flex flex-row gap-1 justify-content-end">
             <OfficeIconButton
+                class="text-orange-500"
                 title="Edytuj klienta"
                 icon="pi pi-file-edit"
                 @click="editCustomer(slotProps.data)"
             />
             <OfficeIconButton
-                title="Usuń klienta"
+              class="text-red-500"
+              title="Usuń klienta"
                 icon="pi pi-trash"
-                severity="danger"
                 @click="confirmDeleteInvoice(slotProps.data)"
             />
           </div>

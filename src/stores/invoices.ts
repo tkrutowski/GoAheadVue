@@ -291,6 +291,29 @@ export const useInvoiceStore = defineStore("invoice", {
             console.log("END - deleteInvoiceDb()");
         },
 
+        /**
+         * Usuwa wiele faktur (po kolei), jedno odświeżenie listy na końcu.
+         */
+        async deleteInvoicesDb(invoiceIds: number[]) {
+            if (!invoiceIds?.length) return;
+            const uniqueIds = [...new Set(invoiceIds)];
+            const idsOnPage = new Set(this.invoices.map((i) => i.idInvoice));
+            const deletingFromPage = uniqueIds.filter((id) => idsOnPage.has(id));
+            const deletesAllVisible =
+                this.invoices.length > 0 &&
+                deletingFromPage.length === this.invoices.length;
+
+            for (const id of uniqueIds) {
+                await httpCommon.delete(`/goahead/invoice/` + id);
+            }
+
+            if (deletesAllVisible && this.currentPage > 0) {
+                await this.getInvoicesFromDb(this.currentPage - 1);
+            } else {
+                await this.getInvoicesFromDb(this.currentPage);
+            }
+        },
+
         //
         //FIND INVOICE NUMBER
         //
@@ -373,6 +396,28 @@ export const useInvoiceStore = defineStore("invoice", {
                 console.error("Błąd podczas pobierania PDF z S3", error);
                 throw error;
             }
+        },
+
+        /**
+         * Wysłanie faktur do KSeF. Backend przyjmuje List<Integer> invoiceIds.
+         */
+        async sendInvoicesToKsef(invoiceIds: number[]) {
+            if (!invoiceIds?.length) return;
+            console.log("START - sendInvoicesToKsef()", invoiceIds);
+            await httpCommon.post(`/goahead/invoice/ksef`, { invoiceIds });
+            await this.getInvoicesFromDb(this.currentPage);
+            console.log("END - sendInvoicesToKsef()");
+        },
+
+        /**
+         * Pobieranie potwierdzenia UPO dla faktur. Backend (docelowo) przyjmuje List<Integer> invoiceIds.
+         */
+        async downloadUpoConfirmation(invoiceIds: number[]) {
+            if (!invoiceIds?.length) return;
+            console.log("START - downloadUpoConfirmation()", invoiceIds);
+            await httpCommon.post(`/goahead/invoice/upo`, { invoiceIds });
+            await this.getInvoicesFromDb(this.currentPage);
+            console.log("END - downloadUpoConfirmation()");
         },
 
         convertResponse(invoice: Invoice) {

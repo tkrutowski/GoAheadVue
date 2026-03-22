@@ -11,6 +11,10 @@ export interface Invoice {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   otherInfo: string;
+  ksefNumber: string;
+  upoUrl: string;
+  ksefUrl: string;
+  pdfUrl: string;
   invoiceItems: InvoiceItem[];
 }
 // export default Invoice

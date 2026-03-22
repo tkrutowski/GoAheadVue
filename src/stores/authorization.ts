@@ -4,6 +4,7 @@ import jwt_decode from "jwt-decode";
 import moment from "moment";
 import {useCustomerStore} from "@/stores/customers.ts";
 import {useInvoiceStore} from "@/stores/invoices.ts";
+import {useSupplierStore} from "@/stores/suppliers.ts";
 
 export const useAuthorizationStore = defineStore("authorization", {
     state: () => ({
@@ -98,12 +99,14 @@ export const useAuthorizationStore = defineStore("authorization", {
             console.log("START - logout()");
             const customerStore = useCustomerStore();
             const invoiceStore = useInvoiceStore();
+            const supplierStore = useSupplierStore();
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("username");
             this.clearLoginError()
             this.$reset(); //store reset
             customerStore.customers = [];
+            supplierStore.suppliers = [];
             invoiceStore.invoices = [];
             // Przekierowanie obsługiwane przez komponent wywołujący
         },
