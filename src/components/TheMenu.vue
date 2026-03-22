@@ -10,8 +10,10 @@ const openSubmenu = ref<string | null>(null);
 
 const activeMenu = computed(() => {
   if (route.path.includes('/home')) return 'home';
-  if (route.path.includes('/customer')) return 'customer';
   if (route.path.includes('/invoice')) return 'finance';
+  if (route.path.includes('/cost')) return 'cost';
+  if (route.path.includes('/customer')) return 'customer';
+  if (route.path.includes('/supplier')) return 'supplier';
   return null;
 });
 
@@ -57,6 +59,25 @@ const menuItems: MenuItem[] = [
     ]
   },
   {
+    label: "Koszty",
+    icon: "pi pi-shopping-bag",
+    routeName: "Costs",
+    key: 'cost',
+    submenu: [
+      {
+        label: "Nowy koszt",
+        icon: "pi pi-file-plus",
+        routeName: "Cost",
+        params: { isEdit: "false", costId: 0 }
+      },
+      {
+        label: "Lista kosztów",
+        icon: "pi pi-list",
+        routeName: "Costs"
+      },
+    ]
+  },
+  {
     label: "Klienci",
     icon: "pi pi-users",
     routeName: "Customers",
@@ -72,6 +93,25 @@ const menuItems: MenuItem[] = [
         label: "Lista klientów",
         icon: "pi pi-bars",
         routeName: "Customers"
+      },
+    ]
+  },
+  {
+    label: "Dostawcy",
+    icon: "pi pi-truck",
+    routeName: "Suppliers",
+    key: 'supplier',
+    submenu: [
+      {
+        label: "Nowy",
+        icon: "pi pi-plus",
+        routeName: "Supplier",
+        params: { isEdit: "false", supplierId: 0 }
+      },
+      {
+        label: "Lista dostawców",
+        icon: "pi pi-list",
+        routeName: "Suppliers"
       },
     ]
   },

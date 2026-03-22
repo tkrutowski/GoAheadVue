@@ -6,6 +6,10 @@ import InvoicesView from "@/views/InvoicesView.vue";
 import InvoiceView from "@/views/InvoiceView.vue";
 import CustomersView from "@/views/CustomersView.vue";
 import CustomerView from "@/views/CustomerView.vue";
+import SuppliersView from "@/views/SuppliersView.vue";
+import SupplierView from "@/views/SupplierView.vue";
+import CostsView from "@/views/CostsView.vue";
+import CostView from "@/views/CostView.vue";
 import {useAuthorizationStore} from "@/stores/authorization.ts";
 import RefreshComponent from "@/components/RefreshComponent.vue";
 import Error403View from "@/views/Error403View.vue";
@@ -51,6 +55,18 @@ const routes: Array<RouteRecordRaw> = [
     props: true,
   },
   {
+    path: "/goahead/cost/all",
+    name: "Costs",
+    component: CostsView,
+    props: true,
+  },
+  {
+    path: "/goahead/cost/:isEdit/:costId",
+    name: "Cost",
+    component: CostView,
+    props: true,
+  },
+  {
     path: "/goahead/customer/all",
     name: "Customers",
     component: CustomersView,
@@ -60,6 +76,18 @@ const routes: Array<RouteRecordRaw> = [
     path: "/goahead/customer/:isEdit/:customerId",
     name: "Customer",
     component: CustomerView,
+    props: true,
+  },
+  {
+    path: "/goahead/supplier/all",
+    name: "Suppliers",
+    component: SuppliersView,
+    props: true,
+  },
+  {
+    path: "/goahead/supplier/:isEdit/:supplierId",
+    name: "Supplier",
+    component: SupplierView,
     props: true,
   },
   // {
