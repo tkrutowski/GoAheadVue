@@ -3,6 +3,7 @@ import {computed, onMounted, ref, watch} from "vue";
 import {FilterMatchMode} from '@primevue/core/api';
 import {type Invoice, PaymentStatus} from "@/types/Invoice";
 import TheMenu from "@/components/TheMenu.vue";
+import ToolbarActionButton from "@/components/ToolbarActionButton.vue";
 import router from "@/router";
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 import {useToast} from "primevue/usetoast";
@@ -20,20 +21,6 @@ const customerStore = useCustomerStore();
 const invoiceStore = useInvoiceStore();
 const toast = useToast();
 
-const toolbarBtnBase =
-  "rounded-full !px-4 !py-1.5 text-xs sm:text-sm font-semibold tracking-wide !border " +
-  "disabled:pointer-events-none disabled:!opacity-100 " +
-  "disabled:!bg-surface-300 disabled:!text-surface-500 disabled:!border-surface-400 " +
-  "dark:disabled:!bg-surface-600 dark:disabled:!text-surface-400 dark:disabled:!border-surface-500";
-const toolbarBtnOrange =
-  toolbarBtnBase +
-  " !text-orange-600 !border-orange-600 hover:!bg-orange-100 dark:!text-orange-400 dark:!border-orange-400 dark:hover:!bg-orange-950/60";
-const toolbarBtnRed =
-  toolbarBtnBase +
-  " !text-red-600 !border-red-600 hover:!bg-red-100 dark:!text-red-400 dark:!border-red-400 dark:hover:!bg-red-950/60";
-const toolbarBtnGreen =
-  toolbarBtnBase +
-  " !text-green-600 !border-green-600 hover:!bg-green-100 dark:!text-green-400 dark:!border-green-400 dark:hover:!bg-green-950/60";
 const toolbarBtnNowa =
   "rounded-full !px-4 !py-1.5 text-xs sm:text-sm font-semibold uppercase tracking-wide";
 
@@ -461,95 +448,71 @@ const handleDownloadUpo = async () => {
         </router-link>
       </div>
       <div class="flex min-w-0 flex-1 flex-nowrap items-center justify-center gap-2 overflow-x-auto py-0.5">
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="Edytuj"
           icon="pi pi-pencil"
-          size="small"
-          outlined
-          :class="toolbarBtnOrange"
+          variant="orange"
           :disabled="!canEdit"
           title="Edytuj fakturę"
           @click="selectedInvoice && editItem(selectedInvoice)"
         />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="Usuń"
           icon="pi pi-trash"
-          size="small"
-          outlined
-          :class="toolbarBtnRed"
+          variant="red"
           :disabled="!canDelete"
           title="Usuń zaznaczone faktury"
           @click="confirmDeleteInvoices"
         />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="Generuj PDF"
           icon="pi pi-file-export"
-          size="small"
-          outlined
-          :class="toolbarBtnOrange"
+          variant="orange"
           :disabled="!canGeneratePdf"
           :loading="invoiceStore.loadingFile"
           title="Wygeneruj i pobierz PDF (jedna zaznaczona faktura)"
           @click="selectedInvoice && generatePdfDownload(selectedInvoice.idInvoice, selectedInvoice.invoiceNumber)"
         />
         <div class="border-l border-surface-400 dark:border-surface-500 h-8 shrink-0 self-center mx-0.5" aria-hidden="true" />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="KSeF"
           icon="pi pi-send"
-          size="small"
-          outlined
-          :class="toolbarBtnGreen"
+          variant="green"
           :disabled="!canKsef"
           title="Wyślij do KSeF zaznaczone faktury"
           @click="handleSendToKsef"
         />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="UPO"
           icon="pi pi-download"
-          size="small"
-          outlined
-          :class="toolbarBtnGreen"
+          variant="green"
           :disabled="!canUpo"
           title="Pobierz potwierdzenie UPO dla zaznaczonych faktur"
           @click="handleDownloadUpo"
         />
         <div class="border-l border-surface-400 dark:border-surface-500 h-8 shrink-0 self-center mx-0.5" aria-hidden="true" />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="PDF"
           icon="pi pi-file-pdf"
-          size="small"
-          outlined
-          :class="toolbarBtnOrange"
+          variant="orange"
           :disabled="!canPreviewPdfUrl"
           title="Otwórz wygenerowany PDF"
           @click="handleOpenInvoicePdfUrls"
         />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="KSeF PDF"
           icon="pi pi-file-pdf"
-          size="small"
-          outlined
-          :class="toolbarBtnOrange"
+          variant="orange"
           :disabled="!canKsefPdf"
           title="Otwórz PDF wygenerowany przez KSeF"
           @click="handleOpenKsefPdfs"
         />
-        <Button
-          type="button"
+        <ToolbarActionButton
           label="UPO PDF"
           icon="pi pi-file-pdf"
-          size="small"
-          outlined
-          :class="toolbarBtnOrange"
+          variant="orange"
           :disabled="!canUpoPdf"
-          title="Otwórz PDF potwierdzenia UPO "
+          title="Otwórz PDF potwierdzenia UPO"
           @click="handleOpenUpoPdfs"
         />
       </div>

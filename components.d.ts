@@ -42,5 +42,6 @@ declare module 'vue' {
     TheMenu: typeof import('./src/components/TheMenu.vue')['default']
     ThemeSwitcher: typeof import('./src/components/ThemeSwitcher.vue')['default']
     Toast: typeof import('primevue/toast')['default']
+    ToolbarActionButton: typeof import('./src/components/ToolbarActionButton.vue')['default']
   }
 }
