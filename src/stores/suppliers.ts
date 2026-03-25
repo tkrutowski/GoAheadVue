@@ -20,7 +20,7 @@ export const useSupplierStore = defineStore("supplier", {
     },
     getSortedSuppliers: (state) => {
       return [...state.suppliers].sort((a: Supplier, b: Supplier) =>
-        a.firstName.localeCompare(b.firstName)
+        a.name.localeCompare(b.name)
       );
     },
     getSupplierActive: (state) =>

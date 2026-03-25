@@ -156,7 +156,7 @@ const handleFilter = async () => {
 };
 
 const getSellerLabel = (supplier: Supplier) => {
-  return supplier.firstName;
+  return supplier.name;
 };
 
 let searchTimeout: NodeJS.Timeout | null = null;

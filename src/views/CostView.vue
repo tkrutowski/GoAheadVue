@@ -253,7 +253,7 @@ const showErrorSeller = () => {
 };
 
 const getSupplierLabel = (option: Supplier) => {
-  return option.firstName;
+  return option.name;
 };
 </script>
 

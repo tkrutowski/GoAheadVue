@@ -20,7 +20,7 @@ const router = useRouter();
 const toast = useToast();
 const supplier = ref<Supplier>({
   id: 0,
-  firstName: "",
+  name: "",
   nip: "",
   phone: "",
   mail: "",
@@ -62,7 +62,7 @@ async function newSupplier() {
         toast.add({
           severity: "success",
           summary: "Potwierdzenie",
-          detail: "Zapisano dostawcę: " + supplier.value.firstName,
+          detail: "Zapisano dostawcę: " + supplier.value.name,
           life: 3000,
         });
         setTimeout(() => {
@@ -99,7 +99,7 @@ async function editSupplier() {
         toast.add({
           severity: "success",
           summary: "Potwierdzenie",
-          detail: "Zaaktualizowano dane dostawcy: " + supplier.value.firstName,
+          detail: "Zaaktualizowano dane dostawcy: " + supplier.value.name,
           life: 3000,
         });
         setTimeout(() => {
@@ -159,7 +159,7 @@ async function lookupSupplierByNip() {
   try {
     const result = await companyLookupStore.lookupByNip(digits);
     supplier.value.nip = result.nip;
-    supplier.value.firstName = result.name;
+    supplier.value.name = result.name;
     supplier.value.address.street = result.street;
     supplier.value.address.zip = result.zip;
     supplier.value.address.city = result.city;
@@ -184,7 +184,7 @@ async function lookupSupplierByNip() {
 
 const isValid = () => {
   return (
-    supplier.value.firstName.length > 0 &&
+    supplier.value.name.length > 0 &&
     /^\d{10}$/.test(supplier.value.nip) &&
     supplier.value.address.street.length > 0 &&
     supplier.value.address.zip.length > 0 &&
@@ -193,7 +193,7 @@ const isValid = () => {
 };
 
 const showErrorFirstName = () => {
-  return submitted.value && supplier.value.firstName.length <= 0;
+  return submitted.value && supplier.value.name.length <= 0;
 };
 const showErrorNip = () => {
   const isTenDigits = /^\d{10}$/.test(supplier.value.nip);
@@ -271,7 +271,7 @@ const showErrorPhone = () => {
             >
             <InputText
               id="supplier-name"
-              v-model="supplier.firstName"
+              v-model="supplier.name"
               class="border-green"
               :invalid="showErrorFirstName()"
               maxlength="100"

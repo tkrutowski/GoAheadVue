@@ -43,7 +43,7 @@ const confirmStatusChange = (supplier: Supplier) => {
 const changeStatusConfirmationMessage = computed(() => {
   if (supplierTemp.value)
     return `Czy chcesz zmienić status dostawcy <b>${
-      supplierTemp.value.firstName
+      supplierTemp.value.name
     }</b> na <b>${
       supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE
         ? "Nieaktywny"
@@ -66,7 +66,7 @@ const submitChangeStatus = async () => {
           summary: "Potwierdzenie",
           detail:
             "Zaaktualizowano status dostawcy: " +
-            supplierTemp.value?.firstName,
+            supplierTemp.value?.name,
           life: 3000,
         });
       })
@@ -95,10 +95,10 @@ const confirmDeleteSupplier = async (supplier: Supplier) => {
 
 const deleteConfirmationMessage = computed(() => {
   if (supplierTemp.value && !hasCosts.value) {
-    return `Czy chcesz usunąć dostawcę: <b>${supplierTemp.value.firstName}</b>?`;
+    return `Czy chcesz usunąć dostawcę: <b>${supplierTemp.value.name}</b>?`;
   }
   if (supplierTemp.value && hasCosts.value) {
-    return `Nie możesz usunąć dostawcy: <b>${supplierTemp.value.firstName}</b>, ponieważ są do niego przypisane koszty. <br><br>Najpierw usuń lub zmień koszty`;
+    return `Nie możesz usunąć dostawcy: <b>${supplierTemp.value.name}</b>, ponieważ są do niego przypisane koszty. <br><br>Najpierw usuń lub zmień koszty`;
   }
   return "No message";
 });
@@ -111,7 +111,7 @@ const submitDelete = async () => {
         toast.add({
           severity: "success",
           summary: "Potwierdzenie",
-          detail: "Usunięto dostawcę: " + supplierTemp.value?.firstName,
+          detail: "Usunięto dostawcę: " + supplierTemp.value?.name,
           life: 3000,
         });
       })

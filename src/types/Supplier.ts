@@ -4,7 +4,7 @@ export type { Address };
 
 export interface Supplier {
   id: number;
-  firstName: string;
+  name: string;
   nip: string;
   phone: string;
   mail: string;
