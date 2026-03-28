@@ -7,5 +7,8 @@ export interface CompanyLookupResult {
   regon: string | null;
   /** Opcjonalne — gdy brak w odpowiedzi API */
   accountNumber?: string | null;
-  address: Pick<Address, "street" | "zip" | "city">;
+  /** Zagnieżdżony adres (nazwa pola jak w JSON z Springa) */
+  addressDto: Pick<Address, "street" | "zip" | "city"> & {
+    id?: number | null;
+  };
 }

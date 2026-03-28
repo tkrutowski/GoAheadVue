@@ -40,44 +40,6 @@ const menuItems: MenuItem[] = [
     key: 'home'
   },
   {
-    label: "Finanse",
-    icon: "pi pi-wallet",
-    routeName: "Invoices",
-    key: 'finance',
-    submenu: [
-      {
-        label: "Nowa faktura",
-        icon: "pi pi-file",
-        routeName: "Invoice",
-        params: {isEdit: "false", invoiceId: 0}
-      },
-      {
-        label: "Lista faktur",
-        icon: "pi pi-list",
-        routeName: "Invoices"
-      },
-    ]
-  },
-  {
-    label: "Koszty",
-    icon: "pi pi-shopping-bag",
-    routeName: "Costs",
-    key: 'cost',
-    submenu: [
-      {
-        label: "Nowy koszt",
-        icon: "pi pi-file-plus",
-        routeName: "Cost",
-        params: { isEdit: "false", costId: 0 }
-      },
-      {
-        label: "Lista kosztów",
-        icon: "pi pi-list",
-        routeName: "Costs"
-      },
-    ]
-  },
-  {
     label: "Klienci",
     icon: "pi pi-users",
     routeName: "Customers",
@@ -93,6 +55,25 @@ const menuItems: MenuItem[] = [
         label: "Lista klientów",
         icon: "pi pi-bars",
         routeName: "Customers"
+      },
+    ]
+  },
+  {
+    label: "Faktury",
+    icon: "pi pi-wallet",
+    routeName: "Invoices",
+    key: 'finance',
+    submenu: [
+      {
+        label: "Nowa faktura",
+        icon: "pi pi-file",
+        routeName: "Invoice",
+        params: {isEdit: "false", invoiceId: 0}
+      },
+      {
+        label: "Lista faktur",
+        icon: "pi pi-list",
+        routeName: "Invoices"
       },
     ]
   },
@@ -115,6 +96,25 @@ const menuItems: MenuItem[] = [
       },
     ]
   },
+  {
+    label: "Koszty",
+    icon: "pi pi-shopping-bag",
+    routeName: "Costs",
+    key: 'cost',
+    submenu: [
+      {
+        label: "Nowy koszt",
+        icon: "pi pi-file-plus",
+        routeName: "Cost",
+        params: { isEdit: "false", costId: 0 }
+      },
+      {
+        label: "Lista kosztów",
+        icon: "pi pi-list",
+        routeName: "Costs"
+      },
+    ]
+  }
 ];
 
 const toggleSubmenu = (key: string) => {
