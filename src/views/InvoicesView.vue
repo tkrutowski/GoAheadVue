@@ -197,8 +197,12 @@ const openPdfBlobFromUrl = async (
 ): Promise<boolean> => {
   try {
     const response = await invoiceStore.getPdfFromS3(url);
-    const blobUrl = URL.createObjectURL(response.data);
-    window.open(blobUrl, "_blank");
+    // S3 często zwraca octet-stream — bez application/pdf przeglądarka pokazuje „Zapisz jako” zamiast podglądu
+    const pdfBlob = new Blob([response.data], { type: "application/pdf" });
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const w = window.open(blobUrl, "_blank");
+    if (!w) URL.revokeObjectURL(blobUrl);
+    else setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
     return true;
   } catch {
     toast.add({
