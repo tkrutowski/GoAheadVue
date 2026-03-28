@@ -177,9 +177,9 @@ async function lookupCompanyByNip() {
     if (result.regon) {
       customer.value.regon = result.regon;
     }
-    customer.value.address.street = result.street;
-    customer.value.address.zip = result.zip;
-    customer.value.address.city = result.city;
+    customer.value.address.street = result.address.street;
+    customer.value.address.zip = result.address.zip;
+    customer.value.address.city = result.address.city;
     toast.add({
       severity: "success",
       summary: "Potwierdzenie",

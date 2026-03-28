@@ -160,9 +160,9 @@ async function lookupSupplierByNip() {
     const result = await companyLookupStore.lookupByNip(digits);
     supplier.value.nip = result.nip;
     supplier.value.name = result.name;
-    supplier.value.address.street = result.street;
-    supplier.value.address.zip = result.zip;
-    supplier.value.address.city = result.city;
+    supplier.value.address.street = result.address.street;
+    supplier.value.address.zip = result.address.zip;
+    supplier.value.address.city = result.address.city;
     toast.add({
       severity: "success",
       summary: "Potwierdzenie",

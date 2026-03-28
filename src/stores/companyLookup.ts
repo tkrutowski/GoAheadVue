@@ -12,7 +12,7 @@ export const useCompanyLookupStore = defineStore("companyLookup", {
       this.loadingLookup = true;
       try {
         const response = await httpCommon.get<CompanyLookupResult>(
-          `/goahead/company/lookup?nip=${encodeURIComponent(nip)}`
+          `/goahead/lookup?nip=${encodeURIComponent(nip)}`
         );
         return response.data;
       } finally {
