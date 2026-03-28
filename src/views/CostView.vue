@@ -26,7 +26,7 @@ const toast = useToast();
 
 const cost = ref<Cost>({
   id: 0,
-  seller: null,
+  supplier: null,
   number: "",
   sellDate: new Date(),
   invoiceDate: new Date(),
@@ -35,6 +35,8 @@ const cost = ref<Cost>({
   paymentMethod: PaymentMethod.TRANSFER,
   otherInfo: "",
   ksefNumber: "",
+  ksefUrl: "",
+  pdfUrl: "",
   costItems: [],
 });
 
@@ -44,10 +46,10 @@ const costItem = ref<CostItem>({
   name: "",
   unit: "",
   quantity: 0,
-  amount: 0,
+  amountNet: 0,
   vat: Vat.VAT_23,
-  vatAmount: 0,
-  grossAmount: 0,
+  amountVat: 0,
+  amountGross: 0,
 });
 
 const vatOptions = [
@@ -159,7 +161,7 @@ const onCellEditComplete = (event: DataTableCellEditCompleteEvent) => {
   const { data, newValue, field, originalEvent } = event;
 
   switch (field) {
-    case "amount":
+    case "amountNet":
     case "quantity":
       if (UtilsService.isPositiveFloat(newValue)) {
         data[field] = newValue;
@@ -240,16 +242,16 @@ const showError = (msg: string) => {
 
 const isValid = () => {
   return (
-    cost.value.seller !== null &&
+    cost.value.supplier !== null &&
     cost.value.costItems.length > 0 &&
     cost.value.costItems.every(
-      (item) => item.quantity > 0 && item.amount > 0
+      (item) => item.quantity > 0 && item.amountNet > 0
     )
   );
 };
 
 const showErrorSeller = () => {
-  return submitted.value && cost.value.seller === null;
+  return submitted.value && cost.value.supplier === null;
 };
 
 const getSupplierLabel = (option: Supplier) => {
@@ -292,7 +294,9 @@ const getSupplierLabel = (option: Supplier) => {
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Fieldset class="w-full" legend="Dane kosztu">
-            <div class="flex flex-row gap-4">
+            <div
+              class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+            >
               <div class="flex flex-col w-full">
                 <label
                   class="pl-1 pb-1 text-surface-800 dark:text-surface-400"
@@ -301,7 +305,7 @@ const getSupplierLabel = (option: Supplier) => {
                 >
                 <Select
                   id="input-seller"
-                  v-model="cost.seller"
+                  v-model="cost.supplier"
                   :invalid="showErrorSeller()"
                   :options="supplierStore.getSupplierActive"
                   :option-label="getSupplierLabel"
@@ -314,6 +318,22 @@ const getSupplierLabel = (option: Supplier) => {
                     showErrorSeller() ? "Pole jest wymagane." : "\u00A0"
                   }}
                 </small>
+              </div>
+              <div class="flex flex-col w-full">
+                <label
+                  class="pl-1 pb-1 text-surface-800 dark:text-surface-400"
+                  for="input-cost-number"
+                  >Numer kosztu:</label
+                >
+                <InputText
+                  id="input-cost-number"
+                  v-model="cost.number"
+                  fluid
+                  maxlength="100"
+                  autocomplete="off"
+                  size="large"
+                />
+                <small class="p-error">&nbsp;</small>
               </div>
             </div>
 
@@ -477,7 +497,7 @@ const getSupplierLabel = (option: Supplier) => {
               </Column>
 
               <Column
-                field="amount"
+                field="amountNet"
                 class="min-w-16"
                 bodyStyle="text-align: center; cursor: pointer"
               >
@@ -486,7 +506,7 @@ const getSupplierLabel = (option: Supplier) => {
                 </template>
                 <template #body="{ data }">
                   <div class="text-center">
-                    {{ UtilsService.formatCurrency(data.amount) }}
+                    {{ UtilsService.formatCurrency(data.amountNet) }}
                   </div>
                 </template>
                 <template #editor="{ data, field }">

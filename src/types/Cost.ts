@@ -18,7 +18,7 @@ export interface CostItem {
   /**
    * Kwota netto za jednostkę.
    */
-  amount: number;
+  amountNet: number;
   /**
    * Stawka VAT (enum).
    */
@@ -26,16 +26,16 @@ export interface CostItem {
   /**
    * Kwota VAT dla całej pozycji (readonly w UI, liczona z quantity, amount i vat).
    */
-  vatAmount: number;
+  amountVat: number;
   /**
    * Kwota brutto dla całej pozycji (readonly w UI, liczona z quantity, amount i vat).
    */
-  grossAmount: number;
+  amountGross: number;
 }
 
 export interface Cost {
   id: number;
-  seller: Supplier | null;
+  supplier: Supplier | null;
   number: string;
   sellDate: Date | null;
   invoiceDate: Date | null;
@@ -44,6 +44,8 @@ export interface Cost {
   paymentMethod: PaymentMethod;
   otherInfo: string;
   ksefNumber: string;
+  ksefUrl: string;
+  pdfUrl: string;
   costItems: CostItem[];
 }
 

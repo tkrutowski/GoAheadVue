@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import httpCommon from "@/config/http-common.ts";
+import axios from "axios";
 import moment from "moment";
 import type { Cost } from "@/types/Cost.ts";
 import type { PaymentStatus } from "@/types/Invoice.ts";
@@ -61,12 +62,12 @@ export const useCostStore = defineStore("cost", {
         params.append("globalFilter", this.filters.global.value);
       }
 
-      if (this.filters.seller?.value) {
-        const seller = this.filters.seller.value;
-        if (Array.isArray(seller) && seller.length > 0 && seller[0].id) {
-          params.append("idSeller", seller[0].id.toString());
-        } else if (!Array.isArray(seller) && seller.id) {
-          params.append("idSeller", seller.id.toString());
+      if (this.filters.supplier?.value) {
+        const supplier = this.filters.supplier.value;
+        if (Array.isArray(supplier) && supplier.length > 0 && supplier[0].id) {
+          params.append("idSeller", supplier[0].id.toString());
+        } else if (!Array.isArray(supplier) && supplier.id) {
+          params.append("idSeller", supplier.id.toString());
         }
       }
 
@@ -132,7 +133,7 @@ export const useCostStore = defineStore("cost", {
       return this.convertResponse(response.data);
     },
 
-    async addCostDb(cost: Cost) {
+    async addCostDb(cost: Cost, options?: { skipListRefresh?: boolean }) {
       console.log("START - addCostDb()");
       const payload = {
         ...cost,
@@ -141,7 +142,9 @@ export const useCostStore = defineStore("cost", {
         paymentDate: cost.paymentDate ? moment(cost.paymentDate).format("YYYY-MM-DD") : null,
       };
       await httpCommon.post(`/goahead/cost`, payload);
-      await this.getCostsFromDb(this.currentPage);
+      if (!options?.skipListRefresh) {
+        await this.getCostsFromDb(this.currentPage);
+      }
     },
 
     async updateCostDb(cost: Cost) {
@@ -162,6 +165,54 @@ export const useCostStore = defineStore("cost", {
       } else {
         await this.getCostsFromDb(this.currentPage);
       }
+    },
+
+    /**
+     * Usuwa wiele kosztów; jedno odświeżenie listy na końcu.
+     */
+    async deleteCostsDb(costIds: number[]) {
+      if (!costIds?.length) return;
+      const uniqueIds = [...new Set(costIds)];
+      const idsOnPage = new Set(this.costs.map((c) => c.id));
+      const deletingFromPage = uniqueIds.filter((id) => idsOnPage.has(id));
+      const deletesAllVisible =
+        this.costs.length > 0 && deletingFromPage.length === this.costs.length;
+
+      for (const id of uniqueIds) {
+        await httpCommon.delete(`/goahead/cost/${id}`);
+      }
+
+      if (deletesAllVisible && this.currentPage > 0) {
+        await this.getCostsFromDb(this.currentPage - 1);
+      } else {
+        await this.getCostsFromDb(this.currentPage);
+      }
+    },
+
+    async getPdfFromS3(url: string) {
+      try {
+        const response = await axios.get(url, {
+          responseType: "blob",
+        });
+        return response;
+      } catch (error) {
+        console.error("Błąd podczas pobierania PDF z S3", error);
+        throw error;
+      }
+    },
+
+    /**
+     * Lista nowych kosztów z KSeF w zakresie dat (backend: GET /goahead/cost/ksef/preview).
+     */
+    async fetchKsefNewCostsPreview(dateFrom: string, dateTo: string): Promise<Cost[]> {
+      const params = new URLSearchParams({ dateFrom, dateTo });
+      const response = await httpCommon.get(
+        `/goahead/cost/ksef?${params.toString()}`
+      );
+      const raw = Array.isArray(response.data)
+        ? response.data
+        : response.data?.content ?? response.data?.items ?? [];
+      return (raw as any[]).map((c) => this.convertResponse(c));
     },
 
     async updateCostStatusDb(costId: number, status: PaymentStatus) {
@@ -193,6 +244,8 @@ export const useCostStore = defineStore("cost", {
     convertResponse(cost: any): Cost {
       return {
         ...cost,
+        number: cost.number ?? cost.costNumber ?? "",
+        supplier: cost.supplier ?? cost.seller ?? null,
         sellDate: cost.sellDate ? new Date(cost.sellDate) : null,
         invoiceDate: cost.invoiceDate ? new Date(cost.invoiceDate) : null,
         paymentDate: cost.paymentDate ? new Date(cost.paymentDate) : null,
