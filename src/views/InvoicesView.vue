@@ -666,6 +666,17 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
       <Column expander style="width: 5rem"/>
       <!--      INVOICE NUMBER  -->
       <Column field="invoiceNumber" header="Nr faktury" :sortable="true" sort-field="number">
+        <template #body="{ data }">
+          <span class="inline-flex items-center gap-1.5">
+            {{ data.invoiceNumber }}
+            <i
+              v-if="data.ksefNumber?.trim()"
+              class="pi pi-verified shrink-0 ml-2 text-green-600 dark:text-green-400 text-sm"
+              :title="'KSeF: ' + data.ksefNumber"
+              aria-hidden="true"
+            />
+          </span>
+        </template>
         <template #filter="{ filterModel }">
           <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
         </template>
