@@ -25,7 +25,7 @@ const filters = ref();
 const initFilters = () => {
   filters.value = {
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    firstName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    name: { value: null, matchMode: FilterMatchMode.CONTAINS },
     "address.street": { value: null, matchMode: FilterMatchMode.CONTAINS },
     "address.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
   };
@@ -190,7 +190,7 @@ onMounted(() => {
       table-style="min-width: 50rem"
       filter-display="menu"
       :global-filter-fields="[
-        'firstName',
+        'name',
         'nip',
         'accountNumber',
         'address.street',
@@ -242,7 +242,7 @@ onMounted(() => {
       </template>
 
       <Column expander style="width: 5rem" />
-      <Column field="firstName" header="Nazwa dostawcy" :sortable="true">
+      <Column field="name" header="Nazwa dostawcy" :sortable="true">
         <template #filter="{ filterModel }">
           <InputText
             v-model="filterModel.value"

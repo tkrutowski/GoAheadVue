@@ -22,6 +22,7 @@ const supplier = ref<Supplier>({
   id: 0,
   name: "",
   nip: "",
+  regon: "",
   phone: "",
   mail: "",
   otherInfo: "",
@@ -158,12 +159,16 @@ async function lookupSupplierByNip() {
   }
   try {
     const result = await companyLookupStore.lookupByNip(digits);
+    const addr = result.addressDto;
     supplier.value.nip = result.nip;
     supplier.value.name = result.name;
-    supplier.value.address.street = result.address.street;
-    supplier.value.address.zip = result.address.zip;
-    supplier.value.address.city = result.address.city;
-    if (result.accountNumber) {
+    if (result.regon) {
+      supplier.value.regon = result.regon;
+    }
+    supplier.value.address.street = addr.street;
+    supplier.value.address.zip = addr.zip;
+    supplier.value.address.city = addr.city;
+    if (result.accountNumber != null && result.accountNumber !== "") {
       supplier.value.accountNumber = result.accountNumber;
     }
     toast.add({
@@ -318,11 +323,25 @@ const showErrorPhone = () => {
               showErrorNip() ? "Pole NIP musi mieć 10 cyfr." : "\u00A0"
             }}</small>
           </div>
+          <div class="flex flex-col w-full min-w-[10rem] flex-1">
+            <label
+              class="pl-1 pb-1 text-surface-800 dark:text-surface-400"
+              for="regon"
+              >REGON</label
+            >
+            <InputText
+              id="regon"
+              v-model="supplier.regon"
+              maxlength="14"
+              size="large"
+            />
+            <small class="p-error">&nbsp;</small>
+          </div>
           <div class="flex flex-col w-full min-w-[12rem] flex-1">
             <label
               class="pl-1 pb-1 text-surface-800 dark:text-surface-400"
               for="accountNumber"
-              >Numer konta</label
+              >Nr konta</label
             >
             <InputText
               id="accountNumber"

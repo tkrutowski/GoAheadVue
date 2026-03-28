@@ -32,7 +32,7 @@ export const FinanceService = {
 
   getCostItemNet(item: CostItem): number {
     if (!item) return 0;
-    return item.quantity * item.amount;
+    return item.quantity * item.amountNet;
   },
 
   getCostItemVat(item: CostItem): number {
@@ -51,8 +51,8 @@ export const FinanceService = {
   updateCostItemAmounts(item: CostItem): void {
     const net = this.getCostItemNet(item);
     const vat = this.getCostItemVat(item);
-    item.vatAmount = vat;
-    item.grossAmount = net + vat;
+    item.amountVat = vat;
+    item.amountGross = net + vat;
   },
 
   getCostTotalGross(cost: Cost): number {
