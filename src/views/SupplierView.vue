@@ -163,6 +163,9 @@ async function lookupSupplierByNip() {
     supplier.value.address.street = result.address.street;
     supplier.value.address.zip = result.address.zip;
     supplier.value.address.city = result.address.city;
+    if (result.accountNumber) {
+      supplier.value.accountNumber = result.accountNumber;
+    }
     toast.add({
       severity: "success",
       summary: "Potwierdzenie",
