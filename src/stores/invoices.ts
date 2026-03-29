@@ -448,10 +448,11 @@ export const useInvoiceStore = defineStore("invoice", {
             // console.log("getInvoicesFromDb()", invoice);
             return {
                 ...invoice,
+                number: invoice.number ?? "",
                 invoiceDate: invoice.invoiceDate ? new Date(invoice.invoiceDate) : null,
                 sellDate: invoice.sellDate ? new Date(invoice.sellDate) : null,
                 paymentDate: invoice.paymentDate ? new Date(invoice.paymentDate) : null,
-            }
+            };
         }
     },
 });
