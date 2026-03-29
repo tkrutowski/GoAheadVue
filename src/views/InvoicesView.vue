@@ -64,7 +64,7 @@ const confirmStatusChange = (invoice: Invoice) => {
 const changeStatusConfirmationMessage = computed(() => {
   if (invoiceTemp.value)
     return `Czy chcesz zmienić status faktury nr <b>${
-        invoiceTemp.value.invoiceNumber
+        invoiceTemp.value.number
     }</b> na <b>${
         invoiceTemp.value.paymentStatus === PaymentStatus.PAID
             ? "Do zapłaty"
@@ -83,7 +83,7 @@ const submitChangeStatus = async () => {
             summary: "Potwierdzenie",
             detail:
                 "Zaaktualizowano status faktury nr: " +
-                invoiceTemp.value?.invoiceNumber,
+                invoiceTemp.value?.number,
             life: 3000,
           });
         })
@@ -92,7 +92,7 @@ const submitChangeStatus = async () => {
             severity: "error",
             summary: reason.message,
             detail: "Błąd podczas aktualizacji statusu faktury nr: " +
-                invoiceTemp.value?.invoiceNumber,
+                invoiceTemp.value?.number,
             life: 5000,
           });
         })
@@ -117,10 +117,10 @@ const deleteConfirmationMessage = computed(() => {
   const list = invoicesToDelete.value;
   if (!list.length) return "No message";
   if (list.length === 1) {
-    return `Czy chcesz usunąć fakturę nr <b>${list[0].invoiceNumber}</b>?`;
+    return `Czy chcesz usunąć fakturę nr <b>${list[0].number}</b>?`;
   }
   const maxShow = 8;
-  const nums = list.slice(0, maxShow).map((i) => i.invoiceNumber).join(", ");
+  const nums = list.slice(0, maxShow).map((i) => i.number).join(", ");
   const more =
     list.length > maxShow ? ` <span class="text-surface-500">(+${list.length - maxShow} więcej)</span>` : "";
   return `Czy chcesz usunąć <b>${list.length}</b> faktur?<br/><span class="text-sm">${nums}${more}</span>`;
@@ -140,7 +140,7 @@ const submitDelete = async () => {
       summary: "Potwierdzenie",
       detail:
         ids.length === 1
-          ? "Usunięto fakturę nr: " + toDelete[0].invoiceNumber
+          ? "Usunięto fakturę nr: " + toDelete[0].number
           : `Usunięto ${ids.length} faktur.`,
       life: 3000,
     });
@@ -151,7 +151,7 @@ const submitDelete = async () => {
       summary: "Błąd",
       detail:
         ids.length === 1
-          ? "Nie usunięto faktury nr: " + toDelete[0].invoiceNumber
+          ? "Nie usunięto faktury nr: " + toDelete[0].number
           : "Nie udało się usunąć wybranych faktur.",
       life: 4000,
     });
@@ -164,30 +164,72 @@ const submitDelete = async () => {
 //
 //-------------------------------------------------GENERATE / PREVIEW PDF-------------------------------------------------
 //
-const generatePdfDownload = (idInvoice: number, invoiceNumber: string) => {
-  console.log("START - generatePdfDownload for ", invoiceNumber);
-  invoiceStore
-    .getInvoicePdfFromDb(idInvoice)
-    .then((response) => {
-      const fileURL = window.URL.createObjectURL(new Blob([response.data]));
-      const fileLink = document.createElement("a");
-      fileLink.href = fileURL;
-      fileLink.setAttribute("download", "faktura_" + invoiceNumber + ".pdf");
-      document.body.appendChild(fileLink);
-      fileLink.click();
-    })
-    .catch(() => {
+const showGeneratePdfConfirmationDialog = ref(false);
+
+const generatePdfConfirmationMessage = computed(() => {
+  const withPdf = selectedInvoices.value.filter((i) => i.pdfUrl?.trim());
+  if (!withPdf.length) return "";
+  if (withPdf.length === 1) {
+    return `Faktura nr <b>${withPdf[0].number}</b> ma już wygenerowany PDF. Czy wygenerować ponownie i nadpisać?`;
+  }
+  const maxShow = 8;
+  const nums = withPdf.slice(0, maxShow).map((i) => i.number).join(", ");
+  const more =
+    withPdf.length > maxShow
+      ? ` <span class="text-surface-500">(+${withPdf.length - maxShow} więcej)</span>`
+      : "";
+  return `Wybrane faktury (<b>${withPdf.length}</b>) mają już PDF: <span class="text-sm">${nums}${more}</span>. Czy wygenerować ponownie?`;
+});
+
+const confirmGeneratePdf = () => {
+  if (selectedInvoices.value.length === 0) return;
+  if (selectedInvoices.value.some((i) => i.pdfUrl?.trim())) {
+    showGeneratePdfConfirmationDialog.value = true;
+  } else {
+    void runGeneratePdf();
+  }
+};
+
+const runGeneratePdf = async () => {
+  const ids = selectedInvoices.value.map((i) => i.idInvoice);
+  if (!ids.length) return;
+  try {
+    const { failed } = await invoiceStore.generateInvoicesPdf(ids);
+    if (failed.length === 0) {
       toast.add({
-        severity: "error",
-        summary: "Błąd",
-        detail: "Nie udało się utworzyć PDF dla faktury nr: " + invoiceNumber,
+        severity: "success",
+        summary: "PDF",
+        detail:
+          ids.length === 1
+            ? "Wygenerowano PDF dla faktury."
+            : `Wygenerowano PDF dla ${ids.length} faktur.`,
         life: 3000,
       });
-    })
-    .finally(() => {
-      invoiceStore.loadingFile = false;
-      console.log("END - generatePdfDownload for ", invoiceNumber);
+    } else if (failed.length === ids.length) {
+      toast.add({
+        severity: "error",
+        summary: "Błąd PDF",
+        detail: `Nie udało się wygenerować PDF dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.number))}.`,
+        life: 6000,
+      });
+    } else {
+      toast.add({
+        severity: "warn",
+        summary: "Część PDF",
+        detail: `Błąd dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.number))}. Pozostałe wygenerowano.`,
+        life: 8000,
+      });
+    }
+  } catch {
+    toast.add({
+      severity: "error",
+      summary: "Błąd PDF",
+      detail: "Nie udało się wygenerować PDF.",
+      life: 4000,
     });
+  } finally {
+    showGeneratePdfConfirmationDialog.value = false;
+  }
 };
 
 // —— Podgląd PDF w aplikacji (bez nowych kart; przeglądarki nie obsługują niezawodnie „kart w tle”) ——
@@ -357,7 +399,7 @@ const canEdit = computed(() => {
 
 const canDelete = computed(() => selectedInvoices.value.length >= 1);
 
-const canGeneratePdf = computed(() => selectedInvoices.value.length === 1);
+const canGeneratePdf = computed(() => selectedInvoices.value.length >= 1);
 
 const canPreviewPdfUrl = computed(() => {
   const sel = selectedInvoices.value;
@@ -401,7 +443,7 @@ const handleOpenInvoicePdfUrls = async () => {
     "PDF faktury",
     withUrl.map((inv) => ({
       url: inv.pdfUrl!,
-      invoiceNumber: inv.invoiceNumber,
+      invoiceNumber: inv.number,
       docLabel: "PDF",
     }))
   );
@@ -414,7 +456,7 @@ const handleOpenKsefPdfs = async () => {
     "PDF KSeF",
     withUrl.map((inv) => ({
       url: inv.ksefUrl!,
-      invoiceNumber: inv.invoiceNumber,
+      invoiceNumber: inv.number,
       docLabel: "KSeF",
     }))
   );
@@ -427,17 +469,44 @@ const handleOpenUpoPdfs = async () => {
     "PDF UPO",
     withUrl.map((inv) => ({
       url: inv.upoUrl!,
-      invoiceNumber: inv.invoiceNumber,
+      invoiceNumber: inv.number,
       docLabel: "UPO",
     }))
   );
 };
 
-const handleSendToKsef = async () => {
-  const ids = selectedInvoices.value
-    .filter((inv) => !inv.ksefNumber?.trim())
-    .map((inv) => inv.idInvoice);
-  if (!ids.length) return;
+const showKsefConfirmationDialog = ref(false);
+const invoicesPendingKsef = ref<Invoice[]>([]);
+
+const ksefConfirmationMessage = computed(() => {
+  const list = invoicesPendingKsef.value;
+  if (!list.length) return "";
+  if (list.length === 1) {
+    return `Czy wysłać fakturę nr <b>${list[0].number}</b> do KSeF?`;
+  }
+  const maxShow = 8;
+  const nums = list.slice(0, maxShow).map((i) => i.number).join(", ");
+  const more =
+    list.length > maxShow
+      ? ` <span class="text-surface-500">(+${list.length - maxShow} więcej)</span>`
+      : "";
+  return `Czy wysłać <b>${list.length}</b> faktur do KSeF?<br/><span class="text-sm">${nums}${more}</span>`;
+});
+
+const confirmSendToKsef = () => {
+  const pending = selectedInvoices.value.filter((inv) => !inv.ksefNumber?.trim());
+  if (!pending.length) return;
+  invoicesPendingKsef.value = [...pending];
+  showKsefConfirmationDialog.value = true;
+};
+
+const submitSendToKsef = async () => {
+  const toSend = invoicesPendingKsef.value;
+  if (!toSend.length) {
+    showKsefConfirmationDialog.value = false;
+    return;
+  }
+  const ids = toSend.map((i) => i.idInvoice);
   try {
     await invoiceStore.sendInvoicesToKsef(ids);
     toast.add({
@@ -453,6 +522,9 @@ const handleSendToKsef = async () => {
       detail: err?.message || "Nie udało się wysłać faktur do KSeF.",
       life: 5000,
     });
+  } finally {
+    showKsefConfirmationDialog.value = false;
+    invoicesPendingKsef.value = [];
   }
 };
 
@@ -519,18 +591,14 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
     label: "Generuj PDF",
     icon: "pi pi-file-export",
     disabled: !canGeneratePdf.value || invoiceStore.loadingFile,
-    command: () => {
-      if (selectedInvoice.value) {
-        generatePdfDownload(selectedInvoice.value.idInvoice, selectedInvoice.value.invoiceNumber);
-      }
-    },
+    command: () => confirmGeneratePdf(),
   },
   { separator: true },
   {
     label: "KSeF",
     icon: "pi pi-send",
     disabled: !canKsef.value,
-    command: () => handleSendToKsef(),
+    command: () => confirmSendToKsef(),
   },
   {
     label: "UPO",
@@ -575,6 +643,22 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
       label="Usuń"
       @save="submitDelete"
       @cancel="showDeleteConfirmationDialog = false"
+  />
+
+  <ConfirmationDialog
+      v-model:visible="showGeneratePdfConfirmationDialog"
+      :msg="generatePdfConfirmationMessage"
+      label="Generuj"
+      @save="runGeneratePdf"
+      @cancel="showGeneratePdfConfirmationDialog = false"
+  />
+
+  <ConfirmationDialog
+      v-model:visible="showKsefConfirmationDialog"
+      :msg="ksefConfirmationMessage"
+      label="Wyślij"
+      @save="submitSendToKsef"
+      @cancel="showKsefConfirmationDialog = false"
   />
 
   <Dialog
@@ -653,8 +737,8 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           variant="orange"
           :disabled="!canGeneratePdf"
           :loading="invoiceStore.loadingFile"
-          title="Wygeneruj i pobierz PDF (jedna zaznaczona faktura)"
-          @click="selectedInvoice && generatePdfDownload(selectedInvoice.idInvoice, selectedInvoice.invoiceNumber)"
+          title="Wygeneruj PDF dla zaznaczonych faktur (istniejący PDF wymaga potwierdzenia)"
+          @click="confirmGeneratePdf"
         />
         <div class="border-l border-surface-400 dark:border-surface-500 h-8 shrink-0 self-center mx-0.5" aria-hidden="true" />
         <ToolbarActionButton
@@ -662,8 +746,8 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           icon="pi pi-send"
           variant="green"
           :disabled="!canKsef"
-          title="Wyślij do KSeF zaznaczone faktury"
-          @click="handleSendToKsef"
+          title="Wyślij do KSeF zaznaczone faktury (wymaga potwierdzenia)"
+          @click="confirmSendToKsef"
         />
         <ToolbarActionButton
           label="UPO"
@@ -755,10 +839,10 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
       <Column selectionMode="multiple" :exportable="false" style="width: 3rem" />
       <Column expander style="width: 5rem"/>
       <!--      INVOICE NUMBER  -->
-      <Column field="invoiceNumber" header="Nr faktury" :sortable="true" sort-field="number">
+      <Column field="number" header="Nr faktury" :sortable="true" sort-field="number">
         <template #body="{ data }">
           <span class="inline-flex items-center gap-1.5">
-            {{ data.invoiceNumber }}
+            {{ data.number }}
             <i
               v-if="data.ksefNumber?.trim()"
               class="pi pi-verified shrink-0 ml-2 text-green-600 dark:text-green-400 text-sm"
@@ -889,7 +973,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
       </Column>
       <template #expansion="slotProps">
         <div class="p-3 flex flex-col ">
-          <p class="text-center">Szczególy faktury nr {{ slotProps.data.invoiceNumber }}</p>
+          <p class="text-center">Szczególy faktury nr {{ slotProps.data.number }}</p>
           <DataTable :value="slotProps.data.invoiceItems">
             <!-- NAME  -->
             <Column field="name">

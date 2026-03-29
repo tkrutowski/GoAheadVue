@@ -199,8 +199,8 @@ export const useInvoiceStore = defineStore("invoice", {
                         return 0;
                     };
                     
-                    const numA = parseInvoiceNumber(a.invoiceNumber || '');
-                    const numB = parseInvoiceNumber(b.invoiceNumber || '');
+                    const numA = parseInvoiceNumber(a.number || '');
+                    const numB = parseInvoiceNumber(b.number || '');
                     
                     return this.sortOrder > 0 ? numA - numB : numB - numA;
                 });
@@ -364,20 +364,44 @@ export const useInvoiceStore = defineStore("invoice", {
             return response.data;
         },
 
-        //
-        // DOWNLOAD PDF
-        //
-        async getInvoicePdfFromDb(invoiceID: number) {
-            console.log("START - getInvoicePdfFromDb()");
+        /**
+         * Generuje PDF i zapisuje w S3 (backend). Sukces = 2xx bez treści; błąd = wyjątek (np. ObjectNotSavedException).
+         * Aktualnego pdfUrl dostarcza odświeżenie listy (getInvoicesFromDb).
+         */
+        async generateInvoicePdfForId(invoiceID: number): Promise<void> {
+            console.log("START - generateInvoicePdfForId()", invoiceID);
+            await httpCommon.post(`/goahead/invoice/pdf/${invoiceID}`);
+            console.log("END - generateInvoicePdfForId()");
+        },
+
+        /**
+         * Generuje PDF dla wielu faktur; po zakończeniu jedno odświeżenie listy.
+         * Zwraca listę nieudanych pozycji (numer faktury do komunikatów).
+         */
+        async generateInvoicesPdf(invoiceIds: number[]): Promise<{
+            failed: { idInvoice: number; invoiceNumber: string }[];
+        }> {
+            if (!invoiceIds?.length) return { failed: [] };
+            const unique = [...new Set(invoiceIds)];
+            console.log("START - generateInvoicesPdf()", unique);
             this.loadingFile = true;
-            const response = await httpCommon.get(
-                `/goahead/invoice/pdf/` + invoiceID,
-            );
-            console.log("getInvoicePdfFromDb", response);
-            const responseFromS3= await this.getPdfFromS3(response.data);
-            this.loadingFile = false;
-            console.log("END - getInvoicePdfFromDb()");
-            return responseFromS3;
+            const failed: { idInvoice: number; invoiceNumber: string }[] = [];
+            try {
+                for (const id of unique) {
+                    const inv = this.invoices.find((i) => i.idInvoice === id);
+                    const invoiceNumber = inv?.number ?? String(id);
+                    try {
+                        await this.generateInvoicePdfForId(id);
+                    } catch {
+                        failed.push({ idInvoice: id, invoiceNumber });
+                    }
+                }
+                await this.getInvoicesFromDb(this.currentPage);
+            } finally {
+                this.loadingFile = false;
+                console.log("END - generateInvoicesPdf()");
+            }
+            return { failed };
         },
 
         async getPdfFromS3(url: string) {
