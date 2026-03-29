@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, nextTick, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from "vue";
 import {FilterMatchMode} from '@primevue/core/api';
 import {type Invoice, PaymentStatus} from "@/types/Invoice";
 import TheMenu from "@/components/TheMenu.vue";
@@ -190,30 +190,105 @@ const generatePdfDownload = (idInvoice: number, invoiceNumber: string) => {
     });
 };
 
-const openPdfBlobFromUrl = async (
-  url: string,
-  invoiceNumber: string,
-  label: string
-): Promise<boolean> => {
+// —— Podgląd PDF w aplikacji (bez nowych kart; przeglądarki nie obsługują niezawodnie „kart w tle”) ——
+type PdfPreviewItem = { label: string; blobUrl: string };
+
+const showPdfPreviewDialog = ref(false);
+const pdfPreviewTitle = ref("");
+const pdfPreviewItems = ref<PdfPreviewItem[]>([]);
+const pdfPreviewBlobUrlsToRevoke = ref<string[]>([]);
+const pdfPreviewActiveIndex = ref(0);
+const loadingPdfPreview = ref(false);
+
+const pdfPreviewSelectOptions = computed(() =>
+  pdfPreviewItems.value.map((item, i) => ({ label: item.label, value: i }))
+);
+
+const currentPdfPreviewSrc = computed(
+  () => pdfPreviewItems.value[pdfPreviewActiveIndex.value]?.blobUrl ?? ""
+);
+
+const revokePdfPreviewUrls = () => {
+  for (const u of pdfPreviewBlobUrlsToRevoke.value) {
+    URL.revokeObjectURL(u);
+  }
+  pdfPreviewBlobUrlsToRevoke.value = [];
+  pdfPreviewItems.value = [];
+};
+
+const onPdfPreviewDialogHide = () => {
+  revokePdfPreviewUrls();
+  pdfPreviewActiveIndex.value = 0;
+  loadingPdfPreview.value = false;
+};
+
+const formatInvoiceNumbersForToast = (numbers: string[], maxShow = 14) => {
+  if (numbers.length <= maxShow) return numbers.join(", ");
+  const head = numbers.slice(0, maxShow).join(", ");
+  return `${head} (+${numbers.length - maxShow} więcej)`;
+};
+
+/** Wczytuje PDF-y z S3 i pokazuje je w oknie dialogowym (użytkownik zostaje w aplikacji). */
+const openPdfsInAppDialog = async (
+  title: string,
+  entries: { url: string; invoiceNumber: string; docLabel: string }[]
+) => {
+  if (!entries.length) return;
+  revokePdfPreviewUrls();
+  pdfPreviewTitle.value = title;
+  pdfPreviewActiveIndex.value = 0;
+  loadingPdfPreview.value = true;
+  showPdfPreviewDialog.value = true;
+
+  const items: PdfPreviewItem[] = [];
+  const failedNumbers: string[] = [];
+
   try {
-    const response = await invoiceStore.getPdfFromS3(url);
-    // S3 często zwraca octet-stream — bez application/pdf przeglądarka pokazuje „Zapisz jako” zamiast podglądu
-    const pdfBlob = new Blob([response.data], { type: "application/pdf" });
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const w = window.open(blobUrl, "_blank");
-    if (!w) URL.revokeObjectURL(blobUrl);
-    else setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    return true;
-  } catch {
-    toast.add({
-      severity: "error",
-      summary: "Błąd",
-      detail: `Nie udało się otworzyć ${label} dla faktury nr: ${invoiceNumber}`,
-      life: 3000,
-    });
-    return false;
+    for (const e of entries) {
+      try {
+        const response = await invoiceStore.getPdfFromS3(e.url);
+        const pdfBlob = new Blob([response.data], { type: "application/pdf" });
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        pdfPreviewBlobUrlsToRevoke.value.push(blobUrl);
+        items.push({
+          label: `${e.docLabel} · ${e.invoiceNumber}`,
+          blobUrl,
+        });
+      } catch {
+        failedNumbers.push(e.invoiceNumber);
+      }
+    }
+
+    pdfPreviewItems.value = items;
+
+    if (items.length === 0) {
+      revokePdfPreviewUrls();
+      showPdfPreviewDialog.value = false;
+      toast.add({
+        severity: "error",
+        summary: "Błąd PDF",
+        detail: `Nie udało się wczytać PDF dla faktur: ${formatInvoiceNumbersForToast(failedNumbers)}.`,
+        life: 8000,
+      });
+      return;
+    }
+
+    if (failedNumbers.length > 0) {
+      toast.add({
+        severity: "warn",
+        summary: "Część plików niedostępna",
+        detail: `Brak PDF dla faktur: ${formatInvoiceNumbersForToast(failedNumbers)}. Pozostałe dokumenty są w podglądzie.`,
+        life: 9000,
+      });
+    }
+  } finally {
+    loadingPdfPreview.value = false;
   }
 };
+
+onUnmounted(() => {
+  revokePdfPreviewUrls();
+});
 
 
 //
@@ -322,64 +397,40 @@ const canUpoPdf = computed(() => {
 const handleOpenInvoicePdfUrls = async () => {
   const withUrl = selectedInvoices.value.filter((inv) => inv.pdfUrl?.trim());
   if (!withUrl.length) return;
-  let opened = 0;
-  for (const inv of withUrl) {
-    const ok = await openPdfBlobFromUrl(inv.pdfUrl!, inv.invoiceNumber, "PDF");
-    if (ok) opened++;
-  }
-  if (opened > 1) {
-    toast.add({
-      severity: "info",
-      summary: "PDF",
-      detail:
-        "Otwarto " +
-        opened +
-        " plików PDF. Jeśli część okien się nie pojawiła, sprawdź blokadę wyskakujących okien w przeglądarce.",
-      life: 5000,
-    });
-  }
+  await openPdfsInAppDialog(
+    "PDF faktury",
+    withUrl.map((inv) => ({
+      url: inv.pdfUrl!,
+      invoiceNumber: inv.invoiceNumber,
+      docLabel: "PDF",
+    }))
+  );
 };
 
 const handleOpenKsefPdfs = async () => {
   const withUrl = selectedInvoices.value.filter((inv) => inv.ksefUrl?.trim());
   if (!withUrl.length) return;
-  let opened = 0;
-  for (const inv of withUrl) {
-    const ok = await openPdfBlobFromUrl(inv.ksefUrl!, inv.invoiceNumber, "KSeF PDF");
-    if (ok) opened++;
-  }
-  if (opened > 1) {
-    toast.add({
-      severity: "info",
-      summary: "KSeF PDF",
-      detail:
-        "Otwarto " +
-        opened +
-        " plików PDF. Jeśli część okien się nie pojawiła, sprawdź blokadę wyskakujących okien w przeglądarce.",
-      life: 5000,
-    });
-  }
+  await openPdfsInAppDialog(
+    "PDF KSeF",
+    withUrl.map((inv) => ({
+      url: inv.ksefUrl!,
+      invoiceNumber: inv.invoiceNumber,
+      docLabel: "KSeF",
+    }))
+  );
 };
 
 const handleOpenUpoPdfs = async () => {
   const withUrl = selectedInvoices.value.filter((inv) => inv.upoUrl?.trim());
   if (!withUrl.length) return;
-  let opened = 0;
-  for (const inv of withUrl) {
-    const ok = await openPdfBlobFromUrl(inv.upoUrl!, inv.invoiceNumber, "UPO PDF");
-    if (ok) opened++;
-  }
-  if (opened > 1) {
-    toast.add({
-      severity: "info",
-      summary: "UPO PDF",
-      detail:
-        "Otwarto " +
-        opened +
-        " plików PDF. Jeśli część okien się nie pojawiła, sprawdź blokadę wyskakujących okien w przeglądarce.",
-      life: 5000,
-    });
-  }
+  await openPdfsInAppDialog(
+    "PDF UPO",
+    withUrl.map((inv) => ({
+      url: inv.upoUrl!,
+      invoiceNumber: inv.invoiceNumber,
+      docLabel: "UPO",
+    }))
+  );
 };
 
 const handleSendToKsef = async () => {
@@ -526,6 +577,45 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
       @cancel="showDeleteConfirmationDialog = false"
   />
 
+  <Dialog
+    v-model:visible="showPdfPreviewDialog"
+    modal
+    :header="pdfPreviewTitle"
+    class="w-full max-w-[min(96vw,1200px)]"
+    :dismissable-mask="true"
+    :closable="!loadingPdfPreview"
+    :close-on-escape="!loadingPdfPreview"
+    maximizable
+    @hide="onPdfPreviewDialogHide"
+  >
+    <div class="flex min-h-[70vh] flex-col gap-3">
+      <div
+        v-if="loadingPdfPreview"
+        class="flex flex-1 items-center justify-center py-24"
+      >
+        <ProgressSpinner class="h-16 w-16" stroke-width="4" />
+      </div>
+      <template v-else>
+        <Select
+          v-if="pdfPreviewItems.length > 1"
+          v-model="pdfPreviewActiveIndex"
+          :options="pdfPreviewSelectOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="Wybierz dokument"
+          class="w-full max-w-md"
+        />
+        <iframe
+          v-if="currentPdfPreviewSrc"
+          :key="pdfPreviewActiveIndex"
+          :src="currentPdfPreviewSrc"
+          class="min-h-[65vh] w-full flex-1 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900"
+          title="Podgląd PDF"
+        />
+      </template>
+    </div>
+  </Dialog>
+
   <ContextMenu
       ref="invoiceRowContextMenu"
       :model="invoiceRowMenuModel"
@@ -589,7 +679,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           icon="pi pi-file-pdf"
           variant="orange"
           :disabled="!canPreviewPdfUrl"
-          title="Otwórz wygenerowany PDF"
+          title="Podgląd wygenerowanego PDF w oknie aplikacji"
           @click="handleOpenInvoicePdfUrls"
         />
         <ToolbarActionButton
@@ -597,7 +687,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           icon="pi pi-file-pdf"
           variant="orange"
           :disabled="!canKsefPdf"
-          title="Otwórz PDF wygenerowany przez KSeF"
+          title="Podgląd PDF z KSeF w oknie aplikacji"
           @click="handleOpenKsefPdfs"
         />
         <ToolbarActionButton
@@ -605,7 +695,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           icon="pi pi-file-pdf"
           variant="orange"
           :disabled="!canUpoPdf"
-          title="Otwórz PDF potwierdzenia UPO"
+          title="Podgląd PDF potwierdzenia UPO w oknie aplikacji"
           @click="handleOpenUpoPdfs"
         />
       </div>
