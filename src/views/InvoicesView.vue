@@ -209,14 +209,14 @@ const runGeneratePdf = async () => {
       toast.add({
         severity: "error",
         summary: "Błąd PDF",
-        detail: `Nie udało się wygenerować PDF dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.number))}.`,
+        detail: `Nie udało się wygenerować PDF dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.invoiceNumber))}.`,
         life: 6000,
       });
     } else {
       toast.add({
         severity: "warn",
         summary: "Część PDF",
-        detail: `Błąd dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.number))}. Pozostałe wygenerowano.`,
+        detail: `Błąd dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.invoiceNumber))}. Pozostałe wygenerowano.`,
         life: 8000,
       });
     }
