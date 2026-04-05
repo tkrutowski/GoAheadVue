@@ -1,144 +1,135 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { FilterMatchMode } from "@primevue/core/api";
-import OfficeButton from "@/components/OfficeButton.vue";
-import TheMenu from "@/components/TheMenu.vue";
-import router from "@/router";
-import StatusButton from "@/components/StatusButton.vue";
-import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
-import { CustomerStatus } from "@/types/Customer";
-import type { Supplier } from "@/types/Supplier";
-import { useCostStore } from "@/stores/costs";
-import { useSupplierStore } from "@/stores/suppliers";
-import InformationDialog from "@/components/InformationDialog.vue";
-import { useToast } from "primevue/usetoast";
-import OfficeIconButton from "@/components/OfficeIconButton.vue";
-import type { AxiosError } from "axios";
+  import { computed, onMounted, ref } from 'vue';
+  import { FilterMatchMode } from '@primevue/core/api';
+  import OfficeButton from '@/components/OfficeButton.vue';
+  import TheMenu from '@/components/TheMenu.vue';
+  import router from '@/router';
+  import StatusButton from '@/components/StatusButton.vue';
+  import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
+  import { CustomerStatus } from '@/types/Customer';
+  import type { Supplier } from '@/types/Supplier';
+  import { useCostStore } from '@/stores/costs';
+  import { useSupplierStore } from '@/stores/suppliers';
+  import InformationDialog from '@/components/InformationDialog.vue';
+  import { useToast } from 'primevue/usetoast';
+  import OfficeIconButton from '@/components/OfficeIconButton.vue';
+  import type { AxiosError } from 'axios';
 
-const costStore = useCostStore();
-const supplierStore = useSupplierStore();
-const toast = useToast();
-const expandedRows = ref([]);
-const supplierTemp = ref<Supplier>();
+  const costStore = useCostStore();
+  const supplierStore = useSupplierStore();
+  const toast = useToast();
+  const expandedRows = ref([]);
+  const supplierTemp = ref<Supplier>();
 
-const filters = ref();
-const initFilters = () => {
-  filters.value = {
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    "address.street": { value: null, matchMode: FilterMatchMode.CONTAINS },
-    "address.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const filters = ref();
+  const initFilters = () => {
+    filters.value = {
+      global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+      name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+      'address.street': { value: null, matchMode: FilterMatchMode.CONTAINS },
+      'address.city': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    };
   };
-};
-initFilters();
-const clearFilter = () => {
   initFilters();
-};
+  const clearFilter = () => {
+    initFilters();
+  };
 
-const showStatusChangeConfirmationDialog = ref<boolean>(false);
-const confirmStatusChange = (supplier: Supplier) => {
-  supplierTemp.value = supplier;
-  showStatusChangeConfirmationDialog.value = true;
-};
-const changeStatusConfirmationMessage = computed(() => {
-  if (supplierTemp.value)
-    return `Czy chcesz zmienić status dostawcy <b>${
-      supplierTemp.value.name
-    }</b> na <b>${
-      supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE
-        ? "Nieaktywny"
-        : "Aktywny"
-    }</b>?`;
-  return "No message";
-});
-const submitChangeStatus = async () => {
-  if (supplierTemp.value) {
-    const newStatus: CustomerStatus =
-      supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE
-        ? CustomerStatus.INACTIVE
-        : CustomerStatus.ACTIVE;
-
-    await supplierStore
-      .updateSupplierStatusDb(supplierTemp.value?.id, newStatus)
-      .then(() => {
-        toast.add({
-          severity: "success",
-          summary: "Potwierdzenie",
-          detail:
-            "Zaaktualizowano status dostawcy: " +
-            supplierTemp.value?.name,
-          life: 3000,
-        });
-      })
-      .catch((reason: AxiosError) => {
-        toast.add({
-          severity: "error",
-          summary: reason.message,
-          detail: "Nie udało się zaaktualizować statusu dostawcy",
-          life: 5000,
-        });
-      });
-    showStatusChangeConfirmationDialog.value = false;
-  }
-};
-
-const showDeleteConfirmationDialog = ref<boolean>(false);
-const showDeleteInformationDialog = ref<boolean>(false);
-const hasCosts = ref<boolean>(false);
-
-const confirmDeleteSupplier = async (supplier: Supplier) => {
-  supplierTemp.value = supplier;
-  hasCosts.value = await costStore.supplierHasCosts(supplier.id);
-  if (!hasCosts.value) showDeleteConfirmationDialog.value = true;
-  else showDeleteInformationDialog.value = true;
-};
-
-const deleteConfirmationMessage = computed(() => {
-  if (supplierTemp.value && !hasCosts.value) {
-    return `Czy chcesz usunąć dostawcę: <b>${supplierTemp.value.name}</b>?`;
-  }
-  if (supplierTemp.value && hasCosts.value) {
-    return `Nie możesz usunąć dostawcy: <b>${supplierTemp.value.name}</b>, ponieważ są do niego przypisane koszty. <br><br>Najpierw usuń lub zmień koszty`;
-  }
-  return "No message";
-});
-
-const submitDelete = async () => {
-  if (supplierTemp.value) {
-    await supplierStore
-      .deleteSupplierDb(supplierTemp.value.id)
-      .then(() => {
-        toast.add({
-          severity: "success",
-          summary: "Potwierdzenie",
-          detail: "Usunięto dostawcę: " + supplierTemp.value?.name,
-          life: 3000,
-        });
-      })
-      .catch(() => {
-        toast.add({
-          severity: "error",
-          summary: "Błąd",
-          detail: "Nie udało się usunąć dostawcy",
-          life: 3000,
-        });
-      });
-  }
-  showDeleteConfirmationDialog.value = false;
-};
-
-const editSupplier = (supplier: Supplier) => {
-  const s: Supplier = JSON.parse(JSON.stringify(supplier));
-  router.push({
-    name: "Supplier",
-    params: { isEdit: "true", supplierId: s.id },
+  const showStatusChangeConfirmationDialog = ref<boolean>(false);
+  const confirmStatusChange = (supplier: Supplier) => {
+    supplierTemp.value = supplier;
+    showStatusChangeConfirmationDialog.value = true;
+  };
+  const changeStatusConfirmationMessage = computed(() => {
+    if (supplierTemp.value)
+      return `Czy chcesz zmienić status dostawcy <b>${supplierTemp.value.name}</b> na <b>${
+        supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE ? 'Nieaktywny' : 'Aktywny'
+      }</b>?`;
+    return 'No message';
   });
-};
+  const submitChangeStatus = async () => {
+    if (supplierTemp.value) {
+      const newStatus: CustomerStatus =
+        supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE ? CustomerStatus.INACTIVE : CustomerStatus.ACTIVE;
 
-onMounted(() => {
-  if (supplierStore.suppliers.length <= 1)
-    supplierStore.getSuppliersFromDb("ALL");
-});
+      await supplierStore
+        .updateSupplierStatusDb(supplierTemp.value?.id, newStatus)
+        .then(() => {
+          toast.add({
+            severity: 'success',
+            summary: 'Potwierdzenie',
+            detail: 'Zaaktualizowano status dostawcy: ' + supplierTemp.value?.name,
+            life: 3000,
+          });
+        })
+        .catch((reason: AxiosError) => {
+          toast.add({
+            severity: 'error',
+            summary: reason.message,
+            detail: 'Nie udało się zaaktualizować statusu dostawcy',
+            life: 5000,
+          });
+        });
+      showStatusChangeConfirmationDialog.value = false;
+    }
+  };
+
+  const showDeleteConfirmationDialog = ref<boolean>(false);
+  const showDeleteInformationDialog = ref<boolean>(false);
+  const hasCosts = ref<boolean>(false);
+
+  const confirmDeleteSupplier = async (supplier: Supplier) => {
+    supplierTemp.value = supplier;
+    hasCosts.value = await costStore.supplierHasCosts(supplier.id);
+    if (!hasCosts.value) showDeleteConfirmationDialog.value = true;
+    else showDeleteInformationDialog.value = true;
+  };
+
+  const deleteConfirmationMessage = computed(() => {
+    if (supplierTemp.value && !hasCosts.value) {
+      return `Czy chcesz usunąć dostawcę: <b>${supplierTemp.value.name}</b>?`;
+    }
+    if (supplierTemp.value && hasCosts.value) {
+      return `Nie możesz usunąć dostawcy: <b>${supplierTemp.value.name}</b>, ponieważ są do niego przypisane koszty. <br><br>Najpierw usuń lub zmień koszty`;
+    }
+    return 'No message';
+  });
+
+  const submitDelete = async () => {
+    if (supplierTemp.value) {
+      await supplierStore
+        .deleteSupplierDb(supplierTemp.value.id)
+        .then(() => {
+          toast.add({
+            severity: 'success',
+            summary: 'Potwierdzenie',
+            detail: 'Usunięto dostawcę: ' + supplierTemp.value?.name,
+            life: 3000,
+          });
+        })
+        .catch(() => {
+          toast.add({
+            severity: 'error',
+            summary: 'Błąd',
+            detail: 'Nie udało się usunąć dostawcy',
+            life: 3000,
+          });
+        });
+    }
+    showDeleteConfirmationDialog.value = false;
+  };
+
+  const editSupplier = (supplier: Supplier) => {
+    const s: Supplier = JSON.parse(JSON.stringify(supplier));
+    router.push({
+      name: 'Supplier',
+      params: { isEdit: 'true', supplierId: s.id },
+    });
+  };
+
+  onMounted(() => {
+    if (supplierStore.suppliers.length <= 1) supplierStore.getSuppliersFromDb('ALL');
+  });
 </script>
 
 <template>
@@ -168,11 +159,7 @@ onMounted(() => {
     <template #header>
       <div class="w-full flex justify-center gap-4">
         <div v-if="supplierStore.loadingSupplier">
-          <ProgressSpinner
-            class="ml-3"
-            style="width: 35px; height: 35px"
-            stroke-width="5"
-          />
+          <ProgressSpinner class="ml-3" style="width: 35px; height: 35px" stroke-width="5" />
         </div>
       </div>
     </template>
@@ -189,13 +176,7 @@ onMounted(() => {
       :rows-per-page-options="[5, 10, 20, 50]"
       table-style="min-width: 50rem"
       filter-display="menu"
-      :global-filter-fields="[
-        'name',
-        'nip',
-        'accountNumber',
-        'address.street',
-        'address.city',
-      ]"
+      :global-filter-fields="['name', 'nip', 'accountNumber', 'address.street', 'address.city']"
     >
       <template #header>
         <div class="flex justify-between">
@@ -213,28 +194,15 @@ onMounted(() => {
               <InputIcon>
                 <i class="pi pi-search" />
               </InputIcon>
-              <InputText
-                class="!max-w-32"
-                v-model="filters['global'].value"
-                placeholder="wyszukaj..."
-              />
+              <InputText class="!max-w-32" v-model="filters['global'].value" placeholder="wyszukaj..." />
             </IconField>
-            <Button
-              type="button"
-              icon="pi pi-filter-slash"
-              outlined
-              size="small"
-              title="Wyczyść filtry"
-              @click="clearFilter()"
-            />
+            <Button type="button" icon="pi pi-filter-slash" outlined size="small" title="Wyczyść filtry" @click="clearFilter()" />
           </div>
         </div>
       </template>
 
       <template #empty>
-        <h4 v-if="!supplierStore.loadingSupplier" class="text-red-500">
-          Nie znaleziono dostawców...
-        </h4>
+        <h4 v-if="!supplierStore.loadingSupplier" class="text-red-500">Nie znaleziono dostawców...</h4>
       </template>
 
       <template #loading>
@@ -244,29 +212,17 @@ onMounted(() => {
       <Column expander style="width: 5rem" />
       <Column field="name" header="Nazwa dostawcy" :sortable="true">
         <template #filter="{ filterModel }">
-          <InputText
-            v-model="filterModel.value"
-            type="text"
-            placeholder="Wpisz tutaj..."
-          />
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
       <Column field="address.street" header="Ulica" sortable>
         <template #filter="{ filterModel }">
-          <InputText
-            v-model="filterModel.value"
-            type="text"
-            placeholder="Wpisz tutaj..."
-          />
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
       <Column field="address.city" header="Miasto" sortable>
         <template #filter="{ filterModel }">
-          <InputText
-            v-model="filterModel.value"
-            type="text"
-            placeholder="Wpisz tutaj..."
-          />
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
       <Column field="nip" header="NIP" sortable />
@@ -305,18 +261,11 @@ onMounted(() => {
           <h5>Szczegóły dostawcy:</h5>
 
           <p class="mt-2 ml-8 text-left">
-            <b>Adres:</b> ul. {{ slotProps.data.address.street }},
-            {{ slotProps.data.address.zip }} {{ slotProps.data.address.city }}
+            <b>Adres:</b> ul. {{ slotProps.data.address.street }}, {{ slotProps.data.address.zip }} {{ slotProps.data.address.city }}
           </p>
-          <p class="mt-2 ml-8 text-left">
-            <b>E-mail:</b> {{ slotProps.data.mail }}
-          </p>
-          <p class="mt-2 ml-8 text-left">
-            <b>Nr konta:</b> {{ slotProps.data.accountNumber }}
-          </p>
-          <p class="mt-2 ml-8 text-left">
-            <b>Info:</b> {{ slotProps.data.otherInfo }}
-          </p>
+          <p class="mt-2 ml-8 text-left"><b>E-mail:</b> {{ slotProps.data.mail }}</p>
+          <p class="mt-2 ml-8 text-left"><b>Nr konta:</b> {{ slotProps.data.accountNumber }}</p>
+          <p class="mt-2 ml-8 text-left"><b>Info:</b> {{ slotProps.data.otherInfo }}</p>
         </div>
       </template>
     </DataTable>
@@ -324,7 +273,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.p-datatable .p-datatable-tbody > tr > td {
-  text-align: center !important;
-}
+  .p-datatable .p-datatable-tbody > tr > td {
+    text-align: center !important;
+  }
 </style>

@@ -1,12 +1,7 @@
 {
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
-  "extends": [
-    "@vue/tsconfig/tsconfig.json"
-  ],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
+  "extends": ["@vue/tsconfig/tsconfig.json"],
   "compilerOptions": {
     "types": ["node", "vue-router"]
   }

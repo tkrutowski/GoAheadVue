@@ -1,33 +1,33 @@
-import { createRouter, createWebHistory,type RouteRecordRaw } from "vue-router";
-import HomeView from "../views/HomeView.vue";
-import LoginView from "@/views/LoginView.vue";
-import Error503View from "@/views/Error503View.vue";
-import InvoicesView from "@/views/InvoicesView.vue";
-import InvoiceView from "@/views/InvoiceView.vue";
-import CustomersView from "@/views/CustomersView.vue";
-import CustomerView from "@/views/CustomerView.vue";
-import SuppliersView from "@/views/SuppliersView.vue";
-import SupplierView from "@/views/SupplierView.vue";
-import CostsView from "@/views/CostsView.vue";
-import CostView from "@/views/CostView.vue";
-import {useAuthorizationStore} from "@/stores/authorization.ts";
-import RefreshComponent from "@/components/RefreshComponent.vue";
-import Error403View from "@/views/Error403View.vue";
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import HomeView from '../views/HomeView.vue';
+import LoginView from '@/views/LoginView.vue';
+import Error503View from '@/views/Error503View.vue';
+import InvoicesView from '@/views/InvoicesView.vue';
+import InvoiceView from '@/views/InvoiceView.vue';
+import CustomersView from '@/views/CustomersView.vue';
+import CustomerView from '@/views/CustomerView.vue';
+import SuppliersView from '@/views/SuppliersView.vue';
+import SupplierView from '@/views/SupplierView.vue';
+import CostsView from '@/views/CostsView.vue';
+import CostView from '@/views/CostView.vue';
+import { useAuthorizationStore } from '@/stores/authorization.ts';
+import RefreshComponent from '@/components/RefreshComponent.vue';
+import Error403View from '@/views/Error403View.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
-    path: "/",
-    name: "Home",
+    path: '/',
+    name: 'Home',
     component: HomeView,
   },
   {
-    path: "/login",
-    name: "login",
+    path: '/login',
+    name: 'login',
     component: LoginView,
   },
   {
-    path: "/error",
-    name: "Error503",
+    path: '/error',
+    name: 'Error503',
     component: Error503View,
   },
   {
@@ -37,56 +37,56 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/refresh',
-    name:'refresh',
+    name: 'refresh',
     component: RefreshComponent,
     props: true,
   },
   //GOAHEAD
   {
-    path: "/goahead/invoice/all",
-    name: "Invoices",
+    path: '/goahead/invoice/all',
+    name: 'Invoices',
     component: InvoicesView,
     props: true,
   },
   {
-    path: "/goahead/invoice/:isEdit/:invoiceId",
-    name: "Invoice",
+    path: '/goahead/invoice/:isEdit/:invoiceId',
+    name: 'Invoice',
     component: InvoiceView,
     props: true,
   },
   {
-    path: "/goahead/cost/all",
-    name: "Costs",
+    path: '/goahead/cost/all',
+    name: 'Costs',
     component: CostsView,
     props: true,
   },
   {
-    path: "/goahead/cost/:isEdit/:costId",
-    name: "Cost",
+    path: '/goahead/cost/:isEdit/:costId',
+    name: 'Cost',
     component: CostView,
     props: true,
   },
   {
-    path: "/goahead/customer/all",
-    name: "Customers",
+    path: '/goahead/customer/all',
+    name: 'Customers',
     component: CustomersView,
     props: true,
   },
   {
-    path: "/goahead/customer/:isEdit/:customerId",
-    name: "Customer",
+    path: '/goahead/customer/:isEdit/:customerId',
+    name: 'Customer',
     component: CustomerView,
     props: true,
   },
   {
-    path: "/goahead/supplier/all",
-    name: "Suppliers",
+    path: '/goahead/supplier/all',
+    name: 'Suppliers',
     component: SuppliersView,
     props: true,
   },
   {
-    path: "/goahead/supplier/:isEdit/:supplierId",
-    name: "Supplier",
+    path: '/goahead/supplier/:isEdit/:supplierId',
+    name: 'Supplier',
     component: SupplierView,
     props: true,
   },
@@ -105,8 +105,8 @@ const router = createRouter({
   routes,
 });
 router.beforeEach((to, from, next) => {
-  const authStore= useAuthorizationStore();
-  console.log("ROUTE to: ",to,", from: ",from );
+  const authStore = useAuthorizationStore();
+  console.log('ROUTE to: ', to, ', from: ', from);
   if (to.path) {
     const history = JSON.parse(localStorage.getItem('navigationHistory') || '[]');
     history.push(to.path);
@@ -114,8 +114,7 @@ router.beforeEach((to, from, next) => {
   }
   const refreshToken = localStorage.getItem('refreshToken') || null;
   if (to.name !== 'login' && !authStore.isAuthenticated && refreshToken === null) {
-    next({name: 'login'})
-  } else
-    next()
-})
+    next({ name: 'login' });
+  } else next();
+});
 export default router;

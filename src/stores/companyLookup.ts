@@ -1,8 +1,8 @@
-import { defineStore } from "pinia";
-import httpCommon from "@/config/http-common.ts";
-import type { CompanyLookupResult } from "@/types/CompanyLookupResult.ts";
+import { defineStore } from 'pinia';
+import httpCommon from '@/config/http-common.ts';
+import type { CompanyLookupResult } from '@/types/CompanyLookupResult.ts';
 
-export const useCompanyLookupStore = defineStore("companyLookup", {
+export const useCompanyLookupStore = defineStore('companyLookup', {
   state: () => ({
     loadingLookup: false,
   }),
@@ -11,9 +11,7 @@ export const useCompanyLookupStore = defineStore("companyLookup", {
     async lookupByNip(nip: string): Promise<CompanyLookupResult> {
       this.loadingLookup = true;
       try {
-        const response = await httpCommon.get<CompanyLookupResult>(
-          `/goahead/lookup?nip=${encodeURIComponent(nip)}`
-        );
+        const response = await httpCommon.get<CompanyLookupResult>(`/goahead/lookup?nip=${encodeURIComponent(nip)}`);
         return response.data;
       } finally {
         this.loadingLookup = false;

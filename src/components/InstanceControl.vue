@@ -3,7 +3,7 @@
   import { useRoute } from 'vue-router';
   import { useEc2Control } from '@/composables/useEc2Control';
   import { useToast } from 'primevue/usetoast';
-  import OfficeIconButton from "@/components/OfficeIconButton.vue";
+  import OfficeIconButton from '@/components/OfficeIconButton.vue';
 
   /** Odświeżanie statusu EC2 co N minut (AWS wyłącza po 15 min bezczynności). 20 min żeby zapytanie nie „budziło” EC2. */
   const STATUS_POLL_INTERVAL_MS = 20 * 60 * 1000;
@@ -132,17 +132,14 @@
   });
 
   // Po przekierowaniu (np. z Error503 po uruchomieniu EC2) odśwież ikonę
-  watch(() => route.fullPath, () => {
-    fetchStatus();
-  });
+  watch(
+    () => route.fullPath,
+    () => {
+      fetchStatus();
+    }
+  );
 </script>
 
 <template>
-  <OfficeIconButton
-    :title="buttonTitle"
-    icon="pi pi-server"
-    :class="buttonIconColor"
-    :loading="loading"
-    @click="handleToggle"
-  />
+  <OfficeIconButton :title="buttonTitle" icon="pi pi-server" :class="buttonIconColor" :loading="loading" @click="handleToggle" />
 </template>

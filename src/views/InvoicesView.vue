@@ -1,689 +1,657 @@
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, ref, watch} from "vue";
-import {FilterMatchMode} from '@primevue/core/api';
-import {type Invoice, PaymentStatus} from "@/types/Invoice";
-import TheMenu from "@/components/TheMenu.vue";
-import ToolbarActionButton from "@/components/ToolbarActionButton.vue";
-import router from "@/router";
-import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
-import {useToast} from "primevue/usetoast";
-import {useCustomerStore} from "@/stores/customers";
-import {useInvoiceStore} from "@/stores/invoices";
-import {type Customer} from "@/types/Customer.ts";
-import {UtilsService} from "../service/UtilsService.ts";
-import {AxiosError} from "axios";
-import {TranslationService} from "../service/TranslationService.ts";
-import {FinanceService} from "../service/FinanceService.ts";
-import type {DataTablePageEvent} from "primevue";
-import type {
-  DataTableRowClickEvent,
-  DataTableRowContextMenuEvent,
-} from "primevue/datatable";
-import type {MenuItem} from "primevue/menuitem";
-import ContextMenu from "primevue/contextmenu";
+  import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+  import { FilterMatchMode } from '@primevue/core/api';
+  import { type Invoice, PaymentStatus } from '@/types/Invoice';
+  import TheMenu from '@/components/TheMenu.vue';
+  import ToolbarActionButton from '@/components/ToolbarActionButton.vue';
+  import router from '@/router';
+  import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
+  import { useToast } from 'primevue/usetoast';
+  import { useCustomerStore } from '@/stores/customers';
+  import { useInvoiceStore } from '@/stores/invoices';
+  import { type Customer } from '@/types/Customer.ts';
+  import { UtilsService } from '../service/UtilsService.ts';
+  import { AxiosError } from 'axios';
+  import { TranslationService } from '../service/TranslationService.ts';
+  import { FinanceService } from '../service/FinanceService.ts';
+  import type { DataTablePageEvent } from 'primevue';
+  import type { DataTableRowClickEvent, DataTableRowContextMenuEvent } from 'primevue/datatable';
+  import type { MenuItem } from 'primevue/menuitem';
+  import ContextMenu from 'primevue/contextmenu';
 
-const customerStore = useCustomerStore();
+  const customerStore = useCustomerStore();
 
-const invoiceStore = useInvoiceStore();
-const toast = useToast();
+  const invoiceStore = useInvoiceStore();
+  const toast = useToast();
 
-const toolbarBtnNowa =
-  "rounded-full !px-4 !py-1.5 text-xs sm:text-sm font-semibold uppercase tracking-wide";
+  const toolbarBtnNowa = 'rounded-full !px-4 !py-1.5 text-xs sm:text-sm font-semibold uppercase tracking-wide';
 
-//filter
-const filters = ref();
-const initFilters = () => {
-  filters.value = {
-    global: {value: null, matchMode: FilterMatchMode.CONTAINS},
-    customer: {value: null, matchMode: FilterMatchMode.IN},
-    sellDate: {constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }],},
-    invoiceDate: {constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }],},
-    paymentDate: {constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }],},
-    amount: {constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }],},
-    number: {value: null, matchMode: FilterMatchMode.CONTAINS},
-    paymentStatus: {value: null, matchMode: FilterMatchMode.EQUALS},
+  //filter
+  const filters = ref();
+  const initFilters = () => {
+    filters.value = {
+      global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+      customer: { value: null, matchMode: FilterMatchMode.IN },
+      sellDate: { constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }] },
+      invoiceDate: { constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }] },
+      paymentDate: { constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }] },
+      amount: { constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+      number: { value: null, matchMode: FilterMatchMode.CONTAINS },
+      paymentStatus: { value: null, matchMode: FilterMatchMode.EQUALS },
+    };
   };
-}
-initFilters();
-const clearFilter = async () => {
   initFilters();
-  await invoiceStore.filterInvoices(filters.value);
-};
+  const clearFilter = async () => {
+    initFilters();
+    await invoiceStore.filterInvoices(filters.value);
+  };
 
-const expandedRows = ref([]);
-const selectedInvoices = ref<Invoice[]>([]);
+  const expandedRows = ref([]);
+  const selectedInvoices = ref<Invoice[]>([]);
 
-/** Po GET/odświeżeniu listy w store `selectedInvoices` może nadal wskazywać stare obiekty — toolbar (canKsef, canEdit, …) wtedy nie widzi nowych pól. */
-function syncSelectedInvoicesFromStore() {
-  const ids = new Set(selectedInvoices.value.map((i) => i.idInvoice));
-  if (ids.size === 0) return;
-  selectedInvoices.value = invoiceStore.invoices.filter((inv) =>
-    ids.has(inv.idInvoice)
-  );
-}
+  /** Po GET/odświeżeniu listy w store `selectedInvoices` może nadal wskazywać stare obiekty — toolbar (canKsef, canEdit, …) wtedy nie widzi nowych pól. */
+  function syncSelectedInvoicesFromStore() {
+    const ids = new Set(selectedInvoices.value.map((i) => i.idInvoice));
+    if (ids.size === 0) return;
+    selectedInvoices.value = invoiceStore.invoices.filter((inv) => ids.has(inv.idInvoice));
+  }
 
-const selectedInvoice = computed(() =>
-  selectedInvoices.value?.length === 1 ? selectedInvoices.value[0] : null
-);
-const invoiceTemp = ref<Invoice>();
-//
-//---------------------------------------------STATUS CHANGE--------------------------------------------------
-//
-const showStatusChangeConfirmationDialog = ref<boolean>(false);
-const confirmStatusChange = (invoice: Invoice) => {
-  invoiceTemp.value = invoice;
-  showStatusChangeConfirmationDialog.value = true;
-};
-const changeStatusConfirmationMessage = computed(() => {
-  if (invoiceTemp.value)
-    return `Czy chcesz zmienić status faktury nr <b>${
-        invoiceTemp.value.number
-    }</b> na <b>${
-        invoiceTemp.value.paymentStatus === PaymentStatus.PAID
-            ? "Do zapłaty"
-            : "Zapłacony"
-    }</b>?`;
-  return "No message";
-});
-const submitChangeStatus = async () => {
-  console.log("submitChangeStatus()");
-  if (invoiceTemp.value) {
-    let newStatus: PaymentStatus = invoiceTemp.value.paymentStatus === "PAID" ? PaymentStatus.TO_PAY : PaymentStatus.PAID;
-    await invoiceStore.updateInvoiceStatusDb(invoiceTemp.value.idInvoice, newStatus)
+  const selectedInvoice = computed(() => (selectedInvoices.value?.length === 1 ? selectedInvoices.value[0] : null));
+  const invoiceTemp = ref<Invoice>();
+  //
+  //---------------------------------------------STATUS CHANGE--------------------------------------------------
+  //
+  const showStatusChangeConfirmationDialog = ref<boolean>(false);
+  const confirmStatusChange = (invoice: Invoice) => {
+    invoiceTemp.value = invoice;
+    showStatusChangeConfirmationDialog.value = true;
+  };
+  const changeStatusConfirmationMessage = computed(() => {
+    if (invoiceTemp.value)
+      return `Czy chcesz zmienić status faktury nr <b>${invoiceTemp.value.number}</b> na <b>${
+        invoiceTemp.value.paymentStatus === PaymentStatus.PAID ? 'Do zapłaty' : 'Zapłacony'
+      }</b>?`;
+    return 'No message';
+  });
+  const submitChangeStatus = async () => {
+    console.log('submitChangeStatus()');
+    if (invoiceTemp.value) {
+      let newStatus: PaymentStatus = invoiceTemp.value.paymentStatus === 'PAID' ? PaymentStatus.TO_PAY : PaymentStatus.PAID;
+      await invoiceStore
+        .updateInvoiceStatusDb(invoiceTemp.value.idInvoice, newStatus)
         .then(() => {
           toast.add({
-            severity: "success",
-            summary: "Potwierdzenie",
-            detail:
-                "Zaaktualizowano status faktury nr: " +
-                invoiceTemp.value?.number,
+            severity: 'success',
+            summary: 'Potwierdzenie',
+            detail: 'Zaaktualizowano status faktury nr: ' + invoiceTemp.value?.number,
             life: 3000,
           });
         })
         .catch((reason: AxiosError) => {
           toast.add({
-            severity: "error",
+            severity: 'error',
             summary: reason.message,
-            detail: "Błąd podczas aktualizacji statusu faktury nr: " +
-                invoiceTemp.value?.number,
+            detail: 'Błąd podczas aktualizacji statusu faktury nr: ' + invoiceTemp.value?.number,
             life: 5000,
           });
-        })
-  }
-
-  showStatusChangeConfirmationDialog.value = false;
-};
-
-//
-//-------------------------------------------------DELETE INVOICE-------------------------------------------------
-//
-const showDeleteConfirmationDialog = ref<boolean>(false);
-const invoicesToDelete = ref<Invoice[]>([]);
-
-const confirmDeleteInvoices = () => {
-  if (selectedInvoices.value.length === 0) return;
-  invoicesToDelete.value = [...selectedInvoices.value];
-  showDeleteConfirmationDialog.value = true;
-};
-
-const deleteConfirmationMessage = computed(() => {
-  const list = invoicesToDelete.value;
-  if (!list.length) return "No message";
-  if (list.length === 1) {
-    return `Czy chcesz usunąć fakturę nr <b>${list[0].number}</b>?`;
-  }
-  const maxShow = 8;
-  const nums = list.slice(0, maxShow).map((i) => i.number).join(", ");
-  const more =
-    list.length > maxShow ? ` <span class="text-surface-500">(+${list.length - maxShow} więcej)</span>` : "";
-  return `Czy chcesz usunąć <b>${list.length}</b> faktur?<br/><span class="text-sm">${nums}${more}</span>`;
-});
-
-const submitDelete = async () => {
-  const toDelete = invoicesToDelete.value;
-  if (!toDelete.length) {
-    showDeleteConfirmationDialog.value = false;
-    return;
-  }
-  const ids = toDelete.map((i) => i.idInvoice);
-  try {
-    await invoiceStore.deleteInvoicesDb(ids);
-    toast.add({
-      severity: "success",
-      summary: "Potwierdzenie",
-      detail:
-        ids.length === 1
-          ? "Usunięto fakturę nr: " + toDelete[0].number
-          : `Usunięto ${ids.length} faktur.`,
-      life: 3000,
-    });
-    selectedInvoices.value = [];
-  } catch {
-    toast.add({
-      severity: "error",
-      summary: "Błąd",
-      detail:
-        ids.length === 1
-          ? "Nie usunięto faktury nr: " + toDelete[0].number
-          : "Nie udało się usunąć wybranych faktur.",
-      life: 4000,
-    });
-  } finally {
-    showDeleteConfirmationDialog.value = false;
-    invoicesToDelete.value = [];
-  }
-};
-
-//
-//-------------------------------------------------GENERATE / PREVIEW PDF-------------------------------------------------
-//
-const showGeneratePdfConfirmationDialog = ref(false);
-
-const generatePdfConfirmationMessage = computed(() => {
-  const withPdf = selectedInvoices.value.filter((i) => i.pdfUrl?.trim());
-  if (!withPdf.length) return "";
-  if (withPdf.length === 1) {
-    return `Faktura nr <b>${withPdf[0].number}</b> ma już wygenerowany PDF. Czy wygenerować ponownie i nadpisać?`;
-  }
-  const maxShow = 8;
-  const nums = withPdf.slice(0, maxShow).map((i) => i.number).join(", ");
-  const more =
-    withPdf.length > maxShow
-      ? ` <span class="text-surface-500">(+${withPdf.length - maxShow} więcej)</span>`
-      : "";
-  return `Wybrane faktury (<b>${withPdf.length}</b>) mają już PDF: <span class="text-sm">${nums}${more}</span>. Czy wygenerować ponownie?`;
-});
-
-const confirmGeneratePdf = () => {
-  if (selectedInvoices.value.length === 0) return;
-  if (selectedInvoices.value.some((i) => i.pdfUrl?.trim())) {
-    showGeneratePdfConfirmationDialog.value = true;
-  } else {
-    void runGeneratePdf();
-  }
-};
-
-const runGeneratePdf = async () => {
-  const ids = selectedInvoices.value.map((i) => i.idInvoice);
-  if (!ids.length) return;
-  try {
-    const { failed } = await invoiceStore.generateInvoicesPdf(ids);
-    syncSelectedInvoicesFromStore();
-    console.log('PDF generation result:', { failed, ids });
-    if (failed.length === 0) {
-      toast.add({
-        severity: "success",
-        summary: "PDF",
-        detail:
-          ids.length === 1
-            ? "Wygenerowano PDF dla faktury."
-            : `Wygenerowano PDF dla ${ids.length} faktur.`,
-        life: 3000,
-      });
-    } else if (failed.length === ids.length) {
-      toast.add({
-        severity: "error",
-        summary: "Błąd PDF",
-        detail: `Nie udało się wygenerować PDF dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.invoiceNumber))}.`,
-        life: 6000,
-      });
-    } else {
-      toast.add({
-        severity: "warn",
-        summary: "Część PDF",
-        detail: `Błąd dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.invoiceNumber))}. Pozostałe wygenerowano.`,
-        life: 8000,
-      });
-    }
-  } catch {
-    toast.add({
-      severity: "error",
-      summary: "Błąd PDF",
-      detail: "Nie udało się wygenerować PDF.",
-      life: 4000,
-    });
-  } finally {
-    showGeneratePdfConfirmationDialog.value = false;
-  }
-};
-
-// —— Podgląd PDF w aplikacji (bez nowych kart; przeglądarki nie obsługują niezawodnie „kart w tle”) ——
-type PdfPreviewItem = { label: string; blobUrl: string };
-
-const showPdfPreviewDialog = ref(false);
-const pdfPreviewTitle = ref("");
-const pdfPreviewItems = ref<PdfPreviewItem[]>([]);
-const pdfPreviewBlobUrlsToRevoke = ref<string[]>([]);
-const pdfPreviewActiveIndex = ref(0);
-const loadingPdfPreview = ref(false);
-
-const pdfPreviewSelectOptions = computed(() =>
-  pdfPreviewItems.value.map((item, i) => ({ label: item.label, value: i }))
-);
-
-const currentPdfPreviewSrc = computed(
-  () => pdfPreviewItems.value[pdfPreviewActiveIndex.value]?.blobUrl ?? ""
-);
-
-const revokePdfPreviewUrls = () => {
-  for (const u of pdfPreviewBlobUrlsToRevoke.value) {
-    URL.revokeObjectURL(u);
-  }
-  pdfPreviewBlobUrlsToRevoke.value = [];
-  pdfPreviewItems.value = [];
-};
-
-const onPdfPreviewDialogHide = () => {
-  revokePdfPreviewUrls();
-  pdfPreviewActiveIndex.value = 0;
-  loadingPdfPreview.value = false;
-};
-
-const formatInvoiceNumbersForToast = (numbers: string[], maxShow = 14) => {
-  if (numbers.length <= maxShow) return numbers.join(", ");
-  const head = numbers.slice(0, maxShow).join(", ");
-  return `${head} (+${numbers.length - maxShow} więcej)`;
-};
-
-/** Wczytuje PDF-y z S3 i pokazuje je w oknie dialogowym (użytkownik zostaje w aplikacji). */
-const openPdfsInAppDialog = async (
-  title: string,
-  entries: { url: string; invoiceNumber: string; docLabel: string }[]
-) => {
-  if (!entries.length) return;
-  revokePdfPreviewUrls();
-  pdfPreviewTitle.value = title;
-  pdfPreviewActiveIndex.value = 0;
-  loadingPdfPreview.value = true;
-  showPdfPreviewDialog.value = true;
-
-  const items: PdfPreviewItem[] = [];
-  const failedNumbers: string[] = [];
-
-  try {
-    for (const e of entries) {
-      try {
-        const response = await invoiceStore.getPdfFromS3(e.url);
-        const pdfBlob = new Blob([response.data], { type: "application/pdf" });
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        pdfPreviewBlobUrlsToRevoke.value.push(blobUrl);
-        items.push({
-          label: `${e.docLabel} · ${e.invoiceNumber}`,
-          blobUrl,
         });
-      } catch {
-        failedNumbers.push(e.invoiceNumber);
-      }
     }
 
-    pdfPreviewItems.value = items;
+    showStatusChangeConfirmationDialog.value = false;
+  };
 
-    if (items.length === 0) {
-      revokePdfPreviewUrls();
-      showPdfPreviewDialog.value = false;
-      toast.add({
-        severity: "error",
-        summary: "Błąd PDF",
-        detail: `Nie udało się wczytać PDF dla faktur: ${formatInvoiceNumbersForToast(failedNumbers)}.`,
-        life: 8000,
-      });
+  //
+  //-------------------------------------------------DELETE INVOICE-------------------------------------------------
+  //
+  const showDeleteConfirmationDialog = ref<boolean>(false);
+  const invoicesToDelete = ref<Invoice[]>([]);
+
+  const confirmDeleteInvoices = () => {
+    if (selectedInvoices.value.length === 0) return;
+    invoicesToDelete.value = [...selectedInvoices.value];
+    showDeleteConfirmationDialog.value = true;
+  };
+
+  const deleteConfirmationMessage = computed(() => {
+    const list = invoicesToDelete.value;
+    if (!list.length) return 'No message';
+    if (list.length === 1) {
+      return `Czy chcesz usunąć fakturę nr <b>${list[0].number}</b>?`;
+    }
+    const maxShow = 8;
+    const nums = list
+      .slice(0, maxShow)
+      .map((i) => i.number)
+      .join(', ');
+    const more = list.length > maxShow ? ` <span class="text-surface-500">(+${list.length - maxShow} więcej)</span>` : '';
+    return `Czy chcesz usunąć <b>${list.length}</b> faktur?<br/><span class="text-sm">${nums}${more}</span>`;
+  });
+
+  const submitDelete = async () => {
+    const toDelete = invoicesToDelete.value;
+    if (!toDelete.length) {
+      showDeleteConfirmationDialog.value = false;
       return;
     }
-
-    if (failedNumbers.length > 0) {
+    const ids = toDelete.map((i) => i.idInvoice);
+    try {
+      await invoiceStore.deleteInvoicesDb(ids);
       toast.add({
-        severity: "warn",
-        summary: "Część plików niedostępna",
-        detail: `Brak PDF dla faktur: ${formatInvoiceNumbersForToast(failedNumbers)}. Pozostałe dokumenty są w podglądzie.`,
-        life: 9000,
+        severity: 'success',
+        summary: 'Potwierdzenie',
+        detail: ids.length === 1 ? 'Usunięto fakturę nr: ' + toDelete[0].number : `Usunięto ${ids.length} faktur.`,
+        life: 3000,
+      });
+      selectedInvoices.value = [];
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd',
+        detail: ids.length === 1 ? 'Nie usunięto faktury nr: ' + toDelete[0].number : 'Nie udało się usunąć wybranych faktur.',
+        life: 4000,
+      });
+    } finally {
+      showDeleteConfirmationDialog.value = false;
+      invoicesToDelete.value = [];
+    }
+  };
+
+  //
+  //-------------------------------------------------GENERATE / PREVIEW PDF-------------------------------------------------
+  //
+  const showGeneratePdfConfirmationDialog = ref(false);
+
+  const generatePdfConfirmationMessage = computed(() => {
+    const withPdf = selectedInvoices.value.filter((i) => i.pdfUrl?.trim());
+    if (!withPdf.length) return '';
+    if (withPdf.length === 1) {
+      return `Faktura nr <b>${withPdf[0].number}</b> ma już wygenerowany PDF. Czy wygenerować ponownie i nadpisać?`;
+    }
+    const maxShow = 8;
+    const nums = withPdf
+      .slice(0, maxShow)
+      .map((i) => i.number)
+      .join(', ');
+    const more = withPdf.length > maxShow ? ` <span class="text-surface-500">(+${withPdf.length - maxShow} więcej)</span>` : '';
+    return `Wybrane faktury (<b>${withPdf.length}</b>) mają już PDF: <span class="text-sm">${nums}${more}</span>. Czy wygenerować ponownie?`;
+  });
+
+  const confirmGeneratePdf = () => {
+    if (selectedInvoices.value.length === 0) return;
+    if (selectedInvoices.value.some((i) => i.pdfUrl?.trim())) {
+      showGeneratePdfConfirmationDialog.value = true;
+    } else {
+      void runGeneratePdf();
+    }
+  };
+
+  const runGeneratePdf = async () => {
+    const ids = selectedInvoices.value.map((i) => i.idInvoice);
+    if (!ids.length) return;
+    try {
+      const { failed } = await invoiceStore.generateInvoicesPdf(ids);
+      syncSelectedInvoicesFromStore();
+      console.log('PDF generation result:', { failed, ids });
+      if (failed.length === 0) {
+        toast.add({
+          severity: 'success',
+          summary: 'PDF',
+          detail: ids.length === 1 ? 'Wygenerowano PDF dla faktury.' : `Wygenerowano PDF dla ${ids.length} faktur.`,
+          life: 3000,
+        });
+      } else if (failed.length === ids.length) {
+        toast.add({
+          severity: 'error',
+          summary: 'Błąd PDF',
+          detail: `Nie udało się wygenerować PDF dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.invoiceNumber))}.`,
+          life: 6000,
+        });
+      } else {
+        toast.add({
+          severity: 'warn',
+          summary: 'Część PDF',
+          detail: `Błąd dla: ${formatInvoiceNumbersForToast(failed.map((f) => f.invoiceNumber))}. Pozostałe wygenerowano.`,
+          life: 8000,
+        });
+      }
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd PDF',
+        detail: 'Nie udało się wygenerować PDF.',
+        life: 4000,
+      });
+    } finally {
+      showGeneratePdfConfirmationDialog.value = false;
+    }
+  };
+
+  // —— Podgląd PDF w aplikacji (bez nowych kart; przeglądarki nie obsługują niezawodnie „kart w tle”) ——
+  type PdfPreviewItem = { label: string; blobUrl: string };
+
+  const showPdfPreviewDialog = ref(false);
+  const pdfPreviewTitle = ref('');
+  const pdfPreviewItems = ref<PdfPreviewItem[]>([]);
+  const pdfPreviewBlobUrlsToRevoke = ref<string[]>([]);
+  const pdfPreviewActiveIndex = ref(0);
+  const loadingPdfPreview = ref(false);
+
+  const pdfPreviewSelectOptions = computed(() => pdfPreviewItems.value.map((item, i) => ({ label: item.label, value: i })));
+
+  const currentPdfPreviewSrc = computed(() => pdfPreviewItems.value[pdfPreviewActiveIndex.value]?.blobUrl ?? '');
+
+  const revokePdfPreviewUrls = () => {
+    for (const u of pdfPreviewBlobUrlsToRevoke.value) {
+      URL.revokeObjectURL(u);
+    }
+    pdfPreviewBlobUrlsToRevoke.value = [];
+    pdfPreviewItems.value = [];
+  };
+
+  const onPdfPreviewDialogHide = () => {
+    revokePdfPreviewUrls();
+    pdfPreviewActiveIndex.value = 0;
+    loadingPdfPreview.value = false;
+  };
+
+  const formatInvoiceNumbersForToast = (numbers: string[], maxShow = 14) => {
+    if (numbers.length <= maxShow) return numbers.join(', ');
+    const head = numbers.slice(0, maxShow).join(', ');
+    return `${head} (+${numbers.length - maxShow} więcej)`;
+  };
+
+  /** Wczytuje PDF-y z S3 i pokazuje je w oknie dialogowym (użytkownik zostaje w aplikacji). */
+  const openPdfsInAppDialog = async (title: string, entries: { url: string; invoiceNumber: string; docLabel: string }[]) => {
+    if (!entries.length) return;
+    revokePdfPreviewUrls();
+    pdfPreviewTitle.value = title;
+    pdfPreviewActiveIndex.value = 0;
+    loadingPdfPreview.value = true;
+    showPdfPreviewDialog.value = true;
+
+    const items: PdfPreviewItem[] = [];
+    const failedNumbers: string[] = [];
+
+    try {
+      for (const e of entries) {
+        try {
+          const response = await invoiceStore.getPdfFromS3(e.url);
+          const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          pdfPreviewBlobUrlsToRevoke.value.push(blobUrl);
+          items.push({
+            label: `${e.docLabel} · ${e.invoiceNumber}`,
+            blobUrl,
+          });
+        } catch {
+          failedNumbers.push(e.invoiceNumber);
+        }
+      }
+
+      pdfPreviewItems.value = items;
+
+      if (items.length === 0) {
+        revokePdfPreviewUrls();
+        showPdfPreviewDialog.value = false;
+        toast.add({
+          severity: 'error',
+          summary: 'Błąd PDF',
+          detail: `Nie udało się wczytać PDF dla faktur: ${formatInvoiceNumbersForToast(failedNumbers)}.`,
+          life: 8000,
+        });
+        return;
+      }
+
+      if (failedNumbers.length > 0) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Część plików niedostępna',
+          detail: `Brak PDF dla faktur: ${formatInvoiceNumbersForToast(failedNumbers)}. Pozostałe dokumenty są w podglądzie.`,
+          life: 9000,
+        });
+      }
+    } finally {
+      loadingPdfPreview.value = false;
+    }
+  };
+
+  onUnmounted(() => {
+    revokePdfPreviewUrls();
+  });
+
+  //
+  //-------------------------------------------------EDIT INVOICE-------------------------------------------------
+  //
+  const editItem = (item: Invoice) => {
+    const invoiceItem: Invoice = JSON.parse(JSON.stringify(item));
+    router.push({
+      name: 'Invoice',
+      params: { isEdit: 'true', invoiceId: invoiceItem.idInvoice },
+    });
+  };
+
+  onMounted(async () => {
+    if (customerStore.customers.length <= 1) customerStore.getCustomersFromDb('ALL');
+    if (invoiceStore.invoices.length === 0 && !invoiceStore.loadingInvoices) {
+      await invoiceStore.filterInvoices(filters.value);
+    }
+  });
+
+  const handlePageChange = async (event: DataTablePageEvent) => {
+    console.log('handlePageChange()', event);
+    invoiceStore.updateRowsPerPage(event.rows);
+    await invoiceStore.getInvoicesFromDb(event.page, event.rows);
+  };
+
+  const handleSort = async (event: any) => {
+    console.log('handleSort()', event);
+    await invoiceStore.sortInvoices(event.sortField, event.sortOrder);
+  };
+
+  const handleFilter = async () => {
+    console.log('handleFilter()', filters.value);
+    await invoiceStore.filterInvoices(filters.value);
+  };
+
+  const getCustomerLabel = (customer: Customer) => {
+    return `${customer.name} ${customer.firstName}`;
+  };
+
+  // Obsługa wyszukiwania globalnego z debounce
+  let searchTimeout: NodeJS.Timeout | null = null;
+
+  watch(
+    () => filters.value.global.value,
+    (newValue) => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      // Search when value has more than 3 letters or is empty
+      if (!newValue || newValue.length >= 3) {
+        searchTimeout = setTimeout(async () => {
+          console.log('Global search:', newValue);
+          await invoiceStore.filterInvoices(filters.value);
+        }, 500); // 500ms debounce
+      }
+    }
+  );
+
+  // Toolbar: reguły włączenia przycisków
+  const canEdit = computed(() => {
+    if (selectedInvoices.value.length !== 1) return false;
+    return !selectedInvoices.value[0].ksefNumber?.trim();
+  });
+
+  const canDelete = computed(() => selectedInvoices.value.length >= 1);
+
+  const canGeneratePdf = computed(() => selectedInvoices.value.length >= 1);
+
+  const canPreviewPdfUrl = computed(() => {
+    const sel = selectedInvoices.value;
+    if (sel.length === 0) return false;
+    if (sel.length === 1) return !!sel[0].pdfUrl?.trim();
+    return sel.some((inv) => inv.pdfUrl?.trim());
+  });
+
+  const canKsef = computed(() => {
+    const sel = selectedInvoices.value;
+    if (sel.length === 0) return false;
+    if (sel.length === 1) return !sel[0].ksefNumber?.trim();
+    return sel.some((inv) => !inv.ksefNumber?.trim());
+  });
+
+  const canUpo = computed(() => {
+    const sel = selectedInvoices.value;
+    if (sel.length === 0) return false;
+    if (sel.length === 1) return !sel[0].upoUrl?.trim();
+    return sel.some((inv) => !inv.upoUrl?.trim());
+  });
+
+  const canKsefPdf = computed(() => {
+    const sel = selectedInvoices.value;
+    if (sel.length === 0) return false;
+    if (sel.length === 1) return !!sel[0].ksefUrl?.trim();
+    return sel.some((inv) => inv.ksefUrl?.trim());
+  });
+
+  const canUpoPdf = computed(() => {
+    const sel = selectedInvoices.value;
+    if (sel.length === 0) return false;
+    if (sel.length === 1) return !!sel[0].upoUrl?.trim();
+    return sel.some((inv) => inv.upoUrl?.trim());
+  });
+
+  const handleOpenInvoicePdfUrls = async () => {
+    const withUrl = selectedInvoices.value.filter((inv) => inv.pdfUrl?.trim());
+    if (!withUrl.length) return;
+    await openPdfsInAppDialog(
+      'PDF faktury',
+      withUrl.map((inv) => ({
+        url: inv.pdfUrl!,
+        invoiceNumber: inv.number,
+        docLabel: 'PDF',
+      }))
+    );
+  };
+
+  const handleOpenKsefPdfs = async () => {
+    const withUrl = selectedInvoices.value.filter((inv) => inv.ksefUrl?.trim());
+    if (!withUrl.length) return;
+    await openPdfsInAppDialog(
+      'PDF KSeF',
+      withUrl.map((inv) => ({
+        url: inv.ksefUrl!,
+        invoiceNumber: inv.number,
+        docLabel: 'KSeF',
+      }))
+    );
+  };
+
+  const handleOpenUpoPdfs = async () => {
+    const withUrl = selectedInvoices.value.filter((inv) => inv.upoUrl?.trim());
+    if (!withUrl.length) return;
+    await openPdfsInAppDialog(
+      'PDF UPO',
+      withUrl.map((inv) => ({
+        url: inv.upoUrl!,
+        invoiceNumber: inv.number,
+        docLabel: 'UPO',
+      }))
+    );
+  };
+
+  const showKsefConfirmationDialog = ref(false);
+  const invoicesPendingKsef = ref<Invoice[]>([]);
+
+  const ksefConfirmationMessage = computed(() => {
+    const list = invoicesPendingKsef.value;
+    if (!list.length) return '';
+    if (list.length === 1) {
+      return `Czy wysłać fakturę nr <b>${list[0].number}</b> do KSeF?`;
+    }
+    const maxShow = 8;
+    const nums = list
+      .slice(0, maxShow)
+      .map((i) => i.number)
+      .join(', ');
+    const more = list.length > maxShow ? ` <span class="text-surface-500">(+${list.length - maxShow} więcej)</span>` : '';
+    return `Czy wysłać <b>${list.length}</b> faktur do KSeF?<br/><span class="text-sm">${nums}${more}</span>`;
+  });
+
+  const confirmSendToKsef = () => {
+    const pending = selectedInvoices.value.filter((inv) => !inv.ksefNumber?.trim());
+    if (!pending.length) return;
+    invoicesPendingKsef.value = [...pending];
+    showKsefConfirmationDialog.value = true;
+  };
+
+  const submitSendToKsef = async () => {
+    const toSend = invoicesPendingKsef.value;
+    if (!toSend.length) {
+      showKsefConfirmationDialog.value = false;
+      return;
+    }
+    const ids = toSend.map((i) => i.idInvoice);
+    try {
+      await invoiceStore.sendInvoicesToKsef(ids);
+      syncSelectedInvoicesFromStore();
+      toast.add({
+        severity: 'success',
+        summary: 'KSeF',
+        detail: 'Wysłano faktury do KSeF.',
+        life: 3000,
+      });
+    } catch (err: any) {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd KSeF',
+        detail: err?.message || 'Nie udało się wysłać faktur do KSeF.',
+        life: 5000,
+      });
+    } finally {
+      showKsefConfirmationDialog.value = false;
+      invoicesPendingKsef.value = [];
+    }
+  };
+
+  const handleDownloadUpo = async () => {
+    const ids = selectedInvoices.value.filter((inv) => !inv.upoUrl?.trim()).map((inv) => inv.idInvoice);
+    if (!ids.length) return;
+    try {
+      await invoiceStore.downloadUpoConfirmation(ids);
+      syncSelectedInvoicesFromStore();
+      toast.add({
+        severity: 'success',
+        summary: 'UPO',
+        detail: 'Pobrano potwierdzenia UPO.',
+        life: 3000,
+      });
+    } catch (err: any) {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd UPO',
+        detail: err?.message || 'Nie udało się pobrać potwierdzeń UPO.',
+        life: 5000,
       });
     }
-  } finally {
-    loadingPdfPreview.value = false;
-  }
-};
+  };
 
-onUnmounted(() => {
-  revokePdfPreviewUrls();
-});
+  /** Lewy klik w treść wiersza: jedna faktura; wiele wyłącznie przez checkbox (Ctrl/Shift na wierszu nie rozszerza zaznaczenia). */
+  const onInvoiceRowClick = async (event: DataTableRowClickEvent) => {
+    const e = event.originalEvent as MouseEvent;
+    if (!e.shiftKey && !e.metaKey && !e.ctrlKey) return;
+    await nextTick();
+    selectedInvoices.value = [event.data as Invoice];
+  };
 
+  //
+  //-------------------------------------------------CONTEXT MENU (wiersz)----------------------------------------------
+  //
+  const invoiceRowContextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
+  const contextMenuInvoice = ref<Invoice | null>(null);
 
-//
-//-------------------------------------------------EDIT INVOICE-------------------------------------------------
-//
-const editItem = (item: Invoice) => {
-  const invoiceItem: Invoice = JSON.parse(JSON.stringify(item));
-  router.push({
-    name: "Invoice",
-    params: {isEdit: "true", invoiceId: invoiceItem.idInvoice},
-  });
-};
+  const onInvoiceContextMenuHide = () => {
+    contextMenuInvoice.value = null;
+  };
 
-onMounted( async () => {
-  if (customerStore.customers.length <= 1) customerStore.getCustomersFromDb("ALL");
-  if (invoiceStore.invoices.length === 0 && !invoiceStore.loadingInvoices) {
-    await invoiceStore.filterInvoices(filters.value);
-  }
-});
-
-const handlePageChange = async (event: DataTablePageEvent) => {
-  console.log('handlePageChange()', event);
-  invoiceStore.updateRowsPerPage(event.rows);
-  await invoiceStore.getInvoicesFromDb(event.page, event.rows);
-};
-
-const handleSort = async (event: any) => {
-  console.log('handleSort()', event);
-  await invoiceStore.sortInvoices(event.sortField, event.sortOrder);
-};
-
-const handleFilter = async () => {
-  console.log('handleFilter()', filters.value);
-  await invoiceStore.filterInvoices(filters.value);
-};
-
-const getCustomerLabel = (customer: Customer) => {
-  return `${customer.name} ${customer.firstName}`;
-}
-
-// Obsługa wyszukiwania globalnego z debounce
-let searchTimeout: NodeJS.Timeout | null = null;
-
-watch(
-  () => filters.value.global.value,
-  newValue => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+  const onInvoiceRowContextMenu = async (event: DataTableRowContextMenuEvent) => {
+    const row = event.data as Invoice;
+    const inSelection = selectedInvoices.value.some((i) => i.idInvoice === row.idInvoice);
+    if (!inSelection) {
+      selectedInvoices.value = [row];
     }
+    contextMenuInvoice.value = row;
+    await nextTick();
+    invoiceRowContextMenu.value?.show(event.originalEvent);
+  };
 
-    // Search when value has more than 3 letters or is empty
-    if (!newValue || newValue.length >= 3) {
-      searchTimeout = setTimeout(async () => {
-        console.log('Global search:', newValue);
-        await invoiceStore.filterInvoices(filters.value);
-      }, 500); // 500ms debounce
-    }
-  }
-);
-
-// Toolbar: reguły włączenia przycisków
-const canEdit = computed(() => {
-  if (selectedInvoices.value.length !== 1) return false;
-  return !selectedInvoices.value[0].ksefNumber?.trim();
-});
-
-const canDelete = computed(() => selectedInvoices.value.length >= 1);
-
-const canGeneratePdf = computed(() => selectedInvoices.value.length >= 1);
-
-const canPreviewPdfUrl = computed(() => {
-  const sel = selectedInvoices.value;
-  if (sel.length === 0) return false;
-  if (sel.length === 1) return !!sel[0].pdfUrl?.trim();
-  return sel.some((inv) => inv.pdfUrl?.trim());
-});
-
-const canKsef = computed(() => {
-  const sel = selectedInvoices.value;
-  if (sel.length === 0) return false;
-  if (sel.length === 1) return !sel[0].ksefNumber?.trim();
-  return sel.some((inv) => !inv.ksefNumber?.trim());
-});
-
-const canUpo = computed(() => {
-  const sel = selectedInvoices.value;
-  if (sel.length === 0) return false;
-  if (sel.length === 1) return !sel[0].upoUrl?.trim();
-  return sel.some((inv) => !inv.upoUrl?.trim());
-});
-
-const canKsefPdf = computed(() => {
-  const sel = selectedInvoices.value;
-  if (sel.length === 0) return false;
-  if (sel.length === 1) return !!sel[0].ksefUrl?.trim();
-  return sel.some((inv) => inv.ksefUrl?.trim());
-});
-
-const canUpoPdf = computed(() => {
-  const sel = selectedInvoices.value;
-  if (sel.length === 0) return false;
-  if (sel.length === 1) return !!sel[0].upoUrl?.trim();
-  return sel.some((inv) => inv.upoUrl?.trim());
-});
-
-const handleOpenInvoicePdfUrls = async () => {
-  const withUrl = selectedInvoices.value.filter((inv) => inv.pdfUrl?.trim());
-  if (!withUrl.length) return;
-  await openPdfsInAppDialog(
-    "PDF faktury",
-    withUrl.map((inv) => ({
-      url: inv.pdfUrl!,
-      invoiceNumber: inv.number,
-      docLabel: "PDF",
-    }))
-  );
-};
-
-const handleOpenKsefPdfs = async () => {
-  const withUrl = selectedInvoices.value.filter((inv) => inv.ksefUrl?.trim());
-  if (!withUrl.length) return;
-  await openPdfsInAppDialog(
-    "PDF KSeF",
-    withUrl.map((inv) => ({
-      url: inv.ksefUrl!,
-      invoiceNumber: inv.number,
-      docLabel: "KSeF",
-    }))
-  );
-};
-
-const handleOpenUpoPdfs = async () => {
-  const withUrl = selectedInvoices.value.filter((inv) => inv.upoUrl?.trim());
-  if (!withUrl.length) return;
-  await openPdfsInAppDialog(
-    "PDF UPO",
-    withUrl.map((inv) => ({
-      url: inv.upoUrl!,
-      invoiceNumber: inv.number,
-      docLabel: "UPO",
-    }))
-  );
-};
-
-const showKsefConfirmationDialog = ref(false);
-const invoicesPendingKsef = ref<Invoice[]>([]);
-
-const ksefConfirmationMessage = computed(() => {
-  const list = invoicesPendingKsef.value;
-  if (!list.length) return "";
-  if (list.length === 1) {
-    return `Czy wysłać fakturę nr <b>${list[0].number}</b> do KSeF?`;
-  }
-  const maxShow = 8;
-  const nums = list.slice(0, maxShow).map((i) => i.number).join(", ");
-  const more =
-    list.length > maxShow
-      ? ` <span class="text-surface-500">(+${list.length - maxShow} więcej)</span>`
-      : "";
-  return `Czy wysłać <b>${list.length}</b> faktur do KSeF?<br/><span class="text-sm">${nums}${more}</span>`;
-});
-
-const confirmSendToKsef = () => {
-  const pending = selectedInvoices.value.filter((inv) => !inv.ksefNumber?.trim());
-  if (!pending.length) return;
-  invoicesPendingKsef.value = [...pending];
-  showKsefConfirmationDialog.value = true;
-};
-
-const submitSendToKsef = async () => {
-  const toSend = invoicesPendingKsef.value;
-  if (!toSend.length) {
-    showKsefConfirmationDialog.value = false;
-    return;
-  }
-  const ids = toSend.map((i) => i.idInvoice);
-  try {
-    await invoiceStore.sendInvoicesToKsef(ids);
-    syncSelectedInvoicesFromStore();
-    toast.add({
-      severity: "success",
-      summary: "KSeF",
-      detail: "Wysłano faktury do KSeF.",
-      life: 3000,
-    });
-  } catch (err: any) {
-    toast.add({
-      severity: "error",
-      summary: "Błąd KSeF",
-      detail: err?.message || "Nie udało się wysłać faktur do KSeF.",
-      life: 5000,
-    });
-  } finally {
-    showKsefConfirmationDialog.value = false;
-    invoicesPendingKsef.value = [];
-  }
-};
-
-const handleDownloadUpo = async () => {
-  const ids = selectedInvoices.value
-    .filter((inv) => !inv.upoUrl?.trim())
-    .map((inv) => inv.idInvoice);
-  if (!ids.length) return;
-  try {
-    await invoiceStore.downloadUpoConfirmation(ids);
-    syncSelectedInvoicesFromStore();
-    toast.add({
-      severity: "success",
-      summary: "UPO",
-      detail: "Pobrano potwierdzenia UPO.",
-      life: 3000,
-    });
-  } catch (err: any) {
-    toast.add({
-      severity: "error",
-      summary: "Błąd UPO",
-      detail: err?.message || "Nie udało się pobrać potwierdzeń UPO.",
-      life: 5000,
-    });
-  }
-};
-
-/** Lewy klik w treść wiersza: jedna faktura; wiele wyłącznie przez checkbox (Ctrl/Shift na wierszu nie rozszerza zaznaczenia). */
-const onInvoiceRowClick = async (event: DataTableRowClickEvent) => {
-  const e = event.originalEvent as MouseEvent;
-  if (!e.shiftKey && !e.metaKey && !e.ctrlKey) return;
-  await nextTick();
-  selectedInvoices.value = [event.data as Invoice];
-};
-
-//
-//-------------------------------------------------CONTEXT MENU (wiersz)----------------------------------------------
-//
-const invoiceRowContextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
-const contextMenuInvoice = ref<Invoice | null>(null);
-
-const onInvoiceContextMenuHide = () => {
-  contextMenuInvoice.value = null;
-};
-
-const onInvoiceRowContextMenu = async (event: DataTableRowContextMenuEvent) => {
-  const row = event.data as Invoice;
-  const inSelection = selectedInvoices.value.some((i) => i.idInvoice === row.idInvoice);
-  if (!inSelection) {
-    selectedInvoices.value = [row];
-  }
-  contextMenuInvoice.value = row;
-  await nextTick();
-  invoiceRowContextMenu.value?.show(event.originalEvent);
-};
-
-const invoiceRowMenuModel = computed((): MenuItem[] => [
-  {
-    label: "Edytuj",
-    icon: "pi pi-pencil",
-    disabled: !canEdit.value,
-    command: () => {
-      if (selectedInvoice.value) editItem(selectedInvoice.value);
+  const invoiceRowMenuModel = computed((): MenuItem[] => [
+    {
+      label: 'Edytuj',
+      icon: 'pi pi-pencil',
+      disabled: !canEdit.value,
+      command: () => {
+        if (selectedInvoice.value) editItem(selectedInvoice.value);
+      },
     },
-  },
-  {
-    label: "Usuń",
-    icon: "pi pi-trash",
-    disabled: !canDelete.value,
-    command: () => confirmDeleteInvoices(),
-  },
-  {
-    label: "Generuj PDF",
-    icon: "pi pi-file-export",
-    disabled: !canGeneratePdf.value || invoiceStore.loadingFile,
-    command: () => confirmGeneratePdf(),
-  },
-  { separator: true },
-  {
-    label: "KSeF",
-    icon: "pi pi-send",
-    disabled: !canKsef.value,
-    command: () => confirmSendToKsef(),
-  },
-  {
-    label: "UPO",
-    icon: "pi pi-download",
-    disabled: !canUpo.value,
-    command: () => handleDownloadUpo(),
-  },
-  { separator: true },
-  {
-    label: "PDF",
-    icon: "pi pi-file-pdf",
-    disabled: !canPreviewPdfUrl.value,
-    command: () => handleOpenInvoicePdfUrls(),
-  },
-  {
-    label: "KSeF PDF",
-    icon: "pi pi-file-pdf",
-    disabled: !canKsefPdf.value,
-    command: () => handleOpenKsefPdfs(),
-  },
-  {
-    label: "UPO PDF",
-    icon: "pi pi-file-pdf",
-    disabled: !canUpoPdf.value,
-    command: () => handleOpenUpoPdfs(),
-  },
-]);
-
+    {
+      label: 'Usuń',
+      icon: 'pi pi-trash',
+      disabled: !canDelete.value,
+      command: () => confirmDeleteInvoices(),
+    },
+    {
+      label: 'Generuj PDF',
+      icon: 'pi pi-file-export',
+      disabled: !canGeneratePdf.value || invoiceStore.loadingFile,
+      command: () => confirmGeneratePdf(),
+    },
+    { separator: true },
+    {
+      label: 'KSeF',
+      icon: 'pi pi-send',
+      disabled: !canKsef.value,
+      command: () => confirmSendToKsef(),
+    },
+    {
+      label: 'UPO',
+      icon: 'pi pi-download',
+      disabled: !canUpo.value,
+      command: () => handleDownloadUpo(),
+    },
+    { separator: true },
+    {
+      label: 'PDF',
+      icon: 'pi pi-file-pdf',
+      disabled: !canPreviewPdfUrl.value,
+      command: () => handleOpenInvoicePdfUrls(),
+    },
+    {
+      label: 'KSeF PDF',
+      icon: 'pi pi-file-pdf',
+      disabled: !canKsefPdf.value,
+      command: () => handleOpenKsefPdfs(),
+    },
+    {
+      label: 'UPO PDF',
+      icon: 'pi pi-file-pdf',
+      disabled: !canUpoPdf.value,
+      command: () => handleOpenUpoPdfs(),
+    },
+  ]);
 </script>
 <template>
-  <TheMenu/>
+  <TheMenu />
   <ConfirmationDialog
-      v-model:visible="showStatusChangeConfirmationDialog"
-      :msg="changeStatusConfirmationMessage"
-      @save="submitChangeStatus"
-      @cancel="showStatusChangeConfirmationDialog = false"
+    v-model:visible="showStatusChangeConfirmationDialog"
+    :msg="changeStatusConfirmationMessage"
+    @save="submitChangeStatus"
+    @cancel="showStatusChangeConfirmationDialog = false"
   />
 
   <ConfirmationDialog
-      v-model:visible="showDeleteConfirmationDialog"
-      :msg="deleteConfirmationMessage"
-      label="Usuń"
-      @save="submitDelete"
-      @cancel="showDeleteConfirmationDialog = false"
+    v-model:visible="showDeleteConfirmationDialog"
+    :msg="deleteConfirmationMessage"
+    label="Usuń"
+    @save="submitDelete"
+    @cancel="showDeleteConfirmationDialog = false"
   />
 
   <ConfirmationDialog
-      v-model:visible="showGeneratePdfConfirmationDialog"
-      :msg="generatePdfConfirmationMessage"
-      label="Generuj"
-      @save="runGeneratePdf"
-      @cancel="showGeneratePdfConfirmationDialog = false"
+    v-model:visible="showGeneratePdfConfirmationDialog"
+    :msg="generatePdfConfirmationMessage"
+    label="Generuj"
+    @save="runGeneratePdf"
+    @cancel="showGeneratePdfConfirmationDialog = false"
   />
 
   <ConfirmationDialog
-      v-model:visible="showKsefConfirmationDialog"
-      :msg="ksefConfirmationMessage"
-      label="Wyślij"
-      @save="submitSendToKsef"
-      @cancel="showKsefConfirmationDialog = false"
+    v-model:visible="showKsefConfirmationDialog"
+    :msg="ksefConfirmationMessage"
+    label="Wyślij"
+    @save="submitSendToKsef"
+    @cancel="showKsefConfirmationDialog = false"
   />
 
   <Dialog
@@ -698,10 +666,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
     @hide="onPdfPreviewDialogHide"
   >
     <div class="flex min-h-[70vh] flex-col gap-3">
-      <div
-        v-if="loadingPdfPreview"
-        class="flex flex-1 items-center justify-center py-24"
-      >
+      <div v-if="loadingPdfPreview" class="flex flex-1 items-center justify-center py-24">
         <ProgressSpinner class="h-16 w-16" stroke-width="4" />
       </div>
       <template v-else>
@@ -725,15 +690,13 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
     </div>
   </Dialog>
 
-  <ContextMenu
-      ref="invoiceRowContextMenu"
-      :model="invoiceRowMenuModel"
-      @hide="onInvoiceContextMenuHide"
-  />
+  <ContextMenu ref="invoiceRowContextMenu" :model="invoiceRowMenuModel" @hide="onInvoiceContextMenuHide" />
 
   <Panel>
     <!-- Toolbar: Nowa (wąsko) | akcje (rozciąga się) | wyszukiwanie (wąsko) -->
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3 rounded-lg shadow px-4 py-2 bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 mb-3">
+    <div
+      class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3 rounded-lg shadow px-4 py-2 bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 mb-3"
+    >
       <div class="flex shrink-0 items-center justify-start">
         <router-link :to="{ name: 'Invoice', params: { isEdit: 'false', invoiceId: 0 } }" class="no-underline">
           <Button type="button" label="Nowa" icon="pi pi-plus" size="small" outlined :class="toolbarBtnNowa" title="Dodaj nową fakturę" />
@@ -815,48 +778,54 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           </InputIcon>
           <InputText v-model="filters['global'].value" placeholder="wpisz tutaj..." class="w-48" />
         </IconField>
-        <Button type="button" icon="pi pi-filter-slash" outlined size="small" class="!rounded-full disabled:!bg-surface-300 disabled:!text-surface-500 dark:disabled:!bg-surface-600 dark:disabled:!text-surface-400" title="Wyczyść filtry" @click="clearFilter()" />
+        <Button
+          type="button"
+          icon="pi pi-filter-slash"
+          outlined
+          size="small"
+          class="!rounded-full disabled:!bg-surface-300 disabled:!text-surface-500 dark:disabled:!bg-surface-600 dark:disabled:!text-surface-400"
+          title="Wyczyść filtry"
+          @click="clearFilter()"
+        />
         <ProgressSpinner v-if="invoiceStore.loadingInvoices" class="w-8 h-8" stroke-width="4" />
       </div>
     </div>
 
     <DataTable
-        v-model:selection="selectedInvoices"
-        v-model:context-menu-selection="contextMenuInvoice"
-        v-model:expanded-rows="expandedRows"
-        v-model:filters="filters"
-        :value="invoiceStore.invoices"
-        :loading="invoiceStore.loadingInvoices"
-        context-menu
-        selection-mode="multiple"
-        :meta-key-selection="true"
-        data-key="idInvoice"
-        striped-rows
-        removable-sort
-        paginator
-        lazy
-        :sort-mode="'single'"
-        :sort-field="invoiceStore.sortField"
-        :sort-order="invoiceStore.sortOrder"
-        :rows="invoiceStore.rowsPerPage"
-        :total-records="invoiceStore.totalInvoices"
-        :rows-per-page-options="[5, 10, 20, 50]"
-        table-style="min-width: 50rem"
-        filter-display="menu"
-        :global-filter-fields="['customer.name', 'number', 'sellDate']"
-        @page="handlePageChange"
-        @sort="handleSort"
-        @filter="handleFilter"
-        @row-click="onInvoiceRowClick"
-        @row-contextmenu="onInvoiceRowContextMenu"
-        paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink RowsPerPageDropdown"
-        current-page-report-template="Od {first} do {last} (Wszystkich faktur: {totalRecords})"
-        size="small"
+      v-model:selection="selectedInvoices"
+      v-model:context-menu-selection="contextMenuInvoice"
+      v-model:expanded-rows="expandedRows"
+      v-model:filters="filters"
+      :value="invoiceStore.invoices"
+      :loading="invoiceStore.loadingInvoices"
+      context-menu
+      selection-mode="multiple"
+      :meta-key-selection="true"
+      data-key="idInvoice"
+      striped-rows
+      removable-sort
+      paginator
+      lazy
+      :sort-mode="'single'"
+      :sort-field="invoiceStore.sortField"
+      :sort-order="invoiceStore.sortOrder"
+      :rows="invoiceStore.rowsPerPage"
+      :total-records="invoiceStore.totalInvoices"
+      :rows-per-page-options="[5, 10, 20, 50]"
+      table-style="min-width: 50rem"
+      filter-display="menu"
+      :global-filter-fields="['customer.name', 'number', 'sellDate']"
+      @page="handlePageChange"
+      @sort="handleSort"
+      @filter="handleFilter"
+      @row-click="onInvoiceRowClick"
+      @row-contextmenu="onInvoiceRowContextMenu"
+      paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink RowsPerPageDropdown"
+      current-page-report-template="Od {first} do {last} (Wszystkich faktur: {totalRecords})"
+      size="small"
     >
       <template #empty>
-        <h4 class="text-red-500" v-if="!invoiceStore.loadingInvoices">
-          Nie znaleziono faktur...
-        </h4>
+        <h4 class="text-red-500" v-if="!invoiceStore.loadingInvoices">Nie znaleziono faktur...</h4>
       </template>
 
       <template #loading>
@@ -864,7 +833,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
       </template>
 
       <Column selectionMode="multiple" :exportable="false" style="width: 3rem" />
-      <Column expander style="width: 5rem"/>
+      <Column expander style="width: 5rem" />
       <!--      INVOICE NUMBER  -->
       <Column field="number" header="Nr faktury" :sortable="true" sort-field="number">
         <template #body="{ data }">
@@ -879,47 +848,41 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           </span>
         </template>
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
 
       <!--      CUSTOMER  -->
       <Column
-          header="Nazwa klienta"
-          :sortable="true"
-          sortField="customer.name"
-          style="min-width: 12rem"
-          filter-field="customer"
-          :show-filter-match-modes="false"
+        header="Nazwa klienta"
+        :sortable="true"
+        sortField="customer.name"
+        style="min-width: 12rem"
+        filter-field="customer"
+        :show-filter-match-modes="false"
       >
-        <template #body="{data}">
+        <template #body="{ data }">
           {{ getCustomerLabel(data.customer) }}
         </template>
         <template #filter="{ filterModel }">
           <MultiSelect
-              v-model="filterModel.value"
-              :options="customerStore.getSortedCustomers"
-              :option-label="getCustomerLabel"
-              placeholder="Wybierz..."
-              class="p-column-filter"
-              :max-selected-labels="0"
-              style="min-width: 12rem; width: 12rem"
+            v-model="filterModel.value"
+            :options="customerStore.getSortedCustomers"
+            :option-label="getCustomerLabel"
+            placeholder="Wybierz..."
+            class="p-column-filter"
+            :max-selected-labels="0"
+            style="min-width: 12rem; width: 12rem"
           />
         </template>
       </Column>
       <!--      SELL DATE-->
-      <Column 
-        field="sellDate" 
-        header="Data sprzedaży" 
-        :sortable="true" 
-        data-type="date"
-        :show-filter-match-modes="true"
-      >
+      <Column field="sellDate" header="Data sprzedaży" :sortable="true" data-type="date" :show-filter-match-modes="true">
         <template #body="{ data }">
           {{ UtilsService.formatDateToString(data.sellDate) }}
         </template>
         <template #filter="{ filterModel }">
-          <DatePicker v-model="filterModel.value" dateFormat="yy-mm-dd" placeholder="yyyy-dd-mm"/>
+          <DatePicker v-model="filterModel.value" dateFormat="yy-mm-dd" placeholder="yyyy-dd-mm" />
         </template>
       </Column>
 
@@ -929,14 +892,14 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           {{ UtilsService.formatDateToString(data.invoiceDate) }}
         </template>
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
 
       <!--      PAYMENT METHOD-->
       <Column field="paymentMethod" header="Rodzaj płatności" :sortable="true">
         <template #body="{ data }">
-          {{ TranslationService.translateEnum("PaymentMethod", data.paymentMethod) }}
+          {{ TranslationService.translateEnum('PaymentMethod', data.paymentMethod) }}
         </template>
       </Column>
 
@@ -946,42 +909,37 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
           {{ UtilsService.formatDateToString(data.paymentDate) }}
         </template>
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..."/>
+          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
 
       <!--      AMOUNT-->
-      <Column 
-        field="amount" 
-        header="Wartość" 
-        style="min-width: 120px" 
+      <Column
+        field="amount"
+        header="Wartość"
+        style="min-width: 120px"
         dataType="numeric"
         filter-field="amount"
         :show-filter-match-modes="true"
         :show-filter-operator="true"
       >
-        <template #body="{data}">
+        <template #body="{ data }">
           {{ UtilsService.formatCurrency(FinanceService.getInvoiceAmount(data)) }}
         </template>
         <template #filter="{ filterModel }">
-          <InputNumber v-model="filterModel.value" mode="currency" currency="PLN" locale="pl-PL"/>
+          <InputNumber v-model="filterModel.value" mode="currency" currency="PLN" locale="pl-PL" />
         </template>
       </Column>
-      <Column 
-        field="paymentStatus" 
-        header="Status" 
-        style="width: 150px"
-        filter-field="paymentStatus"
-        :show-filter-match-modes="false"
-      >
+      <Column field="paymentStatus" header="Status" style="width: 150px" filter-field="paymentStatus" :show-filter-match-modes="false">
         <template #body="{ data, field }">
-          <Tag rounded
-              :value="data[field] === 'PAID' ? 'Zapłacona' : 'Do zapłaty'"
-              :severity="data[field] === 'PAID' ? 'success' : 'danger'"
-              :icon="data[field] === 'PAID' ? 'pi pi-check-circle' : 'pi pi-times-circle'"
-              class="cursor-pointer hover:opacity-80 transition-opacity"
-              @click="confirmStatusChange(data)"
-              :title="'Zmień status faktury (Zapłacona/Do zapłaty)'"
+          <Tag
+            rounded
+            :value="data[field] === 'PAID' ? 'Zapłacona' : 'Do zapłaty'"
+            :severity="data[field] === 'PAID' ? 'success' : 'danger'"
+            :icon="data[field] === 'PAID' ? 'pi pi-check-circle' : 'pi pi-times-circle'"
+            class="cursor-pointer hover:opacity-80 transition-opacity"
+            @click="confirmStatusChange(data)"
+            :title="'Zmień status faktury (Zapłacona/Do zapłaty)'"
           />
         </template>
         <template #filter="{ filterModel }">
@@ -989,7 +947,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
             v-model="filterModel.value"
             :options="[
               { label: 'Zapłacona', value: 'PAID' },
-              { label: 'Do zapłaty', value: 'TO_PAY' }
+              { label: 'Do zapłaty', value: 'TO_PAY' },
             ]"
             option-label="label"
             option-value="value"
@@ -999,7 +957,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
         </template>
       </Column>
       <template #expansion="slotProps">
-        <div class="p-3 flex flex-col ">
+        <div class="p-3 flex flex-col">
           <p class="text-center">Szczególy faktury nr {{ slotProps.data.number }}</p>
           <DataTable :value="slotProps.data.invoiceItems">
             <!-- NAME  -->
@@ -1048,13 +1006,11 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
                 <div class="w-full" style="text-align: center">Wartość</div>
               </template>
               <template #body="slotProps">
-                <p class="text-center">  {{ UtilsService.formatCurrency(FinanceService.getInvoiceItemAmount(slotProps.data)) }}</p>
+                <p class="text-center">{{ UtilsService.formatCurrency(FinanceService.getInvoiceItemAmount(slotProps.data)) }}</p>
               </template>
             </Column>
           </DataTable>
-          <p class="mt-2" style="text-align: center">
-            <b>Info:</b> {{ slotProps.data.otherInfo }}
-          </p>
+          <p class="mt-2" style="text-align: center"><b>Info:</b> {{ slotProps.data.otherInfo }}</p>
         </div>
       </template>
     </DataTable>
@@ -1062,11 +1018,11 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
 </template>
 
 <style scoped>
-.p-datatable .p-datatable-tbody > tr > td {
-  text-align: center !important;
-}
+  .p-datatable .p-datatable-tbody > tr > td {
+    text-align: center !important;
+  }
 
-:deep(.p-panel-header) {
+  :deep(.p-panel-header) {
     padding: 0;
   }
 </style>

@@ -8,7 +8,6 @@
     "skipLibCheck": true,
     "baseUrl": ".",
 
-
     /* Bundler mode */
     "moduleResolution": "node",
     "allowImportingTsExtensions": true,
@@ -31,7 +30,5 @@
     "types": ["node", "vue-router"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "extends": [
-    "@vue/tsconfig/tsconfig.json"
-  ],
+  "extends": ["@vue/tsconfig/tsconfig.json"]
 }

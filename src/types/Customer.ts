@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: number;
   name: string;
@@ -20,13 +19,12 @@ export interface Address {
   zip: string;
 }
 
-
 export enum CustomerStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 export enum CustomerType {
-  CUSTOMER = "CUSTOMER",
-  COMPANY = "COMPANY",
+  CUSTOMER = 'CUSTOMER',
+  COMPANY = 'COMPANY',
 }

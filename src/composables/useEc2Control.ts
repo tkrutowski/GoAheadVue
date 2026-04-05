@@ -123,9 +123,7 @@ export function useEc2Control() {
           return;
         } catch {
           if (Date.now() - appStartTime > waitForAppTimeoutMs) {
-            throw new Error(
-              'Aplikacja nie odpowiada. Serwer EC2 działa – sprawdź połączenie internetowe lub spróbuj za chwilę.'
-            );
+            throw new Error('Aplikacja nie odpowiada. Serwer EC2 działa – sprawdź połączenie internetowe lub spróbuj za chwilę.');
           }
           await new Promise((r) => setTimeout(r, pollIntervalMs));
         }

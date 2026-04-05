@@ -1,4 +1,4 @@
-import type { Address, CustomerStatus } from "@/types/Customer.ts";
+import type { Address, CustomerStatus } from '@/types/Customer.ts';
 
 export type { Address };
 

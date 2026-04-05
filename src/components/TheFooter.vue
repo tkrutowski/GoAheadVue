@@ -1,5 +1,4 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div id="footer">
@@ -8,11 +7,11 @@
 </template>
 
 <style>
-#footer {
-  /* position:fixed; */
-  /* bottom:0; */
-  color: rgba(255, 245, 0, 0.8);
-  width: 100%;
-  margin-bottom: 20px;
-}
+  #footer {
+    /* position:fixed; */
+    /* bottom:0; */
+    color: rgba(255, 245, 0, 0.8);
+    width: 100%;
+    margin-bottom: 20px;
+  }
 </style>

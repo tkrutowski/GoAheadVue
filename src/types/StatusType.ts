@@ -1,1 +1,1 @@
-export type StatusType = "PAID" | "TO_PAY" | "ACTIVE" | "INACTIVE";
+export type StatusType = 'PAID' | 'TO_PAY' | 'ACTIVE' | 'INACTIVE';

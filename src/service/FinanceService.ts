@@ -1,6 +1,6 @@
-import type { Invoice, InvoiceItem } from "@/types/Invoice.ts";
-import type { Cost, CostItem } from "@/types/Cost.ts";
-import { Vat } from "@/types/Cost.ts";
+import type { Invoice, InvoiceItem } from '@/types/Invoice.ts';
+import type { Cost, CostItem } from '@/types/Cost.ts';
+import { Vat } from '@/types/Cost.ts';
 
 export const FinanceService = {
   getInvoiceAmount(inv: Invoice): number {

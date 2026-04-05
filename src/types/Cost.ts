@@ -1,12 +1,12 @@
-import type { Supplier } from "@/types/Supplier.ts";
-import { PaymentMethod, PaymentStatus } from "@/types/Invoice.ts";
+import type { Supplier } from '@/types/Supplier.ts';
+import { PaymentMethod, PaymentStatus } from '@/types/Invoice.ts';
 
 export enum Vat {
-  VAT_0 = "VAT_0",
-  VAT_5 = "VAT_5",
-  VAT_8 = "VAT_8",
-  VAT_23 = "VAT_23",
-  VAT_ZW = "VAT_ZW",
+  VAT_0 = 'VAT_0',
+  VAT_5 = 'VAT_5',
+  VAT_8 = 'VAT_8',
+  VAT_23 = 'VAT_23',
+  VAT_ZW = 'VAT_ZW',
 }
 
 export interface CostItem {
@@ -48,5 +48,3 @@ export interface Cost {
   pdfUrl: string;
   costItems: CostItem[];
 }
-
- 

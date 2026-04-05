@@ -1,14 +1,13 @@
 <script lang="ts" setup>
-import { useAuthorizationStore } from "@/stores/authorization.ts";
-import ThemeSwitcher from "./ThemeSwitcher.vue";
-import InstanceControl from "@/components/InstanceControl.vue";
-import { EC2_INSTANCE_ID, EC2_INSTANCE_NAME } from "@/config/ec2";
+  import { useAuthorizationStore } from '@/stores/authorization.ts';
+  import ThemeSwitcher from './ThemeSwitcher.vue';
+  import InstanceControl from '@/components/InstanceControl.vue';
+  import { EC2_INSTANCE_ID, EC2_INSTANCE_NAME } from '@/config/ec2';
 
-const authStore = useAuthorizationStore();
+  const authStore = useAuthorizationStore();
 </script>
 <template>
   <div class="relative rounded-t-xl overflow-hidden bg-gradient-to-r from-[#005539] to-[#009966]">
-
     <!-- Main banner content -->
     <div class="flex justify-between items-center px-4 py-2 min-h-[70px]">
       <!-- Left side - title in one line -->
@@ -28,7 +27,7 @@ const authStore = useAuthorizationStore();
         </div>
         <div class="flex justify-end items-center">
           <InstanceControl :idInstance="EC2_INSTANCE_ID" :nameInstance="EC2_INSTANCE_NAME" />
-          <ThemeSwitcher/>
+          <ThemeSwitcher />
         </div>
       </div>
     </div>
