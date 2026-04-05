@@ -107,6 +107,27 @@ export const useInvoiceStore = defineStore("invoice", {
             return itemsForId[0].invoiceItems[0];
         },
 
+        /**
+         * Tekst „Dodatkowe informacje” z ostatniej faktury danego klienta (wg daty sprzedaży), jak przy getLatestItemForCustomer.
+         */
+        getLatestOtherInfoForCustomer(customerId: number | undefined): string {
+            if (customerId === undefined) {
+                return "";
+            }
+            const itemsForId = this.invoices.filter(
+                (inv) => inv.customer?.id === customerId
+            );
+            if (itemsForId.length === 0) {
+                return "";
+            }
+            itemsForId.sort((a: Invoice, b: Invoice) => {
+                const dateA = a.sellDate ? new Date(a.sellDate).getTime() : 0;
+                const dateB = b.sellDate ? new Date(b.sellDate).getTime() : 0;
+                return dateB - dateA;
+            });
+            return itemsForId[0].otherInfo ?? "";
+        },
+
         //
         //GET INVOICES FROM DB WITH PAGINATION
         //
@@ -423,23 +444,27 @@ export const useInvoiceStore = defineStore("invoice", {
         },
 
         /**
-         * Wysłanie faktur do KSeF. Backend przyjmuje List<Integer> invoiceIds.
+         * Wysłanie faktur do KSeF.
+         * Backend: @RequestBody List<Integer> — ciałem musi być tablica JSON [1,2,3], nie { invoiceIds: [...] }.
          */
         async sendInvoicesToKsef(invoiceIds: number[]) {
             if (!invoiceIds?.length) return;
-            console.log("START - sendInvoicesToKsef()", invoiceIds);
-            await httpCommon.post(`/goahead/invoice/ksef`, { invoiceIds });
+            const unique = [...new Set(invoiceIds)];
+            console.log("START - sendInvoicesToKsef()", unique);
+            await httpCommon.put(`/goahead/invoice/ksef`, unique);
             await this.getInvoicesFromDb(this.currentPage);
             console.log("END - sendInvoicesToKsef()");
         },
 
         /**
-         * Pobieranie potwierdzenia UPO dla faktur. Backend (docelowo) przyjmuje List<Integer> invoiceIds.
+         * Pobieranie potwierdzenia UPO dla faktur.
+         * Backend: @RequestBody List<Integer> — jak wyżej, tablica w JSON.
          */
         async downloadUpoConfirmation(invoiceIds: number[]) {
             if (!invoiceIds?.length) return;
-            console.log("START - downloadUpoConfirmation()", invoiceIds);
-            await httpCommon.post(`/goahead/invoice/upo`, { invoiceIds });
+            const unique = [...new Set(invoiceIds)];
+            console.log("START - downloadUpoConfirmation()", unique);
+            await httpCommon.post(`/goahead/invoice/upo`, unique);
             await this.getInvoicesFromDb(this.currentPage);
             console.log("END - downloadUpoConfirmation()");
         },

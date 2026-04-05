@@ -14,6 +14,7 @@ import OfficeIconButton from "@/components/OfficeIconButton.vue";
 import {UtilsService} from "@/service/UtilsService.ts";
 import type {DataTableCellEditCompleteEvent} from "primevue";
 import type {AxiosError} from "axios";
+import {Vat} from "@/types/Cost.ts";
 
 const customerStore = useCustomerStore();
 const invoiceStore = useInvoiceStore();
@@ -42,10 +43,11 @@ const invoice = ref<Invoice>({
 const invoiceItem = ref<InvoiceItem>({
   idInvoice: 0,
   unit: "",
-  id: 0,
+  idInvoiceItem: 0,
   amount: 0,
   name: "",
   quantity: 0,
+  vat: Vat.VAT_ZW
 });
 const invoiceNumber = ref<number>(0);
 const invoiceYear = ref<number>();
@@ -95,6 +97,7 @@ async function newInvoice() {
     showError("Uzupełnij brakujące elementy");
   } else {
     btnSaveDisabled.value = true;
+    btnShowBusy.value = true;
     const invoiceDate = moment(invoice.value.invoiceDate);
     invoice.value.number = invoiceYear.value + "/" + invoiceNumber.value;
     invoice.value.paymentDate = invoiceDate.add(paymentDeadline.value, 'day').toDate()
@@ -118,6 +121,7 @@ async function newInvoice() {
             life: 5000,
           });
           btnSaveDisabled.value = false;
+          btnShowBusy.value = false;
         })
   }
 }
@@ -126,6 +130,18 @@ async function newInvoice() {
 //-----------------------------------------------------EDIT INVOICE------------------------------------------------
 //
 const isEdit = ref<boolean>(false);
+/** Wczytywanie pojedynczej faktury do edycji (GET z bazy). */
+const loadingInvoiceForEdit = ref(false);
+
+watch(
+    () => invoice.value.customer,
+    (customer) => {
+      if (isEdit.value) return;
+      invoice.value.otherInfo = invoiceStore.getLatestOtherInfoForCustomer(
+          customer?.id
+      );
+    }
+);
 
 async function editInvoice() {
   if (!isValid()) {
@@ -133,6 +149,7 @@ async function editInvoice() {
   } else {
     invoice.value.number = invoiceYear.value + "/" + invoiceNumber.value;
     btnSaveDisabled.value = true;
+    btnShowBusy.value = true;
     await invoiceStore.updateInvoiceDb(invoice.value)
         .then(() => {
           toast.add({
@@ -153,6 +170,7 @@ async function editInvoice() {
               life: 5000,
             });
           btnSaveDisabled.value = false;
+          btnShowBusy.value = false;
         })
   }
 }
@@ -167,7 +185,7 @@ function newItem() {
 
   if (latestItem !== null) {
     invoiceItem.value = JSON.parse(JSON.stringify(latestItem));
-    invoiceItem.value.id = 0;
+    invoiceItem.value.idInvoiceItem = 0;
     invoiceItem.value.idInvoice = invoice.value.idInvoice;
     invoiceItem.value.unit = latestItem.unit;
     invoiceItem.value.name = latestItem.name;
@@ -249,6 +267,7 @@ onMounted(async () => {
   } else {
     console.log("onMounted EDIT INVOICE");
     const invoiceId = Number(route.params.invoiceId as string);
+    loadingInvoiceForEdit.value = true;
     invoiceStore
         .getInvoiceFromDb(invoiceId)
         .then((data) => {
@@ -271,6 +290,9 @@ onMounted(async () => {
         })
         .catch((error) => {
           console.error("Błąd podczas pobierania faktury:", error);
+        })
+        .finally(() => {
+          loadingInvoiceForEdit.value = false;
         });
   }
   btnSaveDisabled.value = false;
@@ -297,9 +319,17 @@ const isValid = () => {
   );
 };
 
-const showErrorCustomer = () => {
-  return submitted.value && invoice.value.customer === null;
-};
+const customerFieldErrorId = "invoice-customer-error";
+
+const isCustomerFieldInvalid = computed(
+    () => submitted.value && invoice.value.customer === null
+);
+
+const customerSelectPt = computed(() => ({
+  label: isCustomerFieldInvalid.value
+      ? { "aria-describedby": customerFieldErrorId }
+      : {},
+}));
 
 const getCustomerLabel = (option: Customer) => {
   console.log("getCustomerLabel", option);
@@ -322,113 +352,130 @@ const getCustomerLabel = (option: Customer) => {
     <form @submit.stop.prevent="saveInvoice">
       <Panel>
         <template #header>
-          <OfficeIconButton
-              title="Powrót do listy faktur."
-              class="text-primary-400"
-              icon="pi pi-arrow-left"
-              @click="() => router.push({ name: 'Invoices' })"
-          />
-          <div class="w-full flex justify-center">
-            <span class=" text-3xl font-bold text-surface-500 dark:text-surface-400">
-              {{
-                isEdit
-                    ? `Edycja faktury nr: ${invoice.number}`
-                    : "Nowa faktura"
-              }}
-            </span>
+          <div class="flex w-full items-center gap-2 sm:gap-4">
+            <div class="flex min-w-0 flex-1 items-center justify-start">
+              <OfficeIconButton
+                  title="Powrót do listy faktur."
+                  class="text-primary-400"
+                  icon="pi pi-arrow-left"
+                  @click="() => router.push({ name: 'Invoices' })"
+              />
+            </div>
+            <div class="flex min-w-0 flex-1 items-center justify-center px-1">
+              <span class="text-center text-3xl font-bold text-surface-500 dark:text-surface-400">
+                <template v-if="!isEdit">Nowa faktura</template>
+                <span
+                    v-else-if="loadingInvoiceForEdit"
+                    class="inline-flex items-center gap-2 whitespace-nowrap"
+                >
+                  Edycja faktury nr:
+                  <ProgressSpinner
+                      class="h-7 w-7 shrink-0"
+                      stroke-width="4"
+                      aria-label="Wczytywanie faktury"
+                  />
+                </span>
+                <template v-else>Edycja faktury nr: {{ invoice.number }}</template>
+              </span>
+            </div>
+            <div class="flex min-w-0 flex-1 items-center justify-end">
+              <OfficeButton
+                  text="zapisz"
+                  btn-type="office-save"
+                  type="submit"
+                  :loading="btnShowBusy"
+                  :btn-disabled="isSaveBtnDisabled"
+              />
+            </div>
           </div>
         </template>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Fieldset class="w-full " legend="Dane faktury">
+          <Fieldset class="w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700" legend="Dane faktury">
 
-            <!-- ROW-1   CUSTOMER -->
-            <div class="flex flex-row gap-4">
-              <div class="flex flex-col w-full">
-                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input-customer">Wybierz klienta:</label>
+            <!-- Row 1 Klient 50% | Numer 25% | Rok 25%  -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-start sm:gap-4 ">
+              <div class="min-w-0 sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="input-customer">Wybierz klienta</label>
                 <Select
-                    class="text-red-200"
+                    class="w-full"
                     id="input-customer"
                     v-model="invoice.customer"
-                    :invalid="showErrorCustomer()"
+                    :invalid="isCustomerFieldInvalid"
                     :options="isEdit ? customerStore.customers : customerStore.getCustomerActive"
                     :option-label="getCustomerLabel"
-                    required
                     :loading="customerStore.loadingCustomer"
-                    size="large"
+                    :pt="customerSelectPt"
                 />
-                <small class="p-error">{{
-                    showErrorCustomer() ? "Pole jest wymagane." : "&nbsp;"
+                <small
+                    :id="customerFieldErrorId"
+                    class="p-error block min-h-[1.25rem] text-red-500"
+                    :role="isCustomerFieldInvalid ? 'alert' : undefined"
+                >{{
+                    isCustomerFieldInvalid ? "Pole jest wymagane." : "\u00a0"
                   }}</small>
               </div>
-            </div>
-
-            <!-- ROW-2  INVOICE NUMBER/YEAR  -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <!--              <div class="col">-->
-              <div class="flex flex-row gap-4">
-                <div class="flex flex-col w-full ">
-                  <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="number">Numer faktury</label>
-                  <InputNumber
-                      id="number"
-                      v-model="invoiceNumber"
-                      mode="decimal"
-                      show-buttons
-                      :min="1"
-                      :max="100"
-                      size="large"
-                  />
-                </div>
-                <div v-if="invoiceStore.loadingInvoiceNo" class="mt-6">
-                  <ProgressSpinner
-                      class="mt-1"
-                      style="width: 30px; height: 30px"
-                      stroke-width="5"
-                  />
+              <div class="min-w-0 sm:col-span-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="number">Numer faktury</label>
+                <div class="flex min-w-0 w-full items-start gap-2">
+                  <div class="min-w-0 flex-1">
+                    <InputNumber
+                        id="number"
+                        fluid
+                        v-model="invoiceNumber"
+                        mode="decimal"
+                        show-buttons
+                        :min="1"
+                        :max="100"
+                    />
+                  </div>
+                  <div v-if="invoiceStore.loadingInvoiceNo" class="mt-1 shrink-0">
+                    <ProgressSpinner
+                        class="h-[30px] w-[30px]"
+                        stroke-width="5"
+                    />
+                  </div>
                 </div>
               </div>
-              <div class="">
-                <div class="flex flex-col w-full">
-                  <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="year">Rok faktury</label>
-                  <InputNumber
-                      id="year"
-                      v-model="invoiceYear"
-                      mode="decimal"
-                      :use-grouping="false"
-                      show-buttons
-                      :min="2020"
-                      :max="2050"
-                      size="large"
-                  />
-                </div>
+              <div class="min-w-0 sm:col-span-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="year">Rok faktury</label>
+                <InputNumber
+                    id="year"
+                    fluid
+                    class="min-w-0 w-full max-w-full"
+                    v-model="invoiceYear"
+                    mode="decimal"
+                    :use-grouping="false"
+                    show-buttons
+                    :min="2020"
+                    :max="2050"
+                />
               </div>
             </div>
 
-            <!-- ROW-3  DATES  -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
+            <!-- ROW-2  DATES  -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 ">
               <div class="flex flex-col w-full mt-4 sm:mt-0">
-                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Data wystawienia:</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="input">Data wystawienia:</label>
                 <Calendar
                     v-model="invoice.invoiceDate"
                     show-icon
                     date-format="yy-mm-dd"
-                    size="large"
                 />
               </div>
               <div class="flex flex-col w-full">
-                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Data sprzedaży:</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="input">Data sprzedaży:</label>
                 <Calendar
                     v-model="invoice.sellDate"
                     show-icon
                     date-format="yy-mm-dd"
-                    size="large"
                 />
               </div>
             </div>
 
-            <!-- ROW-4  LATE PAYMENT, PAYMENT_TYPE  -->
+            <!-- ROW-3  LATE PAYMENT, PAYMENT_TYPE  -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
               <div class="flex flex-col w-full mt-4 sm:mt-0">
-                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Odroczenie płatności:</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="input">Odroczenie płatności:</label>
                 <InputNumber
                     id="input"
                     v-model="paymentDeadline"
@@ -437,12 +484,11 @@ const getCustomerLabel = (option: Customer) => {
                     show-buttons
                     :min="0"
                     :max="90"
-                    size="large"
                 />
               </div>
               <div class="flex flex-row gap-4">
                 <div class="flex flex-col w-full">
-                  <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input-customer">Forma płatności:</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="input-customer">Forma płatności:</label>
                   <Select
                       id="input-customer"
                       v-model="invoice.paymentMethod"
@@ -451,25 +497,20 @@ const getCustomerLabel = (option: Customer) => {
                       option-value="value"
                       required
                       :loading="invoiceStore.loadingPaymentType"
-                      size="large"
                   />
                 </div>
               </div>
             </div>
 
-            <!-- ROW-5  OTHER INFO  -->
-            <div class="flex-row flex mt-4">
-              <!--              <div class="col">-->
-              <div class="flex flex-col col-12 w-full">
-                <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input">Dodatkowe informacje:</label>
-                <Textarea v-model="invoice.otherInfo" rows="4" cols="30" fluid/>
-              </div>
-              <!--              </div>-->
-            </div>
+            <!-- ROW-4  OTHER INFO  -->
+            <IftaLabel class="flex flex-col col-12 w-full mt-6">
+              <Textarea id="otherInfo" v-model="invoice.otherInfo" rows="3" cols="30" fluid/>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="otherInfo">Dodatkowe informacje</label>
+</IftaLabel>
           </Fieldset>
 
           <!-- TABLE INVOIS_ITEMS -->
-          <Fieldset class="w-full " legend="Pozycje na fakturze">
+          <Fieldset class="w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700" legend="Pozycje na fakturze">
             <DataTable :value="invoice.invoiceItems" class="pt-2 invoice-items-table" size="small" 
                        editMode="cell" dataKey="id" @cell-edit-complete="onCellEditComplete">
               <template #header>
@@ -586,20 +627,6 @@ const getCustomerLabel = (option: Customer) => {
             </div>
           </Fieldset>
         </div>
-
-        <template #footer>
-        <!-- ROW-6  BTN SAVE -->
-        <div class="flex justify-end py-6 bg-surface-100 dark:bg-surface-800 rounded-xl">
-          <OfficeButton
-              text="zapisz"
-              class="mr-6"
-              btn-type="office-save"
-              type="submit"
-              :loading="btnShowBusy"
-              :btn-disabled="isSaveBtnDisabled"
-          />
-        </div>
-        </template>
       </Panel>
     </form>
   </div>

@@ -18,6 +18,7 @@ declare module 'vue' {
     Fieldset: typeof import('primevue/fieldset')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     IconField: typeof import('primevue/iconfield')['default']
+    IftaLabel: typeof import('primevue/iftalabel')['default']
     InformationDialog: typeof import('./src/components/InformationDialog.vue')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']

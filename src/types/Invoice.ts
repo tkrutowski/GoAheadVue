@@ -1,4 +1,5 @@
 import type {Customer} from "@/types/Customer.ts";
+import type {Vat} from "@/types/Cost.ts";
 
 export interface Invoice {
   idInvoice: number;
@@ -19,12 +20,13 @@ export interface Invoice {
 }
 // export default Invoice
 export interface InvoiceItem {
-  id: number;
+  idInvoiceItem: number;
   idInvoice: number;
   name: string;
   unit: string;
   quantity: number;
   amount: number;
+  vat: Vat;
 }
 
 export enum PaymentStatus {

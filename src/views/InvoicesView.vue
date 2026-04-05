@@ -49,6 +49,16 @@ const clearFilter = async () => {
 
 const expandedRows = ref([]);
 const selectedInvoices = ref<Invoice[]>([]);
+
+/** Po GET/odświeżeniu listy w store `selectedInvoices` może nadal wskazywać stare obiekty — toolbar (canKsef, canEdit, …) wtedy nie widzi nowych pól. */
+function syncSelectedInvoicesFromStore() {
+  const ids = new Set(selectedInvoices.value.map((i) => i.idInvoice));
+  if (ids.size === 0) return;
+  selectedInvoices.value = invoiceStore.invoices.filter((inv) =>
+    ids.has(inv.idInvoice)
+  );
+}
+
 const selectedInvoice = computed(() =>
   selectedInvoices.value?.length === 1 ? selectedInvoices.value[0] : null
 );
@@ -195,6 +205,8 @@ const runGeneratePdf = async () => {
   if (!ids.length) return;
   try {
     const { failed } = await invoiceStore.generateInvoicesPdf(ids);
+    syncSelectedInvoicesFromStore();
+    console.log('PDF generation result:', { failed, ids });
     if (failed.length === 0) {
       toast.add({
         severity: "success",
@@ -509,6 +521,7 @@ const submitSendToKsef = async () => {
   const ids = toSend.map((i) => i.idInvoice);
   try {
     await invoiceStore.sendInvoicesToKsef(ids);
+    syncSelectedInvoicesFromStore();
     toast.add({
       severity: "success",
       summary: "KSeF",
@@ -535,6 +548,7 @@ const handleDownloadUpo = async () => {
   if (!ids.length) return;
   try {
     await invoiceStore.downloadUpoConfirmation(ids);
+    syncSelectedInvoicesFromStore();
     toast.add({
       severity: "success",
       summary: "UPO",
