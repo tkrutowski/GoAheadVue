@@ -15,7 +15,10 @@ import {AxiosError} from "axios";
 import {TranslationService} from "../service/TranslationService.ts";
 import {FinanceService} from "../service/FinanceService.ts";
 import type {DataTablePageEvent} from "primevue";
-import type {DataTableRowContextMenuEvent} from "primevue/datatable";
+import type {
+  DataTableRowClickEvent,
+  DataTableRowContextMenuEvent,
+} from "primevue/datatable";
 import type {MenuItem} from "primevue/menuitem";
 import ContextMenu from "primevue/contextmenu";
 
@@ -565,6 +568,14 @@ const handleDownloadUpo = async () => {
   }
 };
 
+/** Lewy klik w treść wiersza: jedna faktura; wiele wyłącznie przez checkbox (Ctrl/Shift na wierszu nie rozszerza zaznaczenia). */
+const onInvoiceRowClick = async (event: DataTableRowClickEvent) => {
+  const e = event.originalEvent as MouseEvent;
+  if (!e.shiftKey && !e.metaKey && !e.ctrlKey) return;
+  await nextTick();
+  selectedInvoices.value = [event.data as Invoice];
+};
+
 //
 //-------------------------------------------------CONTEXT MENU (wiersz)----------------------------------------------
 //
@@ -818,6 +829,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
         :loading="invoiceStore.loadingInvoices"
         context-menu
         selection-mode="multiple"
+        :meta-key-selection="true"
         data-key="idInvoice"
         striped-rows
         removable-sort
@@ -835,6 +847,7 @@ const invoiceRowMenuModel = computed((): MenuItem[] => [
         @page="handlePageChange"
         @sort="handleSort"
         @filter="handleFilter"
+        @row-click="onInvoiceRowClick"
         @row-contextmenu="onInvoiceRowContextMenu"
         paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink RowsPerPageDropdown"
         current-page-report-template="Od {first} do {last} (Wszystkich faktur: {totalRecords})"
