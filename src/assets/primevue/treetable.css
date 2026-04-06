@@ -233,17 +233,11 @@
   @apply border-b border-l last:border-r;
 }
 
-.p-treetable.p-treetable-gridlines:has(.p-treetable-thead):has(.p-treetable-tbody)
-  .p-treetable-tbody
-  > tr
-  > td {
+.p-treetable.p-treetable-gridlines:has(.p-treetable-thead):has(.p-treetable-tbody) .p-treetable-tbody > tr > td {
   @apply border-b border-l last:border-r;
 }
 
-.p-treetable.p-treetable-gridlines:has(.p-treetable-tbody):has(.p-treetable-tfoot)
-  .p-treetable-tbody
-  > tr:last-child
-  > td {
+.p-treetable.p-treetable-gridlines:has(.p-treetable-tbody):has(.p-treetable-tfoot) .p-treetable-tbody > tr:last-child > td {
   @apply border-x;
 }
 

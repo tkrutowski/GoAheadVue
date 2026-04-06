@@ -33,15 +33,11 @@
   @apply bg-surface-100 dark:bg-surface-800 text-surface-800 dark:text-surface-0;
 }
 
-.p-panelmenu-header:not(.p-disabled):focus-visible
-  .p-panelmenu-header-content
-  .p-panelmenu-header-icon {
+.p-panelmenu-header:not(.p-disabled):focus-visible .p-panelmenu-header-content .p-panelmenu-header-icon {
   @apply text-surface-500 dark:text-surface-400;
 }
 
-.p-panelmenu-header:not(.p-disabled):focus-visible
-  .p-panelmenu-header-content
-  .p-panelmenu-submenu-icon {
+.p-panelmenu-header:not(.p-disabled):focus-visible .p-panelmenu-header-content .p-panelmenu-submenu-icon {
   @apply text-surface-500 dark:text-surface-400;
 }
 

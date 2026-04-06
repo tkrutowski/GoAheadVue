@@ -37,13 +37,11 @@
   @apply bg-surface-0 dark:bg-surface-300 text-surface-700 dark:text-surface-800;
 }
 
-.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
-  .p-toggleswitch-slider {
+.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked .p-toggleswitch-slider {
   @apply bg-primary-emphasis;
 }
 
-.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
-  .p-toggleswitch-handle {
+.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked .p-toggleswitch-handle {
   @apply bg-surface-0 dark:bg-surface-900 text-primary-emphasis;
 }
 

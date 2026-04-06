@@ -100,9 +100,6 @@
   @apply transition-transform duration-200 rotate-90;
 }
 
-.p-tieredmenu-mobile
-  .p-tieredmenu-item-active
-  > .p-tieredmenu-item-content
-  .p-tieredmenu-submenu-icon {
+.p-tieredmenu-mobile .p-tieredmenu-item-active > .p-tieredmenu-item-content .p-tieredmenu-submenu-icon {
   @apply -rotate-90;
 }

@@ -18,9 +18,7 @@
   @apply pt-3 px-4 pb-5;
 }
 
-.p-organizationchart-node.p-organizationchart-node-selectable:not(
-    .p-organizationchart-node-selected
-  ):hover {
+.p-organizationchart-node.p-organizationchart-node-selectable:not(.p-organizationchart-node-selected):hover {
   @apply bg-surface-100 text-surface-800 dark:bg-surface-800 dark:text-surface-0;
 }
 

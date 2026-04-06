@@ -61,7 +61,7 @@
 }
 
 .p-menubar-item.active {
-    @apply border-2 border-primary  rounded-md;
+  @apply border-2 border-primary  rounded-md;
 }
 .p-menubar-item:not(.p-disabled) > .p-menubar-item-content:hover .p-menubar-item-icon {
   @apply text-surface-500 dark:text-surface-400;
@@ -131,11 +131,7 @@
         shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)];
 }
 
-.p-menubar-mobile
-  .p-menubar-root-list
-  > .p-menubar-item
-  > .p-menubar-item-content
-  > .p-menubar-item-link {
+.p-menubar-mobile .p-menubar-root-list > .p-menubar-item > .p-menubar-item-content > .p-menubar-item-link {
   @apply px-3 py-3;
 }
 
@@ -151,19 +147,11 @@
   @apply border-t border-surface-200 dark:border-surface-700;
 }
 
-.p-menubar-mobile
-  .p-menubar-root-list
-  > .p-menubar-item
-  > .p-menubar-item-content
-  .p-menubar-submenu-icon {
+.p-menubar-mobile .p-menubar-root-list > .p-menubar-item > .p-menubar-item-content .p-menubar-submenu-icon {
   @apply ml-auto transition-transform duration-[200ms];
 }
 
-.p-menubar-mobile
-  .p-menubar-root-list
-  > .p-menubar-item-active
-  > .p-menubar-item-content
-  .p-menubar-submenu-icon {
+.p-menubar-mobile .p-menubar-root-list > .p-menubar-item-active > .p-menubar-item-content .p-menubar-submenu-icon {
   @apply -rotate-180;
 }
 

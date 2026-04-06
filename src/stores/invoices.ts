@@ -118,6 +118,27 @@ export const useInvoiceStore = defineStore('invoice', {
       return itemsForId[0].otherInfo ?? '';
     },
 
+    /**
+     * „Odroczenie płatności” (dni) z ostatniej faktury klienta (wg daty sprzedaży). Brak danych → 14.
+     */
+    getLatestPaymentDeadlineForCustomer(customerId: number | undefined): number {
+      const fallback = 14;
+      if (customerId === undefined) {
+        return fallback;
+      }
+      const itemsForId = this.invoices.filter((inv) => inv.customer?.id === customerId);
+      if (itemsForId.length === 0) {
+        return fallback;
+      }
+      itemsForId.sort((a: Invoice, b: Invoice) => {
+        const dateA = a.sellDate ? new Date(a.sellDate).getTime() : 0;
+        const dateB = b.sellDate ? new Date(b.sellDate).getTime() : 0;
+        return dateB - dateA;
+      });
+      const d = itemsForId[0].paymentDeadline;
+      return typeof d === 'number' && !Number.isNaN(d) ? d : fallback;
+    },
+
     //
     //GET INVOICES FROM DB WITH PAGINATION
     //

@@ -95,13 +95,11 @@
   @apply bg-surface-100 dark:bg-surface-800 text-surface-800 dark:text-surface-0;
 }
 
-.p-cascadeselect-option:not(.p-cascadeselect-option-selected):not(.p-disabled).p-focus
-  > .p-cascadeselect-option-content {
+.p-cascadeselect-option:not(.p-cascadeselect-option-selected):not(.p-disabled).p-focus > .p-cascadeselect-option-content {
   @apply bg-surface-100 dark:bg-surface-800 text-surface-800 dark:text-surface-0;
 }
 
-.p-cascadeselect-option:not(.p-cascadeselect-option-selected):not(.p-disabled).p-focus
-  .p-cascadeselect-group-icon {
+.p-cascadeselect-option:not(.p-cascadeselect-option-selected):not(.p-disabled).p-focus .p-cascadeselect-group-icon {
   @apply text-surface-500 dark:text-surface-400;
 }
 
@@ -145,10 +143,7 @@
   @apply transition-transform duration-200 rotate-90;
 }
 
-.p-cascadeselect-mobile-active
-  .p-cascadeselect-option-active
-  > .p-cascadeselect-option-content
-  .p-cascadeselect-group-icon {
+.p-cascadeselect-mobile-active .p-cascadeselect-option-active > .p-cascadeselect-option-content .p-cascadeselect-group-icon {
   @apply -rotate-90;
 }
 

@@ -45,9 +45,7 @@
   @apply border-primary-emphasis bg-primary-emphasis;
 }
 
-.p-radiobutton:not(.p-disabled):has(.p-radiobutton-input:hover).p-radiobutton-checked
-  .p-radiobutton-box
-  .p-radiobutton-icon {
+.p-radiobutton:not(.p-disabled):has(.p-radiobutton-input:hover).p-radiobutton-checked .p-radiobutton-box .p-radiobutton-icon {
   @apply bg-primary-contrast;
 }
 

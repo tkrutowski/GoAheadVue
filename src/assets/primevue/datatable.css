@@ -33,20 +33,12 @@
 }
 
 .p-datatable-scrollable > .p-datatable-table-container > .p-datatable-table > .p-datatable-thead,
-.p-datatable-scrollable
-  > .p-datatable-table-container
-  > .p-virtualscroller
-  > .p-datatable-table
-  > .p-datatable-thead {
+.p-datatable-scrollable > .p-datatable-table-container > .p-virtualscroller > .p-datatable-table > .p-datatable-thead {
   @apply bg-surface-0 dark:bg-surface-900;
 }
 
 .p-datatable-scrollable > .p-datatable-table-container > .p-datatable-table > .p-datatable-tfoot,
-.p-datatable-scrollable
-  > .p-datatable-table-container
-  > .p-virtualscroller
-  > .p-datatable-table
-  > .p-datatable-tfoot {
+.p-datatable-scrollable > .p-datatable-table-container > .p-virtualscroller > .p-datatable-table > .p-datatable-tfoot {
   @apply bg-surface-0 dark:bg-surface-900;
 }
 
@@ -68,18 +60,11 @@
   @apply overflow-hidden whitespace-nowrap;
 }
 
-.p-datatable-resizable-table
-  > .p-datatable-thead
-  > tr
-  > th.p-datatable-resizable-column:not(.p-datatable-frozen-column) {
+.p-datatable-resizable-table > .p-datatable-thead > tr > th.p-datatable-resizable-column:not(.p-datatable-frozen-column) {
   @apply bg-clip-padding relative;
 }
 
-.p-datatable-resizable-table-fit
-  > .p-datatable-thead
-  > tr
-  > th.p-datatable-resizable-column:last-child
-  .p-datatable-column-resizer {
+.p-datatable-resizable-table-fit > .p-datatable-thead > tr > th.p-datatable-resizable-column:last-child .p-datatable-column-resizer {
   @apply hidden;
 }
 
@@ -221,7 +206,7 @@
         border-none
         bg-surface-300 dark:bg-[#2f363c]
         text-surface-700 dark:text-surface-400;
-        /* @apply py-3 px-4 font-normal text-left transition-colors duration-200 
+  /* @apply py-3 px-4 font-normal text-left transition-colors duration-200 
         border-b border-surface-200 dark:border-surface-700
         bg-surface-0 dark:bg-surface-900
         text-surface-700 dark:text-surface-0;*/
@@ -360,17 +345,11 @@
   @apply border-b border-l last:border-r;
 }
 
-.p-datatable.p-datatable-gridlines:has(.p-datatable-thead):has(.p-datatable-tbody)
-  .p-datatable-tbody
-  > tr
-  > td {
+.p-datatable.p-datatable-gridlines:has(.p-datatable-thead):has(.p-datatable-tbody) .p-datatable-tbody > tr > td {
   @apply border-b border-l last:border-r;
 }
 
-.p-datatable.p-datatable-gridlines:has(.p-datatable-tbody):has(.p-datatable-tfoot)
-  .p-datatable-tbody
-  > tr:last-child
-  > td {
+.p-datatable.p-datatable-gridlines:has(.p-datatable-tbody):has(.p-datatable-tfoot) .p-datatable-tbody > tr:last-child > td {
   @apply border-l last:border-r;
 }
 

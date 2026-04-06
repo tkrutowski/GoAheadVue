@@ -26,27 +26,19 @@
   @apply flex-row-reverse;
 }
 
-.p-timeline-vertical.p-timeline-alternate
-  .p-timeline-event:nth-child(odd)
-  .p-timeline-event-opposite {
+.p-timeline-vertical.p-timeline-alternate .p-timeline-event:nth-child(odd) .p-timeline-event-opposite {
   @apply text-right;
 }
 
-.p-timeline-vertical.p-timeline-alternate
-  .p-timeline-event:nth-child(odd)
-  .p-timeline-event-content {
+.p-timeline-vertical.p-timeline-alternate .p-timeline-event:nth-child(odd) .p-timeline-event-content {
   @apply text-left;
 }
 
-.p-timeline-vertical.p-timeline-alternate
-  .p-timeline-event:nth-child(even)
-  .p-timeline-event-opposite {
+.p-timeline-vertical.p-timeline-alternate .p-timeline-event:nth-child(even) .p-timeline-event-opposite {
   @apply text-left;
 }
 
-.p-timeline-vertical.p-timeline-alternate
-  .p-timeline-event:nth-child(even)
-  .p-timeline-event-content {
+.p-timeline-vertical.p-timeline-alternate .p-timeline-event:nth-child(even) .p-timeline-event-content {
   @apply text-right;
 }
 

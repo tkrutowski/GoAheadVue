@@ -138,6 +138,7 @@
     (customer) => {
       if (isEdit.value) return;
       invoice.value.otherInfo = invoiceStore.getLatestOtherInfoForCustomer(customer?.id);
+      paymentDeadline.value = invoiceStore.getLatestPaymentDeadlineForCustomer(customer?.id);
     }
   );
 

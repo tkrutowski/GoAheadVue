@@ -59,9 +59,7 @@
   @apply text-surface-500 dark:text-surface-400;
 }
 
-.p-contextmenu-item:not(.p-disabled)
-  > .p-contextmenu-item-content:hover
-  .p-contextmenu-submenu-icon {
+.p-contextmenu-item:not(.p-disabled) > .p-contextmenu-item-content:hover .p-contextmenu-submenu-icon {
   @apply text-surface-500 dark:text-surface-400;
 }
 
@@ -98,9 +96,6 @@
   @apply transition-transform duration-200 rotate-90;
 }
 
-.p-contextmenu-mobile
-  .p-contextmenu-item-active
-  > .p-contextmenu-item-content
-  .p-contextmenu-submenu-icon {
+.p-contextmenu-mobile .p-contextmenu-item-active > .p-contextmenu-item-content .p-contextmenu-submenu-icon {
   @apply -rotate-90;
 }
