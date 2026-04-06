@@ -78,6 +78,14 @@
   //
   //SAVE
   //
+  function applyPaymentDeadlineToInvoice() {
+    const days = paymentDeadline.value ?? invoice.value.paymentDeadline;
+    invoice.value.paymentDeadline = days;
+    if (invoice.value.invoiceDate) {
+      invoice.value.paymentDate = moment(invoice.value.invoiceDate).add(days, 'day').toDate();
+    }
+  }
+
   function saveInvoice() {
     submitted.value = true;
     if (isEdit.value) {
@@ -97,9 +105,8 @@
     } else {
       btnSaveDisabled.value = true;
       btnShowBusy.value = true;
-      const invoiceDate = moment(invoice.value.invoiceDate);
       invoice.value.number = invoiceYear.value + '/' + invoiceNumber.value;
-      invoice.value.paymentDate = invoiceDate.add(paymentDeadline.value, 'day').toDate();
+      applyPaymentDeadlineToInvoice();
       await invoiceStore
         .addInvoiceDb(invoice.value)
         .then(() => {
@@ -147,6 +154,7 @@
       showError('Uzupełnij brakujące elementy');
     } else {
       invoice.value.number = invoiceYear.value + '/' + invoiceNumber.value;
+      applyPaymentDeadlineToInvoice();
       btnSaveDisabled.value = true;
       btnShowBusy.value = true;
       await invoiceStore
