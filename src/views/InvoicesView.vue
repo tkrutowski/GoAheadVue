@@ -462,6 +462,7 @@
   };
 
   const showKsefConfirmationDialog = ref(false);
+  const ksefSubmitLoading = ref(false);
   const invoicesPendingKsef = ref<Invoice[]>([]);
 
   const ksefConfirmationMessage = computed(() => {
@@ -483,6 +484,7 @@
     const pending = selectedInvoices.value.filter((inv) => !inv.ksefNumber?.trim());
     if (!pending.length) return;
     invoicesPendingKsef.value = [...pending];
+    ksefSubmitLoading.value = false;
     showKsefConfirmationDialog.value = true;
   };
 
@@ -493,6 +495,7 @@
       return;
     }
     const ids = toSend.map((i) => i.idInvoice);
+    ksefSubmitLoading.value = true;
     try {
       await invoiceStore.sendInvoicesToKsef(ids);
       syncSelectedInvoicesFromStore();
@@ -510,6 +513,7 @@
         life: 5000,
       });
     } finally {
+      ksefSubmitLoading.value = false;
       showKsefConfirmationDialog.value = false;
       invoicesPendingKsef.value = [];
     }
@@ -650,6 +654,7 @@
     v-model:visible="showKsefConfirmationDialog"
     :msg="ksefConfirmationMessage"
     label="Wyślij"
+    :save-loading="ksefSubmitLoading"
     @save="submitSendToKsef"
     @cancel="showKsefConfirmationDialog = false"
   />
