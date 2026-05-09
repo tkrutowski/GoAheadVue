@@ -497,14 +497,23 @@
     const ids = toSend.map((i) => i.idInvoice);
     ksefSubmitLoading.value = true;
     try {
-      await invoiceStore.sendInvoicesToKsef(ids);
+      const { partial } = await invoiceStore.sendInvoicesToKsef(ids);
       syncSelectedInvoicesFromStore();
-      toast.add({
-        severity: 'success',
-        summary: 'KSeF',
-        detail: 'Wysłano faktury do KSeF.',
-        life: 3000,
-      });
+      if (partial) {
+        toast.add({
+          severity: 'warn',
+          summary: 'KSeF',
+          detail: 'Wysyłka zakończona częściowo — część faktur mogła nie zostać przyjęta. Sprawdź listę i szczegóły.',
+          life: 6000,
+        });
+      } else {
+        toast.add({
+          severity: 'success',
+          summary: 'KSeF',
+          detail: 'Wysłano faktury do KSeF.',
+          life: 3000,
+        });
+      }
     } catch (err: any) {
       toast.add({
         severity: 'error',

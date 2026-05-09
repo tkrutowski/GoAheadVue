@@ -3,6 +3,15 @@ import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
 import { type Invoice, PaymentMethod, PaymentStatus } from '@/types/Invoice';
 import moment from 'moment';
+import { pollKsefInvoiceJobUntilTerminal } from '@/utils/pollKsefInvoiceJob';
+
+function ksefStartResponseJobId(data: unknown): string | number | null {
+  if (data && typeof data === 'object' && 'jobId' in data) {
+    const v = (data as { jobId: unknown }).jobId;
+    if (typeof v === 'string' || typeof v === 'number') return v;
+  }
+  return null;
+}
 
 export const useInvoiceStore = defineStore('invoice', {
   state: () => ({
@@ -448,16 +457,42 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     /**
-     * Wysłanie faktur do KSeF.
-     * Backend: @RequestBody List<Integer> — ciałem musi być tablica JSON [1,2,3], nie { invoiceIds: [...] }.
+     * Wysłanie faktur do KSeF (async job).
+     * Backend: PUT body List<Integer> [1,2,3]; 202 + { jobId } albo przejściowo 200 po synchronicznym zakończeniu.
+     * Zwraca { partial: true } gdy status zadania PARTIAL (część faktur z błędem).
      */
-    async sendInvoicesToKsef(invoiceIds: number[]) {
-      if (!invoiceIds?.length) return;
+    async sendInvoicesToKsef(invoiceIds: number[]): Promise<{ partial: boolean }> {
+      if (!invoiceIds?.length) return { partial: false };
       const unique = [...new Set(invoiceIds)];
       console.log('START - sendInvoicesToKsef()', unique);
-      await httpCommon.put(`/goahead/invoice/ksef`, unique);
+
+      const response = await httpCommon.put<unknown>(`/goahead/invoice/ksef`, unique, {
+        validateStatus: (status) => status === 200 || status === 202,
+      });
+
+      const jobId = ksefStartResponseJobId(response.data);
+
+      if (response.status === 200 && jobId == null) {
+        await this.getInvoicesFromDb(this.currentPage);
+        console.log('END - sendInvoicesToKsef() (sync 200)');
+        return { partial: false };
+      }
+
+      if (jobId == null) {
+        throw new Error('Brak jobId w odpowiedzi serwera po starcie wysyłki do KSeF.');
+      }
+
+      const finalStatus = await pollKsefInvoiceJobUntilTerminal(httpCommon, jobId);
+
+      if (finalStatus.status === 'FAILED') {
+        const fromErrors = finalStatus.errors?.map((e) => `${e.invoiceId}: ${e.message}`).join('; ');
+        const detail = [finalStatus.message, fromErrors].filter(Boolean).join(' — ') || 'Wysyłka do KSeF nie powiodła się.';
+        throw new Error(detail);
+      }
+
       await this.getInvoicesFromDb(this.currentPage);
       console.log('END - sendInvoicesToKsef()');
+      return { partial: finalStatus.status === 'PARTIAL' };
     },
 
     /**
