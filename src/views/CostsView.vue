@@ -3,6 +3,7 @@
   import { FilterMatchMode } from '@primevue/core/api';
   import TheMenu from '@/components/TheMenu.vue';
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
+  import OfficeButton from '@/components/OfficeButton.vue';
   import ToolbarActionButton from '@/components/ToolbarActionButton.vue';
   import router from '@/router';
   import { useToast } from 'primevue/usetoast';
@@ -228,48 +229,96 @@
   };
 
   // —— Dialog KSeF ——
-  const showKsefDialog = ref(false);
-  const ksefDateFrom = ref<Date>(new Date());
-  const ksefDateTo = ref<Date>(new Date());
-  const ksefPreviewList = ref<Cost[]>([]);
-  const ksefRowSelected = ref<boolean[]>([]);
-  const loadingKsefPreview = ref(false);
-
-  function currentMonthRange(): [Date, Date] {
+  function firstDayOfCurrentMonth(): Date {
     const n = new Date();
-    const start = new Date(n.getFullYear(), n.getMonth(), 1);
-    const end = new Date(n.getFullYear(), n.getMonth() + 1, 0);
-    return [start, end];
+    return new Date(n.getFullYear(), n.getMonth(), 1);
   }
 
+  function lastDayOfCurrentMonth(): Date {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth() + 1, 0);
+  }
+
+  const showKsefDialog = ref(false);
+  const ksefDateFrom = ref<Date>(firstDayOfCurrentMonth());
+  const ksefDateTo = ref<Date>(lastDayOfCurrentMonth());
+  /** Loading na pasku „Sprawdź KSeF” i przy „Wyszukaj” do czasu POST + poll. */
+  const loadingKsefSearch = ref(false);
+
   function openKsefCheckDialog() {
-    const [a, b] = currentMonthRange();
-    ksefDateFrom.value = a;
-    ksefDateTo.value = b;
-    ksefPreviewList.value = [];
-    ksefRowSelected.value = [];
+    if (loadingKsefSearch.value) return;
+    ksefDateFrom.value = new Date(firstDayOfCurrentMonth());
+    ksefDateTo.value = new Date(lastDayOfCurrentMonth());
     showKsefDialog.value = true;
   }
 
+  function closeKsefDialog() {
+    showKsefDialog.value = false;
+  }
+
   async function searchKsefCosts() {
-    loadingKsefPreview.value = true;
+    const fromM = moment(ksefDateFrom.value).startOf('day');
+    const toM = moment(ksefDateTo.value).startOf('day');
+    if (fromM.isAfter(toM)) {
+      toast.add({
+        severity: 'warn',
+        summary: 'KSeF',
+        detail: 'Data „od” nie może być późniejsza niż data „do”.',
+        life: 4000,
+      });
+      return;
+    }
+    const fromDate = fromM.format('YYYY-MM-DD');
+    const toDate = toM.format('YYYY-MM-DD');
+
+    loadingKsefSearch.value = true;
+    showKsefDialog.value = false;
     try {
-      const from = moment(ksefDateFrom.value).format('YYYY-MM-DD');
-      const to = moment(ksefDateTo.value).format('YYYY-MM-DD');
-      const list = await costStore.fetchKsefNewCostsPreview(from, to);
-      if (!list.length) {
+      const result = await costStore.fetchKsefNewCostsPreview(fromDate, toDate);
+      if (!result.ok) {
+        toast.add({
+          severity: 'error',
+          summary: 'KSeF',
+          detail: result.message,
+          life: 6000,
+        });
+        return;
+      }
+
+      const { partial, total } = result;
+
+      if (partial) {
+        toast.add({
+          severity: 'warn',
+          summary: 'KSeF',
+          detail:
+            'Synchronizacja zakończona częściowo — sprawdź szczegóły i ewentualne komunikaty z serwera.',
+          life: 6000,
+        });
+      }
+
+      if (total > 0) {
+        if (!partial) {
+          const detail =
+            total === 1
+              ? 'Pobrano 1 nowy koszt z KSeF. Lista została odświeżona.'
+              : `Pobrano ${total} nowych kosztów z KSeF. Lista została odświeżona.`;
+          toast.add({
+            severity: 'success',
+            summary: 'KSeF',
+            detail,
+            life: 5000,
+          });
+        }
+        await costStore.getCostsFromDb(costStore.currentPage);
+      } else {
         toast.add({
           severity: 'info',
           summary: 'KSeF',
-          detail: 'Brak nowych kosztów w KSeF w wybranym okresie.',
+          detail: 'Brak nowych kosztów z KSeF w wybranym okresie.',
           life: 4000,
         });
-        ksefPreviewList.value = [];
-        ksefRowSelected.value = [];
-        return;
       }
-      ksefPreviewList.value = list;
-      ksefRowSelected.value = list.map(() => true);
     } catch (e: unknown) {
       const err = e as AxiosError<{ message?: string }>;
       toast.add({
@@ -279,60 +328,8 @@
         life: 5000,
       });
     } finally {
-      loadingKsefPreview.value = false;
+      loadingKsefSearch.value = false;
     }
-  }
-
-  function previewCostLabel(cost: Cost): string {
-    if (cost.number?.trim()) return cost.number;
-    if (cost.supplier?.name?.trim()) return cost.supplier.name;
-    return 'Koszt';
-  }
-
-  function previewCostGross(cost: Cost): number {
-    return FinanceService.getCostTotalGross(cost);
-  }
-
-  async function saveSelectedKsefCosts() {
-    const indices = ksefRowSelected.value.map((sel, i) => (sel ? i : -1)).filter((i) => i >= 0);
-    if (!indices.length) {
-      toast.add({
-        severity: 'warn',
-        summary: 'Wybór',
-        detail: 'Zaznacz co najmniej jeden koszt.',
-        life: 3000,
-      });
-      return;
-    }
-    let saved = 0;
-    for (const i of indices) {
-      const raw = ksefPreviewList.value[i];
-      const cost = JSON.parse(JSON.stringify(raw)) as Cost;
-      cost.id = 0;
-      try {
-        await costStore.addCostDb(cost, { skipListRefresh: true });
-        saved++;
-      } catch (reason: unknown) {
-        const ax = reason as AxiosError<{ message?: string }>;
-        toast.add({
-          severity: 'error',
-          summary: 'Błąd zapisu',
-          detail: ax?.response?.data?.message ?? ax?.message ?? 'Nie udało się zapisać kosztu.',
-          life: 5000,
-        });
-        return;
-      }
-    }
-    await costStore.getCostsFromDb(costStore.currentPage);
-    toast.add({
-      severity: 'success',
-      summary: 'Potwierdzenie',
-      detail: saved === 1 ? 'Zapisano koszt.' : `Zapisano ${saved} kosztów.`,
-      life: 3000,
-    });
-    showKsefDialog.value = false;
-    ksefPreviewList.value = [];
-    ksefRowSelected.value = [];
   }
 
   onMounted(async () => {
@@ -390,6 +387,12 @@
       icon: 'pi pi-trash',
       disabled: !canDelete.value,
       command: () => confirmDeleteSelectedCosts(),
+    },
+    {
+      label: 'Generuj PDF',
+      icon: 'pi pi-file-export',
+      disabled: !canGeneratePdf.value,
+      command: () => confirmGeneratePdf(),
     },
     { separator: true },
     {
@@ -451,64 +454,69 @@
     @cancel="showDeleteConfirmationDialog = false"
   />
 
+  <ConfirmationDialog
+    v-model:visible="showGeneratePdfConfirmationDialog"
+    :msg="generatePdfConfirmationMessage"
+    label="Generuj"
+    @save="runGeneratePdf"
+    @cancel="showGeneratePdfConfirmationDialog = false"
+  />
+
   <ContextMenu ref="costRowContextMenu" :model="costRowMenuModel" @hide="onCostContextMenuHide" />
 
-  <Dialog v-model:visible="showKsefDialog" modal header="Sprawdź KSeF" class="w-full max-w-3xl" :dismissable-mask="true">
-    <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+  <Dialog
+    v-model:visible="showKsefDialog"
+    modal
+    header="Sprawdź KSeF"
+    class="w-full max-w-[min(96vw,480px)]"
+    :dismissable-mask="!loadingKsefSearch"
+    :closable="!loadingKsefSearch"
+    :close-on-escape="!loadingKsefSearch"
+  >
+    <div class="flex min-h-0 flex-col gap-4">
+      <div class="grid gap-3 sm:grid-cols-2 sm:items-end">
         <div class="flex flex-col gap-1">
-          <label for="ksef-from" class="text-sm text-surface-600 dark:text-surface-400">Data od</label>
-          <DatePicker id="ksef-from" v-model="ksefDateFrom" date-format="yy-mm-dd" show-icon fluid />
+          <label for="ksef-from" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">Okres od</label>
+          <DatePicker
+            id="ksef-from"
+            v-model="ksefDateFrom"
+            date-format="yy-mm-dd"
+            show-icon
+            fluid
+            :disabled="loadingKsefSearch"
+          />
         </div>
         <div class="flex flex-col gap-1">
-          <label for="ksef-to" class="text-sm text-surface-600 dark:text-surface-400">Data do</label>
-          <DatePicker id="ksef-to" v-model="ksefDateTo" date-format="yy-mm-dd" show-icon fluid />
+          <label for="ksef-to" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">Okres do</label>
+          <DatePicker
+            id="ksef-to"
+            v-model="ksefDateTo"
+            date-format="yy-mm-dd"
+            show-icon
+            fluid
+            :disabled="loadingKsefSearch"
+          />
         </div>
-        <Button
-          type="button"
-          label="Pobierz z KSeF"
-          icon="pi pi-search"
-          :loading="loadingKsefPreview"
-          class="sm:ml-0"
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="flex flex-row justify-end gap-1">
+        <OfficeButton
+          text="Anuluj"
+          btn-type="office-regular"
+          :btn-disabled="loadingKsefSearch"
+          @click="closeKsefDialog"
+        />
+        <OfficeButton
+          text="Wyszukaj"
+          btn-type="office-save"
+          :loading="loadingKsefSearch"
+          :btn-disabled="loadingKsefSearch"
           @click="searchKsefCosts"
         />
       </div>
-
-      <div v-if="ksefPreviewList.length > 0" class="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
-        <div
-          v-for="(row, idx) in ksefPreviewList"
-          :key="idx"
-          class="flex flex-col gap-2 rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900"
-        >
-          <div class="flex items-start gap-3">
-            <input
-              :id="'ksef-cb-' + idx"
-              :checked="ksefRowSelected[idx]"
-              type="checkbox"
-              class="mt-1 h-4 w-4 shrink-0 rounded border-surface-300 text-primary focus:ring-primary dark:border-surface-600"
-              @change="ksefRowSelected[idx] = ($event.target as HTMLInputElement).checked"
-            />
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-surface-900 dark:text-surface-0">
-                {{ previewCostLabel(row) }}
-              </p>
-              <p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
-                Data wystawienia:
-                {{ row.invoiceDate ? UtilsService.formatDateToString(row.invoiceDate) : '—' }}
-              </p>
-              <p class="mt-2 text-base font-semibold text-surface-800 dark:text-surface-100">
-                {{ UtilsService.formatCurrency(previewCostGross(row)) }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="ksefPreviewList.length > 0" class="flex justify-end gap-2 pt-2">
-        <Button type="button" label="Anuluj" severity="secondary" outlined @click="showKsefDialog = false" />
-        <Button type="button" label="Zapisz" icon="pi pi-check" @click="saveSelectedKsefCosts" />
-      </div>
-    </div>
+    </template>
   </Dialog>
 
   <Panel>
@@ -537,12 +545,23 @@
           title="Usuń zaznaczone koszty"
           @click="confirmDeleteSelectedCosts"
         />
+        <ToolbarActionButton
+          label="Generuj PDF"
+          icon="pi pi-file-export"
+          variant="orange"
+          :disabled="!canGeneratePdf"
+          :loading="costStore.loadingFile"
+          title="Wygeneruj PDF dla zaznaczonych kosztów (istniejący PDF wymaga potwierdzenia)"
+          @click="confirmGeneratePdf"
+        />
         <div class="mx-0.5 h-8 shrink-0 self-center border-l border-surface-400 dark:border-surface-500" aria-hidden="true" />
         <ToolbarActionButton
           label="Sprawdź KSeF"
           icon="pi pi-send"
           variant="green"
           title="Pobierz nowe koszty z KSeF dla zakresu dat"
+          :loading="loadingKsefSearch"
+          :disabled="loadingKsefSearch"
           @click="openKsefCheckDialog"
         />
         <div class="mx-0.5 h-8 shrink-0 self-center border-l border-surface-400 dark:border-surface-500" aria-hidden="true" />
