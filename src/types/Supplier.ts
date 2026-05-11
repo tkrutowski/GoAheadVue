@@ -13,4 +13,5 @@ export interface Supplier {
   status: CustomerStatus;
   address: Address;
   accountNumber: string;
+  bankName: string;
 }
