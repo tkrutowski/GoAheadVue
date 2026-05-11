@@ -11,12 +11,12 @@
   import { useCostStore } from '@/stores/costs';
   import type { Supplier } from '@/types/Supplier.ts';
   import type { Cost } from '@/types/Cost.ts';
-  import { PaymentStatus } from '@/types/Invoice.ts';
+  import {PaymentStatus } from '@/types/Invoice.ts';
   import { UtilsService } from '@/service/UtilsService.ts';
   import { FinanceService } from '@/service/FinanceService.ts';
   import { TranslationService } from '@/service/TranslationService.ts';
   import type { DataTablePageEvent } from 'primevue';
-  import type { DataTableRowContextMenuEvent } from 'primevue/datatable';
+  import type {DataTableRowClickEvent, DataTableRowContextMenuEvent } from 'primevue/datatable';
   import type { MenuItem } from 'primevue/menuitem';
   import ContextMenu from 'primevue/contextmenu';
   import type { AxiosError } from 'axios';
@@ -49,6 +49,13 @@
   const expandedRows = ref([]);
   const selectedCosts = ref<Cost[]>([]);
   const selectedCost = computed(() => (selectedCosts.value?.length === 1 ? selectedCosts.value[0] : null));
+
+  /** Po GET/odświeżeniu listy w store `selectedCosts` może nadal wskazywać stare obiekty — toolbar nie widzi nowych pól (np. pdfUrl). */
+  function syncSelectedCostsFromStore() {
+    const ids = new Set(selectedCosts.value.map((c) => c.idCost));
+    if (ids.size === 0) return;
+    selectedCosts.value = costStore.costs.filter((c) => ids.has(c.idCost));
+  }
 
   const canEdit = computed(() => {
     if (selectedCosts.value.length !== 1) return false;
@@ -146,7 +153,7 @@
     if (costTemp.value) {
       const newStatus: PaymentStatus = costTemp.value.paymentStatus === PaymentStatus.PAID ? PaymentStatus.TO_PAY : PaymentStatus.PAID;
       await costStore
-        .updateCostStatusDb(costTemp.value.id, newStatus)
+        .updateCostStatusDb(costTemp.value.idCost, newStatus)
         .then(() => {
           toast.add({
             severity: 'success',
@@ -197,7 +204,7 @@
       showDeleteConfirmationDialog.value = false;
       return;
     }
-    const ids = toDelete.map((c) => c.id);
+    const ids = toDelete.map((c) => c.idCost);
     try {
       await costStore.deleteCostsDb(ids);
       toast.add({
@@ -220,11 +227,89 @@
     }
   };
 
+  //
+  //-------------------------------------------------GENERATE PDF-------------------------------------------------
+  //
+  const showGeneratePdfConfirmationDialog = ref(false);
+
+  const generatePdfConfirmationMessage = computed(() => {
+    const withPdf = selectedCosts.value.filter((c) => c.pdfUrl?.trim());
+    if (!withPdf.length) return '';
+    if (withPdf.length === 1) {
+      return `Koszt nr <b>${withPdf[0].number}</b> ma już wygenerowany PDF. Czy wygenerować ponownie i nadpisać?`;
+    }
+    const maxShow = 8;
+    const nums = withPdf
+      .slice(0, maxShow)
+      .map((c) => c.number)
+      .join(', ');
+    const more = withPdf.length > maxShow ? ` <span class="text-surface-500">(+${withPdf.length - maxShow} więcej)</span>` : '';
+    return `Wybrane koszty (<b>${withPdf.length}</b>) mają już PDF: <span class="text-sm">${nums}${more}</span>. Czy wygenerować ponownie?`;
+  });
+
+  const formatCostNumbersForToast = (numbers: string[], maxShow = 14) => {
+    if (numbers.length <= maxShow) return numbers.join(', ');
+    const head = numbers.slice(0, maxShow).join(', ');
+    return `${head} (+${numbers.length - maxShow} więcej)`;
+  };
+
+  const confirmGeneratePdf = () => {
+    if (!canGeneratePdf.value) return;
+    if (selectedCosts.value.some((c) => c.pdfUrl?.trim())) {
+      showGeneratePdfConfirmationDialog.value = true;
+    } else {
+      void runGeneratePdf();
+    }
+  };
+
+  const runGeneratePdf = async () => {
+    const ids = selectedCosts.value.map((c) => c.idCost);
+    if (!ids.length || costStore.loadingFile) return;
+    showGeneratePdfConfirmationDialog.value = false;
+    try {
+      const { failed } = await costStore.generateCostsPdf(ids);
+      syncSelectedCostsFromStore();
+      if (failed.length === 0) {
+        toast.add({
+          severity: 'success',
+          summary: 'PDF',
+          detail: ids.length === 1 ? 'Wygenerowano PDF dla kosztu.' : `Wygenerowano PDF dla ${ids.length} kosztów.`,
+          life: 3000,
+        });
+      } else if (failed.length === ids.length) {
+        toast.add({
+          severity: 'error',
+          summary: 'Błąd PDF',
+          detail: `Nie udało się wygenerować PDF dla: ${formatCostNumbersForToast(failed.map((f) => f.costNumber))}.`,
+          life: 6000,
+        });
+      } else {
+        toast.add({
+          severity: 'warn',
+          summary: 'Część PDF',
+          detail: `Błąd dla: ${formatCostNumbersForToast(failed.map((f) => f.costNumber))}. Pozostałe wygenerowano.`,
+          life: 8000,
+        });
+      }
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd PDF',
+        detail: 'Nie udało się wygenerować PDF.',
+        life: 4000,
+      });
+    }
+  };
+
+  const canGeneratePdf = computed(
+    () => selectedCosts.value.length >= 1 && !costStore.loadingFile,
+  );
+
   const editItem = (item: Cost) => {
     const costItem: Cost = JSON.parse(JSON.stringify(item));
     router.push({
       name: 'Cost',
-      params: { isEdit: 'true', costId: costItem.id },
+      params: { isEdit: 'true', costId: costItem.idCost },
     });
   };
 
@@ -352,6 +437,14 @@
     await costStore.filterCosts(filters.value);
   };
 
+  /** Lewy klik w treść wiersza: jedna faktura; wiele wyłącznie przez checkbox (Ctrl/Shift na wierszu nie rozszerza zaznaczenia). */
+  const onInvoiceRowClick = async (event: DataTableRowClickEvent) => {
+    const e = event.originalEvent as MouseEvent;
+    if (!e.shiftKey && !e.metaKey && !e.ctrlKey) return;
+    await nextTick();
+    selectedCosts.value = [event.data as Cost];
+  };
+
   //
   // —— Context menu (wiersz) ——
   //
@@ -364,7 +457,7 @@
 
   const onCostRowContextMenu = async (event: DataTableRowContextMenuEvent) => {
     const row = event.data as Cost;
-    const inSelection = selectedCosts.value.some((c) => c.id === row.id);
+    const inSelection = selectedCosts.value.some((c) => c.idCost === row.idCost);
     if (!inSelection) {
       selectedCosts.value = [row];
     }
@@ -610,7 +703,6 @@
       :value="costStore.costs"
       :loading="costStore.loadingCosts"
       context-menu
-      data-key="id"
       striped-rows
       removable-sort
       paginator
@@ -624,6 +716,8 @@
       table-style="min-width: 50rem"
       filter-display="menu"
       selection-mode="multiple"
+      dataKey="idCost"
+      :meta-key-selection="true"
       :global-filter-fields="['supplier.name', 'number', 'sellDate']"
       @page="handlePageChange"
       @sort="handleSort"
@@ -632,6 +726,7 @@
       paginator-template="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink RowsPerPageDropdown"
       current-page-report-template="Od {first} do {last} (Wszystkich kosztów: {totalRecords})"
       size="small"
+      @row-click="onInvoiceRowClick"
     >
       <template #empty>
         <h4 v-if="!costStore.loadingCosts" class="text-red-500">Nie znaleziono kosztów...</h4>
@@ -641,7 +736,7 @@
         <h4>Ładowanie danych. Proszę czekać...</h4>
       </template>
 
-      <Column selection-mode="multiple" :exportable="false" style="width: 3rem" />
+      <Column selectionMode="multiple" :exportable="false" style="width: 3rem" />
       <Column expander style="width: 5rem" />
 
       <Column field="number" header="Nr kosztu" :sortable="true" sort-field="number">

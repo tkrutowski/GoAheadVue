@@ -34,7 +34,7 @@ export interface CostItem {
 }
 
 export interface Cost {
-  id: number;
+  idCost: number;
   supplier: Supplier | null;
   number: string;
   sellDate: Date | null;

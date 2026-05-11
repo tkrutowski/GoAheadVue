@@ -25,7 +25,7 @@
   const toast = useToast();
 
   const cost = ref<Cost>({
-    id: 0,
+    idCost: 0,
     supplier: null,
     number: '',
     sellDate: new Date(),
@@ -147,7 +147,7 @@
 
   function newItem() {
     costItem.value.idCostItem = 0;
-    costItem.value.idCost = cost.value.id;
+    costItem.value.idCost = cost.value.idCost;
     if (!costItem.value.unit) costItem.value.unit = 'szt.';
     FinanceService.updateCostItemAmounts(costItem.value);
     cost.value.costItems.push({ ...costItem.value });

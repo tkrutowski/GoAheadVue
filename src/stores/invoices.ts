@@ -3,15 +3,9 @@ import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
 import { type Invoice, PaymentMethod, PaymentStatus } from '@/types/Invoice';
 import moment from 'moment';
-import { pollKsefInvoiceJobUntilTerminal } from '@/utils/pollKsefInvoiceJob';
-
-function ksefStartResponseJobId(data: unknown): string | number | null {
-  if (data && typeof data === 'object' && 'jobId' in data) {
-    const v = (data as { jobId: unknown }).jobId;
-    if (typeof v === 'string' || typeof v === 'number') return v;
-  }
-  return null;
-}
+import { pollInvoicePdfJobUntilTerminal, pollKsefInvoiceJobUntilTerminal } from '@/utils/pollKsefInvoiceJob';
+import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
+import { invoicePdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
 
 export const useInvoiceStore = defineStore('invoice', {
   state: () => ({
@@ -399,18 +393,8 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     /**
-     * Generuje PDF i zapisuje w S3 (backend). Sukces = 2xx bez treści; błąd = wyjątek (np. ObjectNotSavedException).
-     * Aktualnego pdfUrl dostarcza odświeżenie listy (getInvoicesFromDb).
-     */
-    async generateInvoicePdfForId(invoiceID: number): Promise<void> {
-      console.log('START - generateInvoicePdfForId()', invoiceID);
-      await httpCommon.post(`/goahead/invoice/pdf/${invoiceID}`);
-      console.log('END - generateInvoicePdfForId()');
-    },
-
-    /**
-     * Generuje PDF dla wielu faktur; po zakończeniu jedno odświeżenie listy.
-     * Zwraca listę nieudanych pozycji (numer faktury do komunikatów).
+     * Generuje PDF dla wielu faktur (async job).
+     * Backend: POST /goahead/invoice/pdf body [id,...] → 202 + { jobId }; GET .../invoice/pdf/jobs/{jobId}.
      */
     async generateInvoicesPdf(invoiceIds: number[]): Promise<{
       failed: { idInvoice: number; invoiceNumber: string }[];
@@ -419,23 +403,48 @@ export const useInvoiceStore = defineStore('invoice', {
       const unique = [...new Set(invoiceIds)];
       console.log('START - generateInvoicesPdf()', unique);
       this.loadingFile = true;
-      const failed: { idInvoice: number; invoiceNumber: string }[] = [];
       try {
-        for (const id of unique) {
-          const inv = this.invoices.find((i) => i.idInvoice === id);
-          const invoiceNumber = inv?.number ?? String(id);
-          try {
-            await this.generateInvoicePdfForId(id);
-          } catch {
-            failed.push({ idInvoice: id, invoiceNumber });
-          }
+        const response = await httpCommon.post<unknown>(`/goahead/invoice/pdf`, unique, {
+          validateStatus: (status) => status === 200 || status === 202,
+        });
+
+        const jobId = ksefStartResponseJobId(response.data);
+
+        if (response.status === 200 && jobId == null) {
+          await this.getInvoicesFromDb(this.currentPage);
+          return { failed: [] };
         }
+
+        if (jobId == null) {
+          await this.getInvoicesFromDb(this.currentPage);
+          return {
+            failed: unique.map((id) => ({
+              idInvoice: id,
+              invoiceNumber: this.invoices.find((i) => i.idInvoice === id)?.number ?? String(id),
+            })),
+          };
+        }
+
+        let finalStatus;
+        try {
+          finalStatus = await pollInvoicePdfJobUntilTerminal(httpCommon, jobId);
+        } catch {
+          await this.getInvoicesFromDb(this.currentPage);
+          return {
+            failed: unique.map((id) => ({
+              idInvoice: id,
+              invoiceNumber: this.invoices.find((i) => i.idInvoice === id)?.number ?? String(id),
+            })),
+          };
+        }
+
+        const failed = invoicePdfFailedFromJob(unique, finalStatus, this.invoices);
         await this.getInvoicesFromDb(this.currentPage);
+        return { failed };
       } finally {
         this.loadingFile = false;
         console.log('END - generateInvoicesPdf()');
       }
-      return { failed };
     },
 
     async getPdfFromS3(url: string) {

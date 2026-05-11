@@ -4,6 +4,10 @@ import axios from 'axios';
 import moment from 'moment';
 import type { Cost } from '@/types/Cost.ts';
 import type { PaymentStatus } from '@/types/Invoice.ts';
+import type { KsefCostPreviewFetchResult } from '@/types/KsefCostPreview.ts';
+import { pollCostPdfJobUntilTerminal, pollKsefCostPreviewJobUntilTerminal } from '@/utils/pollKsefInvoiceJob';
+import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
+import { costPdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
 
 export const useCostStore = defineStore('cost', {
   state: () => ({
@@ -20,7 +24,7 @@ export const useCostStore = defineStore('cost', {
   }),
 
   getters: {
-    getSortedCosts: (state) => state.costs.slice().sort((a, b) => a.id - b.id),
+    getSortedCosts: (state) => state.costs.slice().sort((a, b) => a.idCost - b.idCost),
   },
 
   actions: {
@@ -172,7 +176,7 @@ export const useCostStore = defineStore('cost', {
     async deleteCostsDb(costIds: number[]) {
       if (!costIds?.length) return;
       const uniqueIds = [...new Set(costIds)];
-      const idsOnPage = new Set(this.costs.map((c) => c.id));
+      const idsOnPage = new Set(this.costs.map((c) => c.idCost));
       const deletingFromPage = uniqueIds.filter((id) => idsOnPage.has(id));
       const deletesAllVisible = this.costs.length > 0 && deletingFromPage.length === this.costs.length;
 
@@ -200,18 +204,109 @@ export const useCostStore = defineStore('cost', {
     },
 
     /**
-     * Lista nowych kosztów z KSeF w zakresie dat (backend: GET /goahead/cost/ksef/preview).
+     * Generuje PDF dla wielu kosztów (async job).
+     * Backend: POST /goahead/cost/pdf body [id,...] → 202 + { jobId }; GET .../cost/pdf/jobs/{jobId}.
      */
-    async fetchKsefNewCostsPreview(dateFrom: string, dateTo: string): Promise<Cost[]> {
-      const params = new URLSearchParams({ dateFrom, dateTo });
-      const response = await httpCommon.get(`/goahead/cost/ksef?${params.toString()}`);
-      const raw = Array.isArray(response.data) ? response.data : response.data?.content ?? response.data?.items ?? [];
-      return (raw as any[]).map((c) => this.convertResponse(c));
+    async generateCostsPdf(costIds: number[]): Promise<{
+      failed: { idCost: number; costNumber: string }[];
+    }> {
+      if (!costIds?.length) return { failed: [] };
+      const unique = [...new Set(costIds)];
+      console.log('START - generateCostsPdf()', unique);
+      this.loadingFile = true;
+      try {
+        const response = await httpCommon.post<unknown>(`/goahead/cost/pdf`, unique, {
+          validateStatus: (status) => status === 200 || status === 202,
+        });
+
+        const jobId = ksefStartResponseJobId(response.data);
+
+        if (response.status === 200 && jobId == null) {
+          await this.getCostsFromDb(this.currentPage);
+          return { failed: [] };
+        }
+
+        if (jobId == null) {
+          await this.getCostsFromDb(this.currentPage);
+          return {
+            failed: unique.map((id) => ({
+              idCost: id,
+              costNumber: this.costs.find((c) => c.idCost === id)?.number ?? String(id),
+            })),
+          };
+        }
+
+        let finalStatus;
+        try {
+          finalStatus = await pollCostPdfJobUntilTerminal(httpCommon, jobId);
+        } catch {
+          await this.getCostsFromDb(this.currentPage);
+          return {
+            failed: unique.map((id) => ({
+              idCost: id,
+              costNumber: this.costs.find((c) => c.idCost === id)?.number ?? String(id),
+            })),
+          };
+        }
+
+        const failed = costPdfFailedFromJob(unique, finalStatus, this.costs);
+        await this.getCostsFromDb(this.currentPage);
+        return { failed };
+      } finally {
+        this.loadingFile = false;
+        console.log('END - generateCostsPdf()');
+      }
+    },
+
+    /**
+     * Synchronizacja / pobieranie kosztów z KSeF (async job). Wynik w bazie — odśwież listę stroną.
+     * Backend: POST /goahead/cost/ksef { fromDate, toDate } → 202 + { jobId }; GET .../cost/ksef/jobs/{jobId} (brak listy kosztów w odpowiedzi).
+     */
+    async fetchKsefNewCostsPreview(fromDate: string, toDate: string): Promise<KsefCostPreviewFetchResult> {
+      const response = await httpCommon.post<unknown>(
+        `/goahead/cost/ksef`,
+        { fromDate, toDate },
+        {
+          validateStatus: (status) => status === 202,
+        }
+      );
+
+      const jobId = ksefStartResponseJobId(response.data);
+      if (jobId == null) {
+        return { ok: false, message: 'Brak jobId w odpowiedzi serwera po starcie pobierania kosztów z KSeF.' };
+      }
+
+      let finalStatus;
+      try {
+        finalStatus = await pollKsefCostPreviewJobUntilTerminal(httpCommon, jobId);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Nie udało się sprawdzić statusu zadania KSeF.';
+        return { ok: false, message: msg };
+      }
+
+      if (finalStatus.status === 'FAILED') {
+        const fromErrors = finalStatus.errors?.map((e) => `${e.costId ?? '?'}: ${e.message}`).join('; ');
+        const message =
+          [finalStatus.message, fromErrors].filter(Boolean).join(' — ') ||
+          'Pobieranie kosztów z KSeF nie powiodło się.';
+        return { ok: false, message };
+      }
+
+      const total =
+        typeof finalStatus.total === 'number' && Number.isFinite(finalStatus.total)
+          ? finalStatus.total
+          : 0;
+
+      return {
+        ok: true,
+        partial: finalStatus.status === 'PARTIAL',
+        total,
+      };
     },
 
     async updateCostStatusDb(costId: number, status: PaymentStatus) {
       await httpCommon.put(`/goahead/cost/paymentstatus/${costId}`, { value: status });
-      const cost = this.costs.find((c) => c.id === costId);
+      const cost = this.costs.find((c) => c.idCost === costId);
       if (cost) {
         cost.paymentStatus = status;
       }
