@@ -26,7 +26,7 @@
     phone: '',
     mail: '',
     otherInfo: '',
-    customerStatus: CustomerStatus.ACTIVE,
+    status: CustomerStatus.ACTIVE,
     accountNumber: '',
     address: {
       id: 0,

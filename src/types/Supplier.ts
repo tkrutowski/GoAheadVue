@@ -10,7 +10,7 @@ export interface Supplier {
   phone: string;
   mail: string;
   otherInfo: string;
-  customerStatus: CustomerStatus;
+  status: CustomerStatus;
   address: Address;
   accountNumber: string;
 }

@@ -177,7 +177,7 @@
   });
 
   const confirmGeneratePdf = () => {
-    if (selectedInvoices.value.length === 0) return;
+    if (!canGeneratePdf.value) return;
     if (selectedInvoices.value.some((i) => i.pdfUrl?.trim())) {
       showGeneratePdfConfirmationDialog.value = true;
     } else {
@@ -187,7 +187,8 @@
 
   const runGeneratePdf = async () => {
     const ids = selectedInvoices.value.map((i) => i.idInvoice);
-    if (!ids.length) return;
+    if (!ids.length || invoiceStore.loadingFile) return;
+    showGeneratePdfConfirmationDialog.value = false;
     try {
       const { failed } = await invoiceStore.generateInvoicesPdf(ids);
       syncSelectedInvoicesFromStore();
@@ -221,8 +222,6 @@
         detail: 'Nie udało się wygenerować PDF.',
         life: 4000,
       });
-    } finally {
-      showGeneratePdfConfirmationDialog.value = false;
     }
   };
 
@@ -385,7 +384,9 @@
 
   const canDelete = computed(() => selectedInvoices.value.length >= 1);
 
-  const canGeneratePdf = computed(() => selectedInvoices.value.length >= 1);
+  const canGeneratePdf = computed(
+    () => selectedInvoices.value.length >= 1 && !invoiceStore.loadingFile,
+  );
 
   const canPreviewPdfUrl = computed(() => {
     const sel = selectedInvoices.value;
@@ -408,13 +409,6 @@
     return sel.some((inv) => !inv.upoUrl?.trim());
   });
 
-  const canKsefPdf = computed(() => {
-    const sel = selectedInvoices.value;
-    if (sel.length === 0) return false;
-    if (sel.length === 1) return !!sel[0].ksefUrl?.trim();
-    return sel.some((inv) => inv.ksefUrl?.trim());
-  });
-
   const canUpoPdf = computed(() => {
     const sel = selectedInvoices.value;
     if (sel.length === 0) return false;
@@ -431,19 +425,6 @@
         url: inv.pdfUrl!,
         invoiceNumber: inv.number,
         docLabel: 'PDF',
-      }))
-    );
-  };
-
-  const handleOpenKsefPdfs = async () => {
-    const withUrl = selectedInvoices.value.filter((inv) => inv.ksefUrl?.trim());
-    if (!withUrl.length) return;
-    await openPdfsInAppDialog(
-      'PDF KSeF',
-      withUrl.map((inv) => ({
-        url: inv.ksefUrl!,
-        invoiceNumber: inv.number,
-        docLabel: 'KSeF',
       }))
     );
   };
@@ -597,7 +578,7 @@
     {
       label: 'Generuj PDF',
       icon: 'pi pi-file-export',
-      disabled: !canGeneratePdf.value || invoiceStore.loadingFile,
+      disabled: !canGeneratePdf.value,
       command: () => confirmGeneratePdf(),
     },
     { separator: true },
@@ -619,12 +600,6 @@
       icon: 'pi pi-file-pdf',
       disabled: !canPreviewPdfUrl.value,
       command: () => handleOpenInvoicePdfUrls(),
-    },
-    {
-      label: 'KSeF PDF',
-      icon: 'pi pi-file-pdf',
-      disabled: !canKsefPdf.value,
-      command: () => handleOpenKsefPdfs(),
     },
     {
       label: 'UPO PDF',
@@ -744,7 +719,7 @@
         />
         <div class="border-l border-surface-400 dark:border-surface-500 h-8 shrink-0 self-center mx-0.5" aria-hidden="true" />
         <ToolbarActionButton
-          label="KSeF"
+          label="Wyślij do KSeF"
           icon="pi pi-send"
           variant="green"
           :disabled="!canKsef"
@@ -767,14 +742,6 @@
           :disabled="!canPreviewPdfUrl"
           title="Podgląd wygenerowanego PDF w oknie aplikacji"
           @click="handleOpenInvoicePdfUrls"
-        />
-        <ToolbarActionButton
-          label="KSeF PDF"
-          icon="pi pi-file-pdf"
-          variant="orange"
-          :disabled="!canKsefPdf"
-          title="Podgląd PDF z KSeF w oknie aplikacji"
-          @click="handleOpenKsefPdfs"
         />
         <ToolbarActionButton
           label="UPO PDF"

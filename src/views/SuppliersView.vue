@@ -43,14 +43,14 @@
   const changeStatusConfirmationMessage = computed(() => {
     if (supplierTemp.value)
       return `Czy chcesz zmienić status dostawcy <b>${supplierTemp.value.name}</b> na <b>${
-        supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE ? 'Nieaktywny' : 'Aktywny'
+        supplierTemp.value?.status === CustomerStatus.ACTIVE ? 'Nieaktywny' : 'Aktywny'
       }</b>?`;
     return 'No message';
   });
   const submitChangeStatus = async () => {
     if (supplierTemp.value) {
       const newStatus: CustomerStatus =
-        supplierTemp.value?.customerStatus === CustomerStatus.ACTIVE ? CustomerStatus.INACTIVE : CustomerStatus.ACTIVE;
+        supplierTemp.value?.status === CustomerStatus.ACTIVE ? CustomerStatus.INACTIVE : CustomerStatus.ACTIVE;
 
       await supplierStore
         .updateSupplierStatusDb(supplierTemp.value?.id, newStatus)
@@ -233,7 +233,6 @@
           <StatusButton
             title="Zmień status dostawcy (Aktywny/Nieaktywny)"
             :btn-type="data[field]"
-            :color-icon="data[field] === 'ACTIVE' ? '#2da687' : '#dc3545'"
             @click="confirmStatusChange(data)"
           />
         </template>

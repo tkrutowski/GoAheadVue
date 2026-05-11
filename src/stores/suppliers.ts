@@ -21,7 +21,7 @@ export const useSupplierStore = defineStore('supplier', {
     getSortedSuppliers: (state) => {
       return [...state.suppliers].sort((a: Supplier, b: Supplier) => a.name.localeCompare(b.name));
     },
-    getSupplierActive: (state) => state.suppliers.filter((s) => s.customerStatus === CustomerStatus.ACTIVE),
+    getSupplierActive: (state) => state.suppliers.filter((s) => s.status === CustomerStatus.ACTIVE),
   },
 
   actions: {
@@ -51,7 +51,7 @@ export const useSupplierStore = defineStore('supplier', {
       });
       const supplier = this.suppliers.find((item) => item.id === supplierId);
       if (supplier) {
-        supplier.customerStatus = status;
+        supplier.status = status;
       }
       console.log('END - updateSupplierStatusDb()');
       return true;

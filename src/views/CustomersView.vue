@@ -255,7 +255,6 @@
           <StatusButton
             title="Zmień status klienta (Aktywny/Nieaktywny)"
             :btn-type="data[field]"
-            :color-icon="data[field] === 'ACTIVE' ? '#2da687' : '#dc3545'"
             @click="confirmStatusChange(data)"
           />
         </template>
