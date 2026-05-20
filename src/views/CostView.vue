@@ -12,6 +12,7 @@
   import TheMenu from '@/components/TheMenu.vue';
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
   import OfficeIconButton from '@/components/OfficeIconButton.vue';
+  import CostFileUploadButton from '@/components/CostFileUploadButton.vue';
   import { UtilsService } from '@/service/UtilsService.ts';
   import { FinanceService } from '@/service/FinanceService.ts';
   import type { DataTableCellEditCompleteEvent } from 'primevue';
@@ -69,7 +70,7 @@
   });
 
   const isSaveBtnDisabled = computed(() => {
-    return costStore.loadingCosts || supplierStore.loadingSupplier || btnSaveDisabled.value;
+    return costStore.loadingCosts || supplierStore.loadingSupplier || btnSaveDisabled.value || costStore.loadingCostUpload;
   });
 
   function saveCost() {
@@ -248,10 +249,81 @@
   const getSupplierLabel = (option: Supplier) => {
     return option.name;
   };
+
+  const uploadErrorDetail = (error: unknown): string => {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    if (axiosError?.response?.data?.message) return axiosError.response.data.message;
+    if (error instanceof Error && error.message) return error.message;
+    return 'Nie udało się odczytać danych z pliku.';
+  };
+
+  const applyUploadedCost = (uploaded: Cost) => {
+    cost.value = {
+      ...cost.value,
+      supplier: uploaded.supplier ?? cost.value.supplier,
+      number: uploaded.number || cost.value.number,
+      sellDate: uploaded.sellDate ?? cost.value.sellDate,
+      invoiceDate: uploaded.invoiceDate ?? cost.value.invoiceDate,
+      paymentDate: uploaded.paymentDate ?? cost.value.paymentDate,
+      paymentStatus: uploaded.paymentStatus ?? cost.value.paymentStatus,
+      paymentMethod: uploaded.paymentMethod ?? cost.value.paymentMethod,
+      otherInfo: uploaded.otherInfo || cost.value.otherInfo,
+      ksefNumber: uploaded.ksefNumber || cost.value.ksefNumber,
+      ksefUrl: uploaded.ksefUrl || cost.value.ksefUrl,
+      pdfUrl: uploaded.pdfUrl || cost.value.pdfUrl,
+      costItems:
+        uploaded.costItems.length > 0
+          ? uploaded.costItems.map((item) => ({
+              ...item,
+              idCost: cost.value.idCost,
+              idCostItem: 0,
+            }))
+          : cost.value.costItems,
+    };
+  };
+
+  const handleCostFileUpload = async (file: File) => {
+    try {
+      const { cost: uploaded, partial, supplierMatched } = await costStore.uploadCostFromFile(file);
+      applyUploadedCost(uploaded);
+
+      if (!supplierMatched && !uploaded.supplier) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Sprzedawca',
+          detail: 'Nie znaleziono dostawcy po NIP. Wybierz sprzedawcę ręcznie.',
+          life: 5000,
+        });
+      }
+
+      if (partial) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Odczyt pliku',
+          detail: 'Część danych wymaga ręcznego uzupełnienia.',
+          life: 5000,
+        });
+        return;
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Odczyt pliku',
+        detail: 'Uzupełniono dane z pliku.',
+        life: 3000,
+      });
+    } catch (error: unknown) {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd odczytu pliku',
+        detail: uploadErrorDetail(error),
+        life: 5000,
+      });
+    }
+  };
 </script>
 
 <template>
-  <Toast />
   <TheMenu />
 
   <ConfirmationDialog
@@ -266,16 +338,23 @@
     <form @submit.stop.prevent="saveCost">
       <Panel>
         <template #header>
-          <OfficeIconButton
-            title="Powrót do listy kosztów."
-            class="text-primary-400"
-            icon="pi pi-arrow-left"
-            @click="() => router.push({ name: 'Costs' })"
-          />
-          <div class="w-full flex justify-center">
-            <span class="text-3xl font-bold text-surface-500 dark:text-surface-400">
-              {{ isEdit ? 'Edycja kosztu' : 'Nowy koszt' }}
-            </span>
+          <div class="flex w-full items-center gap-2">
+            <OfficeIconButton
+              title="Powrót do listy kosztów."
+              class="text-primary-400"
+              icon="pi pi-arrow-left"
+              @click="() => router.push({ name: 'Costs' })"
+            />
+            <CostFileUploadButton
+              :loading="costStore.loadingCostUpload"
+              :disabled="isSaveBtnDisabled && !costStore.loadingCostUpload"
+              @select="handleCostFileUpload"
+            />
+            <div class="flex flex-1 justify-center">
+              <span class="text-3xl font-bold text-surface-500 dark:text-surface-400">
+                {{ isEdit ? 'Edycja kosztu' : 'Nowy koszt' }}
+              </span>
+            </div>
           </div>
         </template>
 

@@ -5,9 +5,19 @@ import moment from 'moment';
 import type { Cost } from '@/types/Cost.ts';
 import type { PaymentStatus } from '@/types/Invoice.ts';
 import type { KsefCostPreviewFetchResult } from '@/types/KsefCostPreview.ts';
-import { pollCostPdfJobUntilTerminal, pollKsefCostPreviewJobUntilTerminal } from '@/utils/pollKsefInvoiceJob';
+import type {
+  CostUploadCompleteRequest,
+  CostUploadResult,
+  CostUploadUrlRequest,
+  CostUploadUrlResponse,
+} from '@/types/CostUpload.ts';
+import type { Supplier } from '@/types/Supplier.ts';
+import { pollCostPdfJobUntilTerminal, pollCostUploadJobUntilTerminal, pollKsefCostPreviewJobUntilTerminal } from '@/utils/pollAsyncJob';
 import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
 import { costPdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
+import { FinanceService } from '@/service/FinanceService.ts';
+import { UtilsService } from '@/service/UtilsService.ts';
+import { useSupplierStore } from '@/stores/suppliers';
 
 export const useCostStore = defineStore('cost', {
   state: () => ({
@@ -15,6 +25,7 @@ export const useCostStore = defineStore('cost', {
     loadingCosts: false,
     loadingCostNumber: false,
     loadingFile: false,
+    loadingCostUpload: false,
     costs: [] as Cost[],
     totalCosts: 0,
     currentPage: 0,
@@ -200,6 +211,130 @@ export const useCostStore = defineStore('cost', {
       } catch (error) {
         console.error('Błąd podczas pobierania PDF z S3', error);
         throw error;
+      }
+    },
+
+    assertCostUploadFile(file: File) {
+      const maxBytes = 10 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        throw new Error('Plik jest za duży. Maksymalny rozmiar to 10 MB.');
+      }
+
+      const name = file.name.toLowerCase();
+      const mime = (file.type || '').toLowerCase();
+      const allowedMime =
+        mime === 'application/pdf' ||
+        mime.startsWith('image/') ||
+        name.endsWith('.pdf') ||
+        /\.(jpe?g|png|gif|webp|bmp|tiff?)$/.test(name);
+
+      if (!allowedMime) {
+        throw new Error('Obsługiwane są wyłącznie pliki PDF oraz obrazy.');
+      }
+    },
+
+    async requestCostUploadUrl(fileName: string, contentType: string): Promise<CostUploadUrlResponse> {
+      const payload: CostUploadUrlRequest = { fileName, contentType, module: 'GO_AHEAD' };
+      const { data } = await httpCommon.post<CostUploadUrlResponse>(`/v1/files/upload-url`, payload);
+      if (!data?.uploadUrl) {
+        throw new Error('Brak adresu uploadu w odpowiedzi serwera.');
+      }
+      return data;
+    },
+
+    async uploadCostFileToS3(uploadUrl: string, file: File): Promise<void> {
+      await axios.put(uploadUrl, file, {
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+      });
+    },
+
+    resolveSupplierForUploadedCost(cost: Cost, raw: unknown): { supplier: Supplier | null; matched: boolean } {
+      const supplierStore = useSupplierStore();
+      const suppliers = supplierStore.suppliers;
+
+      const supplierFromCost = cost.supplier;
+      if (supplierFromCost?.id) {
+        const byId = suppliers.find((s) => s.id === supplierFromCost.id);
+        if (byId) return { supplier: byId, matched: true };
+      }
+
+      const rawRecord = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+      const seller = rawRecord.seller ?? rawRecord.supplier;
+      const nipSource =
+        (supplierFromCost?.nip ?? '') ||
+        (seller && typeof seller === 'object' && 'nip' in seller ? String((seller as { nip?: unknown }).nip ?? '') : '');
+
+      const nipDigits = UtilsService.normalizeNipDigits(nipSource);
+      if (nipDigits) {
+        const byNip = suppliers.find((s) => UtilsService.normalizeNipDigits(s.nip) === nipDigits);
+        if (byNip) return { supplier: byNip, matched: true };
+      }
+
+      return { supplier: supplierFromCost, matched: false };
+    },
+
+    convertUploadCostToForm(raw: unknown): CostUploadResult {
+      const cost = this.convertResponse(raw);
+      cost.costItems = (cost.costItems ?? []).map((item) => {
+        const next = { ...item, idCostItem: 0, idCost: cost.idCost ?? 0 };
+        FinanceService.updateCostItemAmounts(next);
+        return next;
+      });
+
+      const { supplier, matched } = this.resolveSupplierForUploadedCost(cost, raw);
+      cost.supplier = supplier;
+
+      return {
+        cost,
+        partial: false,
+        supplierMatched: matched,
+      };
+    },
+
+    async uploadCostFromFile(file: File): Promise<CostUploadResult> {
+      this.assertCostUploadFile(file);
+      this.loadingCostUpload = true;
+
+      try {
+        const supplierStore = useSupplierStore();
+        if (supplierStore.suppliers.length <= 1) {
+          await supplierStore.getSuppliersFromDb('ALL');
+        }
+
+        const contentType = file.type || 'application/octet-stream';
+        const { uploadUrl, objectKey, jobId: initialJobId } = await this.requestCostUploadUrl(file.name, contentType);
+        await this.uploadCostFileToS3(uploadUrl, file);
+
+        let jobId = initialJobId ?? null;
+        if (jobId == null && objectKey) {
+          const completePayload: CostUploadCompleteRequest = { objectKey };
+          const completeResponse = await httpCommon.post<unknown>(`/v1/files/upload/confirm`, completePayload, {
+            validateStatus: (status) => status === 200 || status === 202,
+          });
+          jobId = ksefStartResponseJobId(completeResponse.data);
+        }
+
+        if (jobId == null) {
+          throw new Error('Brak identyfikatora zadania po wgraniu pliku.');
+        }
+
+        const finalStatus = await pollCostUploadJobUntilTerminal(httpCommon, jobId);
+        if (finalStatus.status === 'FAILED') {
+          throw new Error(finalStatus.message ?? 'Odczyt danych z pliku nie powiódł się.');
+        }
+
+        const draft = finalStatus.textractResultJson;
+        if (!draft) {
+          throw new Error('Serwer nie zwrócił danych kosztu po przetworzeniu pliku.');
+        }
+
+        const result = this.convertUploadCostToForm(draft);
+        result.partial = finalStatus.status === 'PARTIAL';
+        return result;
+      } finally {
+        this.loadingCostUpload = false;
       }
     },
 

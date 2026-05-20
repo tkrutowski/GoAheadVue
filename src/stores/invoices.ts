@@ -3,7 +3,7 @@ import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
 import { type Invoice, PaymentMethod, PaymentStatus } from '@/types/Invoice';
 import moment from 'moment';
-import { pollInvoicePdfJobUntilTerminal, pollKsefInvoiceJobUntilTerminal } from '@/utils/pollKsefInvoiceJob';
+import { pollInvoicePdfJobUntilTerminal, pollKsefInvoiceJobUntilTerminal } from '@/utils/pollAsyncJob';
 import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
 import { invoicePdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
 

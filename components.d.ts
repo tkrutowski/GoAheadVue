@@ -13,6 +13,7 @@ declare module 'vue' {
     Chart: typeof import('primevue/chart')['default']
     Column: typeof import('primevue/column')['default']
     ConfirmationDialog: typeof import('./src/components/ConfirmationDialog.vue')['default']
+    CostFileUploadButton: typeof import('./src/components/CostFileUploadButton.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     DatePicker: typeof import('primevue/datepicker')['default']
     Dialog: typeof import('primevue/dialog')['default']

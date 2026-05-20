@@ -5,9 +5,10 @@ import {
   type KsefInvoiceJobStatusResponse,
   KSEF_ASYNC_JOB_TERMINAL_STATUSES,
 } from '@/types/KsefJob';
+import type { CostUploadJobStatusResponse } from '@/types/CostUpload';
 import type { PdfBatchJobStatusResponse } from '@/types/PdfBatchJob';
 
-export interface PollKsefInvoiceJobOptions {
+export interface PollAsyncJobOptions {
   /** Pierwszy i bazowy odstęp między zapytaniami (ms). Domyślnie 2000. */
   intervalMs?: number;
   /** Maksymalny odstęp po backoff (ms). Domyślnie 5000. */
@@ -16,19 +17,17 @@ export interface PollKsefInvoiceJobOptions {
   timeoutMs?: number;
 }
 
-/** Alias dla reużycia przy kosztach */
-export type PollKsefJobOptions = PollKsefInvoiceJobOptions;
-
 const INVOICE_JOBS_BASE = '/goahead/invoice/ksef/jobs';
 const COST_KSEF_JOBS_BASE = '/goahead/cost/ksef/jobs';
 const INVOICE_PDF_JOBS_BASE = '/goahead/invoice/pdf/jobs';
 const COST_PDF_JOBS_BASE = '/goahead/cost/pdf/jobs';
+const COST_UPLOAD_JOBS_BASE = '/goahead/cost/upload/jobs';
 
-async function pollKsefJobUntilTerminal<T extends { status: KsefAsyncJobStatus }>(
+async function pollJobUntilTerminal<T extends { status: KsefAsyncJobStatus }>(
   http: AxiosInstance,
   jobId: string | number,
   jobsBasePath: string,
-  options: PollKsefJobOptions | undefined,
+  options: PollAsyncJobOptions | undefined,
   messages: { timeout: string; invalid: string }
 ): Promise<T> {
   const intervalMs = options?.intervalMs ?? 2000;
@@ -64,9 +63,9 @@ async function pollKsefJobUntilTerminal<T extends { status: KsefAsyncJobStatus }
 export async function pollKsefInvoiceJobUntilTerminal(
   http: AxiosInstance,
   jobId: string | number,
-  options?: PollKsefInvoiceJobOptions
+  options?: PollAsyncJobOptions
 ): Promise<KsefInvoiceJobStatusResponse> {
-  return pollKsefJobUntilTerminal<KsefInvoiceJobStatusResponse>(
+  return pollJobUntilTerminal<KsefInvoiceJobStatusResponse>(
     http,
     jobId,
     INVOICE_JOBS_BASE,
@@ -85,9 +84,9 @@ export async function pollKsefInvoiceJobUntilTerminal(
 export async function pollKsefCostPreviewJobUntilTerminal(
   http: AxiosInstance,
   jobId: string | number,
-  options?: PollKsefJobOptions
+  options?: PollAsyncJobOptions
 ): Promise<KsefCostPreviewJobStatusResponse> {
-  return pollKsefJobUntilTerminal<KsefCostPreviewJobStatusResponse>(
+  return pollJobUntilTerminal<KsefCostPreviewJobStatusResponse>(
     http,
     jobId,
     COST_KSEF_JOBS_BASE,
@@ -106,9 +105,9 @@ export async function pollKsefCostPreviewJobUntilTerminal(
 export async function pollInvoicePdfJobUntilTerminal(
   http: AxiosInstance,
   jobId: string | number,
-  options?: PollKsefInvoiceJobOptions
+  options?: PollAsyncJobOptions
 ): Promise<PdfBatchJobStatusResponse> {
-  return pollKsefJobUntilTerminal<PdfBatchJobStatusResponse>(
+  return pollJobUntilTerminal<PdfBatchJobStatusResponse>(
     http,
     jobId,
     INVOICE_PDF_JOBS_BASE,
@@ -127,9 +126,9 @@ export async function pollInvoicePdfJobUntilTerminal(
 export async function pollCostPdfJobUntilTerminal(
   http: AxiosInstance,
   jobId: string | number,
-  options?: PollKsefJobOptions
+  options?: PollAsyncJobOptions
 ): Promise<PdfBatchJobStatusResponse> {
-  return pollKsefJobUntilTerminal<PdfBatchJobStatusResponse>(
+  return pollJobUntilTerminal<PdfBatchJobStatusResponse>(
     http,
     jobId,
     COST_PDF_JOBS_BASE,
@@ -138,6 +137,27 @@ export async function pollCostPdfJobUntilTerminal(
       timeout:
         'Przekroczono czas oczekiwania na wygenerowanie PDF kosztów. Sprawdź listę za chwilę lub spróbuj ponownie.',
       invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu generowania PDF kosztów.',
+    }
+  );
+}
+
+/**
+ * Poluje GET /goahead/cost/upload/jobs/{jobId}.
+ */
+export async function pollCostUploadJobUntilTerminal(
+  http: AxiosInstance,
+  jobId: string | number,
+  options?: PollAsyncJobOptions
+): Promise<CostUploadJobStatusResponse> {
+  return pollJobUntilTerminal<CostUploadJobStatusResponse>(
+    http,
+    jobId,
+    COST_UPLOAD_JOBS_BASE,
+    options,
+    {
+      timeout:
+        'Przekroczono czas oczekiwania na odczyt danych z pliku. Spróbuj ponownie za chwilę.',
+      invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu odczytu pliku kosztu.',
     }
   );
 }

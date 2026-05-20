@@ -335,7 +335,6 @@
 </script>
 
 <template>
-  <Toast />
   <TheMenu />
   <ConfirmationDialog
     v-model:visible="showDeleteConfirmationDialog"
