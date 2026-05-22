@@ -1,6 +1,6 @@
 export const Translations: Record<string, Record<string, string>> = {
   PaymentMethod: { CASH: 'gotówka', CASH_LATE: 'gotówka terminowa', TRANSFER: 'przelew' },
-  CustomerStatus: { ACTIVE: 'Aktywny', INACTIVE: 'Nieaktywny' },
+  ActiveStatus: { ACTIVE: 'Aktywny', INACTIVE: 'Nieaktywny' },
   CustomerType: { CUSTOMER: 'Klient indywidualny', COMPANY: 'Firma' },
 
   PaymentStatus: {

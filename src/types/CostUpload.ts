@@ -1,5 +1,6 @@
 import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
 import type { Cost } from '@/types/Cost.ts';
+import type { Supplier } from '@/types/Supplier.ts';
 
 export interface CostUploadUrlRequest {
   fileName: string;
@@ -29,4 +30,6 @@ export interface CostUploadResult {
   cost: Cost;
   partial: boolean;
   supplierMatched: boolean;
+  /** Dane dostawcy z OCR do prefillu dialogu tworzenia (gdy brak dopasowania po NIP) */
+  supplierDraft?: Partial<Supplier> | null;
 }

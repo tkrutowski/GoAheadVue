@@ -18,6 +18,8 @@ import { costPdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
 import { FinanceService } from '@/service/FinanceService.ts';
 import { UtilsService } from '@/service/UtilsService.ts';
 import { useSupplierStore } from '@/stores/suppliers';
+import { createEmptySupplier } from '@/composables/useSupplierForm';
+import { ActiveStatus, type Address } from '@/types/Customer.ts';
 
 export const useCostStore = defineStore('cost', {
   state: () => ({
@@ -79,9 +81,9 @@ export const useCostStore = defineStore('cost', {
       if (this.filters.supplier?.value) {
         const supplier = this.filters.supplier.value;
         if (Array.isArray(supplier) && supplier.length > 0 && supplier[0].id) {
-          params.append('idSeller', supplier[0].id.toString());
+          params.append('idSupplier', supplier[0].id.toString());
         } else if (!Array.isArray(supplier) && supplier.id) {
-          params.append('idSeller', supplier.id.toString());
+          params.append('idSupplier', supplier.id.toString());
         }
       }
 
@@ -250,6 +252,61 @@ export const useCostStore = defineStore('cost', {
       });
     },
 
+    parseUploadRaw(raw: unknown): unknown {
+      if (typeof raw === 'string') {
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return raw;
+        }
+      }
+      return raw;
+    },
+
+    buildSupplierDraftFromUpload(raw: unknown): Partial<Supplier> | null {
+      const parsed = this.parseUploadRaw(raw);
+      const record = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+      const sellerRaw = record.supplier;
+      const costConverted = this.convertResponse(parsed);
+      const source =
+        sellerRaw && typeof sellerRaw === 'object'
+          ? (sellerRaw as Partial<Supplier>)
+          : costConverted.supplier
+            ? (costConverted.supplier as Partial<Supplier>)
+            : null;
+
+      if (!source) return null;
+
+      const empty = createEmptySupplier();
+      const addr = source.address && typeof source.address === 'object' ? (source.address as Address) : null;
+
+      return {
+        ...empty,
+        id: 0,
+        status: ActiveStatus.ACTIVE,
+        name: source.name?.trim() || empty.name,
+        nip: source.nip ? UtilsService.normalizeNipDigits(String(source.nip)) : empty.nip,
+        regon: source.regon?.trim() || empty.regon,
+        phone: source.phone?.trim() || empty.phone,
+        mail: source.mail?.trim() || empty.mail,
+        otherInfo: source.otherInfo?.trim() || empty.otherInfo,
+        accountNumber: source.accountNumber?.trim() || empty.accountNumber,
+        bankName: source.bankName?.trim() || empty.bankName,
+        address: {
+          ...empty.address,
+          id: 0,
+          city: addr?.city?.trim() || empty.address.city,
+          street: addr?.street?.trim() || empty.address.street,
+          zip: addr?.zip?.trim() || empty.address.zip,
+        },
+      };
+    },
+
+    buildSupplierDraftFromEntity(source: Partial<Supplier> | null | undefined): Partial<Supplier> | null {
+      if (!source) return null;
+      return this.buildSupplierDraftFromUpload({ supplier: source });
+    },
+
     resolveSupplierForUploadedCost(cost: Cost, raw: unknown): { supplier: Supplier | null; matched: boolean } {
       const supplierStore = useSupplierStore();
       const suppliers = supplierStore.suppliers;
@@ -261,10 +318,10 @@ export const useCostStore = defineStore('cost', {
       }
 
       const rawRecord = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-      const seller = rawRecord.seller ?? rawRecord.supplier;
+      const supplier = rawRecord.supplier;
       const nipSource =
         (supplierFromCost?.nip ?? '') ||
-        (seller && typeof seller === 'object' && 'nip' in seller ? String((seller as { nip?: unknown }).nip ?? '') : '');
+        (supplier && typeof supplier === 'object' && 'nip' in supplier ? String((supplier as { nip?: unknown }).nip ?? '') : '');
 
       const nipDigits = UtilsService.normalizeNipDigits(nipSource);
       if (nipDigits) {
@@ -276,20 +333,22 @@ export const useCostStore = defineStore('cost', {
     },
 
     convertUploadCostToForm(raw: unknown): CostUploadResult {
-      const cost = this.convertResponse(raw);
+      const parsedRaw = this.parseUploadRaw(raw);
+      const cost = this.convertResponse(parsedRaw);
       cost.costItems = (cost.costItems ?? []).map((item) => {
         const next = { ...item, idCostItem: 0, idCost: cost.idCost ?? 0 };
         FinanceService.updateCostItemAmounts(next);
         return next;
       });
 
-      const { supplier, matched } = this.resolveSupplierForUploadedCost(cost, raw);
+      const { supplier, matched } = this.resolveSupplierForUploadedCost(cost, parsedRaw);
       cost.supplier = supplier;
 
       return {
         cost,
         partial: false,
         supplierMatched: matched,
+        supplierDraft: matched ? null : this.buildSupplierDraftFromUpload(parsedRaw),
       };
     },
 
@@ -458,7 +517,7 @@ export const useCostStore = defineStore('cost', {
         sort: this.sortField,
         direction: this.sortOrder > 0 ? 'ASC' : 'DESC',
       });
-      params.append('idSeller', supplierId.toString());
+      params.append('idSupplier', supplierId.toString());
       const response = await httpCommon.get(`/goahead/cost/page?${params.toString()}`);
       return (response.data.totalElements as number) > 0;
     },
@@ -467,7 +526,7 @@ export const useCostStore = defineStore('cost', {
       return {
         ...cost,
         number: cost.number ?? cost.costNumber ?? '',
-        supplier: cost.supplier ?? cost.seller ?? null,
+        supplier: cost.supplier ?? null,
         sellDate: cost.sellDate ? new Date(cost.sellDate) : null,
         invoiceDate: cost.invoiceDate ? new Date(cost.invoiceDate) : null,
         paymentDate: cost.paymentDate ? new Date(cost.paymentDate) : null,

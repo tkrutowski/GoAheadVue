@@ -38,6 +38,8 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
     StatusButton: typeof import('./src/components/StatusButton.vue')['default']
+    SupplierCreateDialog: typeof import('./src/components/supplier/SupplierCreateDialog.vue')['default']
+    SupplierFormCore: typeof import('./src/components/supplier/SupplierFormCore.vue')['default']
     Tag: typeof import('primevue/tag')['default']
     Textarea: typeof import('primevue/textarea')['default']
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']

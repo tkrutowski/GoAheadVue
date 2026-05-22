@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import OfficeButton from '@/components/OfficeButton.vue';
 
+  const visible = defineModel<boolean>('visible', { default: false });
+
   defineProps({
     msg: {
       type: String,
@@ -13,12 +15,13 @@
   }>();
 
   const cancel = () => {
+    visible.value = false;
     emit('cancel');
   };
 </script>
 
 <template>
-  <Dialog :style="{ width: '550px' }" header="Informacja" :modal="true">
+  <Dialog v-model:visible="visible" :style="{ width: '550px' }" header="Informacja" :modal="true">
     <div class="confirmation-content">
       <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
       <span v-html="msg"></span>

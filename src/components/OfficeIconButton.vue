@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  defineOptions({ inheritAttrs: false });
+
   const props = defineProps({
     icon: {
       type: String,
@@ -32,6 +34,7 @@
   </span>
   <Button
     v-else
+    v-bind="$attrs"
     class="icon-only"
     :icon="props.icon"
     :rounded="props.rounded"

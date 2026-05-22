@@ -3,7 +3,6 @@
   import { useCostStore } from '@/stores/costs';
   import { useRoute, useRouter } from 'vue-router';
   import { computed, onMounted, ref } from 'vue';
-  import type { Supplier } from '@/types/Supplier';
   import { type Cost, type CostItem, Vat } from '@/types/Cost';
   import { PaymentMethod, PaymentStatus } from '@/types/Invoice';
   import moment from 'moment';
@@ -13,6 +12,9 @@
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
   import OfficeIconButton from '@/components/OfficeIconButton.vue';
   import CostFileUploadButton from '@/components/CostFileUploadButton.vue';
+  import SupplierCreateDialog from '@/components/supplier/SupplierCreateDialog.vue';
+  import type { Supplier } from '@/types/Supplier';
+  import { ActiveStatus } from '@/types/Customer';
   import { UtilsService } from '@/service/UtilsService.ts';
   import { FinanceService } from '@/service/FinanceService.ts';
   import type { DataTableCellEditCompleteEvent } from 'primevue';
@@ -178,6 +180,48 @@
     }
   };
 
+  const showSupplierCreateDialog = ref(false);
+  const supplierDialogInitial = ref<Partial<Supplier> | null>(null);
+  const supplierDialogConfirmLabel = ref('zapisz');
+  const supplierDialogHeader = ref('Nowy dostawca');
+
+  function openSupplierCreateDialogManual() {
+    supplierDialogInitial.value = null;
+    supplierDialogConfirmLabel.value = 'zapisz';
+    supplierDialogHeader.value = 'Nowy dostawca';
+    showSupplierCreateDialog.value = true;
+  }
+
+  function openSupplierCreateDialogFromOcr(draft: Partial<Supplier> | null | undefined) {
+    supplierDialogInitial.value = draft ?? null;
+    supplierDialogConfirmLabel.value = 'zapisz';
+    supplierDialogHeader.value = 'Dostawca z faktury';
+    showSupplierCreateDialog.value = true;
+  }
+
+  const supplierSelectOptions = computed(() => {
+    const active = supplierStore.getSupplierActive;
+    const current = cost.value.supplier;
+    if (current?.id && !active.some((s) => s.id === current.id)) {
+      const withStatus: Supplier = {
+        ...current,
+        status: current.status === ActiveStatus.INACTIVE ? current.status : ActiveStatus.ACTIVE,
+      };
+      return [...active, withStatus];
+    }
+    return active;
+  });
+
+  async function onSupplierCreated(supplier: Supplier) {
+    if (!supplierStore.getSupplierById(supplier.id)) {
+      await supplierStore.getSuppliersFromDb('ALL');
+    }
+    cost.value.supplier = supplierStore.getSupplierById(supplier.id) ?? supplierStore.normalizeSupplier(supplier);
+    supplierDialogInitial.value = null;
+    supplierDialogConfirmLabel.value = 'zapisz';
+    supplierDialogHeader.value = 'Nowy dostawca';
+  }
+
   const showDeleteConfirmationDialog = ref<boolean>(false);
   const costDeleteItemIndex = ref<number>(-1);
   const confirmDeleteItem = (item: CostItem, index: number) => {
@@ -198,9 +242,9 @@
     showDeleteConfirmationDialog.value = false;
   };
 
-  onMounted(() => {
+  onMounted(async () => {
     btnSaveDisabled.value = true;
-    if (supplierStore.suppliers.length <= 1) supplierStore.getSuppliersFromDb('ALL');
+    if (supplierStore.suppliers.length === 0) await supplierStore.getSuppliersFromDb('ALL');
     btnSaveDisabled.value = false;
   });
 
@@ -284,19 +328,23 @@
 
   const handleCostFileUpload = async (file: File) => {
     try {
-      const { cost: uploaded, partial, supplierMatched } = await costStore.uploadCostFromFile(file);
-      applyUploadedCost(uploaded);
+      const result = await costStore.uploadCostFromFile(file);
+      applyUploadedCost(result.cost);
 
-      if (!supplierMatched && !uploaded.supplier) {
+      if (!result.supplierMatched) {
+        cost.value.supplier = null;
+        const draft =
+          result.supplierDraft ?? costStore.buildSupplierDraftFromEntity(result.cost.supplier as Partial<Supplier> | null);
+        openSupplierCreateDialogFromOcr(draft);
         toast.add({
-          severity: 'warn',
+          severity: 'info',
           summary: 'Sprzedawca',
-          detail: 'Nie znaleziono dostawcy po NIP. Wybierz sprzedawcę ręcznie.',
+          detail: 'Nie znaleziono dostawcy po NIP. Uzupełnij dane i zapisz nowego dostawcę.',
           life: 5000,
         });
       }
 
-      if (partial) {
+      if (result.partial) {
         toast.add({
           severity: 'warn',
           summary: 'Odczyt pliku',
@@ -334,6 +382,14 @@
     @cancel="showDeleteConfirmationDialog = false"
   />
 
+  <SupplierCreateDialog
+    v-model:visible="showSupplierCreateDialog"
+    :initial-supplier="supplierDialogInitial"
+    :confirm-label="supplierDialogConfirmLabel"
+    :header="supplierDialogHeader"
+    @saved="onSupplierCreated"
+  />
+
   <div class="m-4">
     <form @submit.stop.prevent="saveCost">
       <Panel>
@@ -359,20 +415,33 @@
         </template>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Fieldset class="w-full" legend="Dane kosztu">
+          <Fieldset
+            class="w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700"
+            legend="Dane kosztu"
+          >
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div class="flex flex-col w-full">
                 <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input-seller">Wybierz sprzedawcę:</label>
-                <Select
-                  id="input-seller"
-                  v-model="cost.supplier"
-                  :invalid="showErrorSeller()"
-                  :options="supplierStore.getSupplierActive"
-                  :option-label="getSupplierLabel"
-                  required
-                  :loading="supplierStore.loadingSupplier"
-                  size="large"
-                />
+                <div class="flex min-w-0 items-center gap-2">
+                  <Select
+                    id="input-seller"
+                    v-model="cost.supplier"
+                    class="min-w-0 flex-1"
+                    data-key="id"
+                    :invalid="showErrorSeller()"
+                    :options="supplierSelectOptions"
+                    :option-label="getSupplierLabel"
+                    required
+                    :loading="supplierStore.loadingSupplier"
+                    size="large"
+                  />
+                  <OfficeIconButton
+                    title="Dodaj nowego dostawcę"
+                    class="shrink-0 text-primary-400"
+                    icon="pi pi-plus"
+                    @click="openSupplierCreateDialogManual"
+                  />
+                </div>
                 <small class="p-error">
                   {{ showErrorSeller() ? 'Pole jest wymagane.' : '\u00A0' }}
                 </small>

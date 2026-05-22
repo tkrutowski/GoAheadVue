@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
+  import { computed, nextTick, onMounted, ref } from 'vue';
   import { FilterMatchMode } from '@primevue/core/api';
   import OfficeButton from '@/components/OfficeButton.vue';
   import TheMenu from '@/components/TheMenu.vue';
@@ -80,9 +80,9 @@
 
   const confirmDeleteSupplier = async (supplier: Supplier) => {
     supplierTemp.value = supplier;
-    hasCosts.value = await costStore.supplierHasCosts(supplier.id);
-    if (!hasCosts.value) showDeleteConfirmationDialog.value = true;
-    else showDeleteInformationDialog.value = true;
+    hasCosts.value = false;
+    await nextTick();
+    showDeleteConfirmationDialog.value = true;
   };
 
   const deleteConfirmationMessage = computed(() => {
@@ -96,27 +96,32 @@
   });
 
   const submitDelete = async () => {
-    if (supplierTemp.value) {
-      await supplierStore
-        .deleteSupplierDb(supplierTemp.value.id)
-        .then(() => {
-          toast.add({
-            severity: 'success',
-            summary: 'Potwierdzenie',
-            detail: 'Usunięto dostawcę: ' + supplierTemp.value?.name,
-            life: 3000,
-          });
-        })
-        .catch(() => {
-          toast.add({
-            severity: 'error',
-            summary: 'Błąd',
-            detail: 'Nie udało się usunąć dostawcy',
-            life: 3000,
-          });
-        });
-    }
+    if (!supplierTemp.value) return;
     showDeleteConfirmationDialog.value = false;
+
+    try {
+      hasCosts.value = await costStore.supplierHasCosts(supplierTemp.value.id);
+      if (hasCosts.value) {
+        await nextTick();
+        showDeleteInformationDialog.value = true;
+        return;
+      }
+
+      await supplierStore.deleteSupplierDb(supplierTemp.value.id);
+      toast.add({
+        severity: 'success',
+        summary: 'Potwierdzenie',
+        detail: 'Usunięto dostawcę: ' + supplierTemp.value.name,
+        life: 3000,
+      });
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd',
+        detail: 'Nie udało się usunąć dostawcy',
+        life: 3000,
+      });
+    }
   };
 
   const editSupplier = (supplier: Supplier) => {
@@ -250,7 +255,7 @@
               class="text-red-500"
               title="Usuń dostawcę"
               icon="pi pi-trash"
-              @click="confirmDeleteSupplier(slotProps.data)"
+              @click.stop="confirmDeleteSupplier(slotProps.data)"
             />
           </div>
         </template>
