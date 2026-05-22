@@ -1,4 +1,4 @@
-import type { Address, CustomerStatus } from '@/types/Customer.ts';
+import type { Address, ActiveStatus } from '@/types/Customer.ts';
 
 export type { Address };
 
@@ -10,7 +10,7 @@ export interface Supplier {
   phone: string;
   mail: string;
   otherInfo: string;
-  status: CustomerStatus;
+  status: ActiveStatus;
   address: Address;
   accountNumber: string;
   bankName: string;

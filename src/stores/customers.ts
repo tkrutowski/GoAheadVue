@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import httpCommon from '@/config/http-common.ts';
-import { type Customer, CustomerStatus } from '@/types/Customer.ts';
+import { type Customer, ActiveStatus } from '@/types/Customer.ts';
 
 export const useCustomerStore = defineStore('customer', {
   state: () => ({
@@ -24,7 +24,7 @@ export const useCustomerStore = defineStore('customer', {
     getCustomerNames: (state) => {
       return state.customers.map((customer) => customer.firstName + ' ' + customer.name);
     },
-    getCustomerActive: (state) => state.customers.filter((c) => c.customerStatus === CustomerStatus.ACTIVE),
+    getCustomerActive: (state) => state.customers.filter((c) => c.activeStatus === ActiveStatus.ACTIVE),
   },
 
   //actions = metody w komponentach
@@ -32,10 +32,10 @@ export const useCustomerStore = defineStore('customer', {
     //
     //GET CUSTOMER BY STATUS
     //
-    async getCustomersFromDb(customerStatus: string) {
-      console.log('START - getCustomersFromDb(' + customerStatus + ')');
+    async getCustomersFromDb(activeStatus: string) {
+      console.log('START - getCustomersFromDb(' + activeStatus + ')');
       this.loadingCustomer = true;
-      const response = await httpCommon.get(`/goahead/customer?status=` + customerStatus).finally(() => (this.loadingCustomer = false));
+      const response = await httpCommon.get(`/goahead/customer?status=` + activeStatus).finally(() => (this.loadingCustomer = false));
       // JSON responses are automatically parsed.
       console.log('getCustomersFromDb() - size[]: ' + response.data.length);
       this.customers = response.data;
@@ -58,12 +58,12 @@ export const useCustomerStore = defineStore('customer', {
     //
     //CHANGE CUSTOMER_STATUS
     //
-    async updateCustomerStatusDb(customerId: number, status: CustomerStatus) {
+    async updateCustomerStatusDb(customerId: number, status: ActiveStatus) {
       console.log('START - updateCustomerStatusDb()');
-      await httpCommon.put(`/goahead/customer/customerstatus/` + customerId, { value: status });
+      await httpCommon.put(`/goahead/customer/status/` + customerId, { value: status });
       const customer = this.customers.find((item) => item.id === customerId);
       if (customer) {
-        customer.customerStatus = status;
+        customer.activeStatus = status;
       }
       console.log('END - updateCustomerStatusDb()');
       return true;

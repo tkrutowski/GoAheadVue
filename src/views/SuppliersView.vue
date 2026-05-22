@@ -6,7 +6,7 @@
   import router from '@/router';
   import StatusButton from '@/components/StatusButton.vue';
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
-  import { CustomerStatus } from '@/types/Customer';
+  import { ActiveStatus } from '@/types/Customer';
   import type { Supplier } from '@/types/Supplier';
   import { useCostStore } from '@/stores/costs';
   import { useSupplierStore } from '@/stores/suppliers';
@@ -43,14 +43,14 @@
   const changeStatusConfirmationMessage = computed(() => {
     if (supplierTemp.value)
       return `Czy chcesz zmienić status dostawcy <b>${supplierTemp.value.name}</b> na <b>${
-        supplierTemp.value?.status === CustomerStatus.ACTIVE ? 'Nieaktywny' : 'Aktywny'
+        supplierTemp.value?.status === ActiveStatus.ACTIVE ? 'Nieaktywny' : 'Aktywny'
       }</b>?`;
     return 'No message';
   });
   const submitChangeStatus = async () => {
     if (supplierTemp.value) {
-      const newStatus: CustomerStatus =
-        supplierTemp.value?.status === CustomerStatus.ACTIVE ? CustomerStatus.INACTIVE : CustomerStatus.ACTIVE;
+      const newStatus: ActiveStatus =
+        supplierTemp.value?.status === ActiveStatus.ACTIVE ? ActiveStatus.INACTIVE : ActiveStatus.ACTIVE;
 
       await supplierStore
         .updateSupplierStatusDb(supplierTemp.value?.id, newStatus)
@@ -233,7 +233,7 @@
       <Column field="nip" header="NIP" sortable />
       <Column field="accountNumber" header="Nr konta" sortable />
 
-      <Column field="customerStatus" header="Status" style="width: 100px">
+      <Column field="status" header="Status" style="width: 100px">
         <template #body="{ data, field }">
           <StatusButton
             title="Zmień status dostawcy (Aktywny/Nieaktywny)"

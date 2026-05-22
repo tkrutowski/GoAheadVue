@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, ref, watch } from 'vue';
+  import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
   import { FilterMatchMode } from '@primevue/core/api';
   import TheMenu from '@/components/TheMenu.vue';
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
@@ -64,6 +64,10 @@
 
   const canDelete = computed(() => selectedCosts.value.length >= 1);
 
+  const costsEligibleForPdf = computed(() => selectedCosts.value.filter((c) => c.ksefNumber?.trim()));
+
+  const costsSkippedWithoutKsef = computed(() => selectedCosts.value.filter((c) => !c.ksefNumber?.trim()));
+
   const canPreviewPdfUrl = computed(() => {
     const sel = selectedCosts.value;
     if (sel.length === 0) return false;
@@ -78,59 +82,123 @@
     return sel.some((c) => c.ksefUrl?.trim());
   });
 
-  const openPdfBlobFromUrl = async (url: string, costLabel: string, label: string): Promise<boolean> => {
+  // —— Podgląd PDF w aplikacji (bez nowych kart) ——
+  type PdfPreviewItem = { label: string; blobUrl: string };
+
+  const showPdfPreviewDialog = ref(false);
+  const pdfPreviewTitle = ref('');
+  const pdfPreviewItems = ref<PdfPreviewItem[]>([]);
+  const pdfPreviewBlobUrlsToRevoke = ref<string[]>([]);
+  const pdfPreviewActiveIndex = ref(0);
+  const loadingPdfPreview = ref(false);
+
+  const pdfPreviewSelectOptions = computed(() => pdfPreviewItems.value.map((item, i) => ({ label: item.label, value: i })));
+
+  const currentPdfPreviewSrc = computed(() => pdfPreviewItems.value[pdfPreviewActiveIndex.value]?.blobUrl ?? '');
+
+  const revokePdfPreviewUrls = () => {
+    for (const u of pdfPreviewBlobUrlsToRevoke.value) {
+      URL.revokeObjectURL(u);
+    }
+    pdfPreviewBlobUrlsToRevoke.value = [];
+    pdfPreviewItems.value = [];
+  };
+
+  const onPdfPreviewDialogHide = () => {
+    revokePdfPreviewUrls();
+    pdfPreviewActiveIndex.value = 0;
+    loadingPdfPreview.value = false;
+  };
+
+  const formatCostNumbersForToast = (numbers: string[], maxShow = 14) => {
+    if (numbers.length <= maxShow) return numbers.join(', ');
+    const head = numbers.slice(0, maxShow).join(', ');
+    return `${head} (+${numbers.length - maxShow} więcej)`;
+  };
+
+  /** Wczytuje PDF-y z S3 i pokazuje je w oknie dialogowym (użytkownik zostaje w aplikacji). */
+  const openPdfsInAppDialog = async (title: string, entries: { url: string; costNumber: string; docLabel: string }[]) => {
+    if (!entries.length) return;
+    revokePdfPreviewUrls();
+    pdfPreviewTitle.value = title;
+    pdfPreviewActiveIndex.value = 0;
+    loadingPdfPreview.value = true;
+    showPdfPreviewDialog.value = true;
+
+    const items: PdfPreviewItem[] = [];
+    const failedNumbers: string[] = [];
+
     try {
-      const response = await costStore.getPdfFromS3(url);
-      const blobUrl = URL.createObjectURL(response.data);
-      window.open(blobUrl, '_blank');
-      return true;
-    } catch {
-      toast.add({
-        severity: 'error',
-        summary: 'Błąd',
-        detail: `Nie udało się otworzyć ${label} dla kosztu: ${costLabel}`,
-        life: 3000,
-      });
-      return false;
+      for (const e of entries) {
+        try {
+          const response = await costStore.getPdfFromS3(e.url);
+          const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          pdfPreviewBlobUrlsToRevoke.value.push(blobUrl);
+          items.push({
+            label: `${e.docLabel} · ${e.costNumber}`,
+            blobUrl,
+          });
+        } catch {
+          failedNumbers.push(e.costNumber);
+        }
+      }
+
+      pdfPreviewItems.value = items;
+
+      if (items.length === 0) {
+        revokePdfPreviewUrls();
+        showPdfPreviewDialog.value = false;
+        toast.add({
+          severity: 'error',
+          summary: 'Błąd PDF',
+          detail: `Nie udało się wczytać PDF dla kosztów: ${formatCostNumbersForToast(failedNumbers)}.`,
+          life: 8000,
+        });
+        return;
+      }
+
+      if (failedNumbers.length > 0) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Część plików niedostępna',
+          detail: `Brak PDF dla kosztów: ${formatCostNumbersForToast(failedNumbers)}. Pozostałe dokumenty są w podglądzie.`,
+          life: 9000,
+        });
+      }
+    } finally {
+      loadingPdfPreview.value = false;
     }
   };
+
+  onUnmounted(() => {
+    revokePdfPreviewUrls();
+  });
 
   const handleOpenCostPdfUrls = async () => {
     const withUrl = selectedCosts.value.filter((c) => c.pdfUrl?.trim());
     if (!withUrl.length) return;
-    let opened = 0;
-    for (const c of withUrl) {
-      const ok = await openPdfBlobFromUrl(c.pdfUrl!, c.number || '—', 'PDF');
-      if (ok) opened++;
-    }
-    if (opened > 1) {
-      toast.add({
-        severity: 'info',
-        summary: 'PDF',
-        detail:
-          'Otwarto ' + opened + ' plików PDF. Jeśli część okien się nie pojawiła, sprawdź blokadę wyskakujących okien w przeglądarce.',
-        life: 5000,
-      });
-    }
+    await openPdfsInAppDialog(
+      'PDF kosztu',
+      withUrl.map((c) => ({
+        url: c.pdfUrl!,
+        costNumber: c.number || '—',
+        docLabel: 'PDF',
+      })),
+    );
   };
 
   const handleOpenKsefPdfs = async () => {
     const withUrl = selectedCosts.value.filter((c) => c.ksefUrl?.trim());
     if (!withUrl.length) return;
-    let opened = 0;
-    for (const c of withUrl) {
-      const ok = await openPdfBlobFromUrl(c.ksefUrl!, c.number || '—', 'KSeF PDF');
-      if (ok) opened++;
-    }
-    if (opened > 1) {
-      toast.add({
-        severity: 'info',
-        summary: 'KSeF PDF',
-        detail:
-          'Otwarto ' + opened + ' plików PDF. Jeśli część okien się nie pojawiła, sprawdź blokadę wyskakujących okien w przeglądarce.',
-        life: 5000,
-      });
-    }
+    await openPdfsInAppDialog(
+      'KSeF PDF',
+      withUrl.map((c) => ({
+        url: c.ksefUrl!,
+        costNumber: c.number || '—',
+        docLabel: 'KSeF PDF',
+      })),
+    );
   };
 
   const costTemp = ref<Cost>();
@@ -230,10 +298,29 @@
   //
   //-------------------------------------------------GENERATE PDF-------------------------------------------------
   //
+  const showPartialKsefGenerateDialog = ref(false);
   const showGeneratePdfConfirmationDialog = ref(false);
 
+  const partialKsefGenerateMessage = computed(() => {
+    const total = selectedCosts.value.length;
+    const eligible = costsEligibleForPdf.value;
+    const skipped = costsSkippedWithoutKsef.value.length;
+    if (!eligible.length || !skipped) return '';
+    const maxShow = 8;
+    const nums = eligible
+      .slice(0, maxShow)
+      .map((c) => c.number)
+      .join(', ');
+    const more = eligible.length > maxShow ? ` <span class="text-surface-500">(+${eligible.length - maxShow} więcej)</span>` : '';
+    return (
+      `Zaznaczono <b>${total}</b> kosztów. PDF zostanie wygenerowany wyłącznie dla <b>${eligible.length}</b> kosztów z numerem KSeF: ` +
+      `<span class="text-sm">${nums}${more}</span>. ` +
+      `<b>${skipped}</b> kosztów bez numeru KSeF zostanie pominiętych. Czy kontynuować?`
+    );
+  });
+
   const generatePdfConfirmationMessage = computed(() => {
-    const withPdf = selectedCosts.value.filter((c) => c.pdfUrl?.trim());
+    const withPdf = costsEligibleForPdf.value.filter((c) => c.pdfUrl?.trim());
     if (!withPdf.length) return '';
     if (withPdf.length === 1) {
       return `Koszt nr <b>${withPdf[0].number}</b> ma już wygenerowany PDF. Czy wygenerować ponownie i nadpisać?`;
@@ -244,28 +331,36 @@
       .map((c) => c.number)
       .join(', ');
     const more = withPdf.length > maxShow ? ` <span class="text-surface-500">(+${withPdf.length - maxShow} więcej)</span>` : '';
-    return `Wybrane koszty (<b>${withPdf.length}</b>) mają już PDF: <span class="text-sm">${nums}${more}</span>. Czy wygenerować ponownie?`;
+    return `Wybrane koszty z KSeF (<b>${withPdf.length}</b>) mają już PDF: <span class="text-sm">${nums}${more}</span>. Czy wygenerować ponownie?`;
   });
 
-  const formatCostNumbersForToast = (numbers: string[], maxShow = 14) => {
-    if (numbers.length <= maxShow) return numbers.join(', ');
-    const head = numbers.slice(0, maxShow).join(', ');
-    return `${head} (+${numbers.length - maxShow} więcej)`;
-  };
-
-  const confirmGeneratePdf = () => {
-    if (!canGeneratePdf.value) return;
-    if (selectedCosts.value.some((c) => c.pdfUrl?.trim())) {
+  const proceedGeneratePdfAfterKsefInfo = () => {
+    if (costsEligibleForPdf.value.some((c) => c.pdfUrl?.trim())) {
       showGeneratePdfConfirmationDialog.value = true;
     } else {
       void runGeneratePdf();
     }
   };
 
+  const confirmPartialKsefGenerate = () => {
+    showPartialKsefGenerateDialog.value = false;
+    proceedGeneratePdfAfterKsefInfo();
+  };
+
+  const confirmGeneratePdf = () => {
+    if (!canGeneratePdf.value) return;
+    if (costsSkippedWithoutKsef.value.length > 0) {
+      showPartialKsefGenerateDialog.value = true;
+      return;
+    }
+    proceedGeneratePdfAfterKsefInfo();
+  };
+
   const runGeneratePdf = async () => {
-    const ids = selectedCosts.value.map((c) => c.idCost);
+    const ids = costsEligibleForPdf.value.map((c) => c.idCost);
     if (!ids.length || costStore.loadingFile) return;
     showGeneratePdfConfirmationDialog.value = false;
+    showPartialKsefGenerateDialog.value = false;
     try {
       const { failed } = await costStore.generateCostsPdf(ids);
       syncSelectedCostsFromStore();
@@ -302,7 +397,10 @@
   };
 
   const canGeneratePdf = computed(
-    () => selectedCosts.value.length >= 1 && !costStore.loadingFile,
+    () =>
+      selectedCosts.value.length >= 1 &&
+      !costStore.loadingFile &&
+      costsEligibleForPdf.value.length >= 1,
   );
 
   const editItem = (item: Cost) => {
@@ -548,12 +646,56 @@
   />
 
   <ConfirmationDialog
+    v-model:visible="showPartialKsefGenerateDialog"
+    :msg="partialKsefGenerateMessage"
+    label="Kontynuuj"
+    @save="confirmPartialKsefGenerate"
+    @cancel="showPartialKsefGenerateDialog = false"
+  />
+
+  <ConfirmationDialog
     v-model:visible="showGeneratePdfConfirmationDialog"
     :msg="generatePdfConfirmationMessage"
     label="Generuj"
     @save="runGeneratePdf"
     @cancel="showGeneratePdfConfirmationDialog = false"
   />
+
+  <Dialog
+    v-model:visible="showPdfPreviewDialog"
+    modal
+    :header="pdfPreviewTitle"
+    class="w-full max-w-[min(96vw,1200px)]"
+    :dismissable-mask="true"
+    :closable="!loadingPdfPreview"
+    :close-on-escape="!loadingPdfPreview"
+    maximizable
+    @hide="onPdfPreviewDialogHide"
+  >
+    <div class="flex min-h-[70vh] flex-col gap-3">
+      <div v-if="loadingPdfPreview" class="flex flex-1 items-center justify-center py-24">
+        <ProgressSpinner class="h-16 w-16" stroke-width="4" />
+      </div>
+      <template v-else>
+        <Select
+          v-if="pdfPreviewItems.length > 1"
+          v-model="pdfPreviewActiveIndex"
+          :options="pdfPreviewSelectOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="Wybierz dokument"
+          class="w-full max-w-md"
+        />
+        <iframe
+          v-if="currentPdfPreviewSrc"
+          :key="pdfPreviewActiveIndex"
+          :src="currentPdfPreviewSrc"
+          class="min-h-[65vh] w-full flex-1 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900"
+          title="Podgląd PDF"
+        />
+      </template>
+    </div>
+  </Dialog>
 
   <ContextMenu ref="costRowContextMenu" :model="costRowMenuModel" @hide="onCostContextMenuHide" />
 
@@ -618,7 +760,7 @@
     >
       <div class="flex shrink-0 items-center justify-start">
         <router-link :to="{ name: 'Cost', params: { isEdit: 'false', costId: 0 } }" class="no-underline">
-          <Button type="button" label="Nowa" icon="pi pi-plus" size="small" outlined :class="toolbarBtnNowa" title="Dodaj nowy koszt" />
+          <Button type="button" label="Nowy" icon="pi pi-plus" size="small" outlined :class="toolbarBtnNowa" title="Dodaj nowy koszt" />
         </router-link>
       </div>
       <div class="flex min-w-0 flex-1 flex-nowrap items-center justify-center gap-2 overflow-x-auto py-0.5">
@@ -644,7 +786,7 @@
           variant="orange"
           :disabled="!canGeneratePdf"
           :loading="costStore.loadingFile"
-          title="Wygeneruj PDF dla zaznaczonych kosztów (istniejący PDF wymaga potwierdzenia)"
+          title="Wygeneruj PDF dla kosztów z numerem KSeF (bez KSeF zostaną pominięte; istniejący PDF wymaga potwierdzenia)"
           @click="confirmGeneratePdf"
         />
         <div class="mx-0.5 h-8 shrink-0 self-center border-l border-surface-400 dark:border-surface-500" aria-hidden="true" />
@@ -740,6 +882,17 @@
       <Column expander style="width: 5rem" />
 
       <Column field="number" header="Nr kosztu" :sortable="true" sort-field="number">
+        <template #body="{ data }">
+          <span class="inline-flex items-center gap-1.5">
+            {{ data.number }}
+            <i
+              v-if="data.ksefNumber?.trim()"
+              class="pi pi-verified shrink-0 ml-2 text-green-600 dark:text-green-400 text-sm"
+              :title="'KSeF: ' + data.ksefNumber"
+              aria-hidden="true"
+            />
+          </span>
+        </template>
         <template #filter="{ filterModel }">
           <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>

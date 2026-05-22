@@ -3,7 +3,7 @@
   import { useCompanyLookupStore } from '@/stores/companyLookup';
   import { useRoute, useRouter } from 'vue-router';
   import { computed, onMounted, ref } from 'vue';
-  import { type Customer, CustomerStatus, CustomerType } from '@/types/Customer';
+  import { type Customer, ActiveStatus, CustomerType } from '@/types/Customer';
   import OfficeButton from '@/components/OfficeButton.vue';
   import { useToast } from 'primevue/usetoast';
   import TheMenu from '@/components/TheMenu.vue';
@@ -33,7 +33,7 @@
     mail: '',
     customerType: CustomerType.COMPANY,
     otherInfo: '',
-    customerStatus: CustomerStatus.ACTIVE,
+    activeStatus: ActiveStatus.ACTIVE,
     regon: '',
     address: {
       id: 0,

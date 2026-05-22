@@ -479,7 +479,7 @@
               </div>
               <div class="flex flex-col w-full">
                 <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="ksef">Numer KSeF:</label>
-                <InputText id="ksef" v-model="cost.ksefNumber" fluid maxlength="100" />
+                <InputText id="ksef" v-model="cost.ksefNumber" fluid maxlength="100" size="large" />
               </div>
             </div>
 
@@ -491,7 +491,10 @@
             </div>
           </Fieldset>
 
-          <Fieldset class="w-full" legend="Pozycje kosztu">
+          <Fieldset
+            class="w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700"
+            legend="Pozycje kosztu"
+          >
             <DataTable
               :value="cost.costItems"
               class="pt-2 invoice-items-table"

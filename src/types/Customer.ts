@@ -7,7 +7,7 @@ export interface Customer {
   mail: string;
   customerType: CustomerType;
   otherInfo: string;
-  customerStatus: CustomerStatus;
+  activeStatus: ActiveStatus;
   regon: string;
   address: Address;
 }
@@ -19,7 +19,7 @@ export interface Address {
   zip: string;
 }
 
-export enum CustomerStatus {
+export enum ActiveStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
 }
