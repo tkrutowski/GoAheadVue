@@ -22,6 +22,7 @@
     icon: string;
     routeName: string;
     params?: Record<string, string | number>;
+    query?: Record<string, string>;
   }
 
   interface MenuItem {
@@ -113,6 +114,12 @@
           icon: 'pi pi-list',
           routeName: 'Costs',
         },
+        {
+          label: 'Sprawdź KSeF',
+          icon: 'pi pi-send',
+          routeName: 'Costs',
+          query: { action: 'ksef' },
+        },
       ],
     },
   ];
@@ -125,12 +132,12 @@
     }
   };
 
-  const navigateTo = (routeName: string, params?: Record<string, string | number>) => {
-    if (params) {
-      router.push({ name: routeName, params });
-    } else {
-      router.push({ name: routeName });
-    }
+  const navigateTo = (
+    routeName: string,
+    params?: Record<string, string | number>,
+    query?: Record<string, string>,
+  ) => {
+    router.push({ name: routeName, ...(params ? { params } : {}), ...(query ? { query } : {}) });
     openSubmenu.value = null;
   };
 
@@ -193,9 +200,9 @@
           >
             <button
               v-for="subItem in item.submenu"
-              :key="subItem.routeName"
+              :key="subItem.label"
               class="w-full flex items-center gap-2 px-4 py-2.5 text-[#bbbbbb] hover:bg-[#3a4147] hover:text-white transition-colors text-sm text-left"
-              @click="navigateTo(subItem.routeName, subItem.params)"
+              @click="navigateTo(subItem.routeName, subItem.params, subItem.query)"
             >
               <i :class="['text-sm', subItem.icon]"></i>
               <span>{{ subItem.label }}</span>

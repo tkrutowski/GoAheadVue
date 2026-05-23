@@ -6,6 +6,7 @@
   import OfficeButton from '@/components/OfficeButton.vue';
   import ToolbarActionButton from '@/components/ToolbarActionButton.vue';
   import router from '@/router';
+  import { useRoute } from 'vue-router';
   import { useToast } from 'primevue/usetoast';
   import { useSupplierStore } from '@/stores/suppliers';
   import { useCostStore } from '@/stores/costs';
@@ -22,6 +23,7 @@
   import type { AxiosError } from 'axios';
   import moment from 'moment';
 
+  const route = useRoute();
   const supplierStore = useSupplierStore();
   const costStore = useCostStore();
   const toast = useToast();
@@ -435,6 +437,12 @@
     showKsefDialog.value = true;
   }
 
+  function openKsefCheckDialogFromRoute() {
+    if (route.query.action !== 'ksef') return;
+    openKsefCheckDialog();
+    router.replace({ name: 'Costs' });
+  }
+
   function closeKsefDialog() {
     showKsefDialog.value = false;
   }
@@ -520,7 +528,16 @@
     if (costStore.costs.length === 0 && !costStore.loadingCosts) {
       await costStore.filterCosts(filters.value);
     }
+    await nextTick();
+    openKsefCheckDialogFromRoute();
   });
+
+  watch(
+    () => route.query.action,
+    (action) => {
+      if (action === 'ksef') openKsefCheckDialogFromRoute();
+    },
+  );
 
   const handlePageChange = async (event: DataTablePageEvent) => {
     costStore.updateRowsPerPage(event.rows);
