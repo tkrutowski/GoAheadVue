@@ -22,6 +22,8 @@
   import ContextMenu from 'primevue/contextmenu';
   import type { AxiosError } from 'axios';
   import moment from 'moment';
+  import { asyncTaskStatusTimestamp } from '@/types/AsyncTask.ts';
+  import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
 
   const route = useRoute();
   const supplierStore = useSupplierStore();
@@ -430,6 +432,37 @@
   /** Loading na pasku „Sprawdź KSeF” i przy „Wyszukaj” do czasu POST + poll. */
   const loadingKsefSearch = ref(false);
 
+  type KsefLastCheckIndicator = 'loading' | 'failed' | 'success' | 'none' | 'unavailable';
+
+  const ksefLastCheckIndicator = computed((): KsefLastCheckIndicator => {
+    if (loadingKsefSearch.value || costStore.loadingKsefLastCheck) return 'loading';
+    if (costStore.ksefLastCheckFetchError) return 'unavailable';
+    if (!costStore.ksefLastCheckLoaded) return 'loading';
+    if (!costStore.ksefLastCheck) return 'none';
+    const status = costStore.ksefLastCheck.status as KsefAsyncJobStatus;
+    if (status === 'FAILED') return 'failed';
+    if (status === 'QUEUED' || status === 'RUNNING') return 'loading';
+    return 'success';
+  });
+
+  const ksefLastCheckTitle = computed(() => {
+    const check = costStore.ksefLastCheck;
+    if (!check) return 'KSeF';
+    return `KSeF — status: ${check.status}`;
+  });
+
+  const ksefLastCheckLabel = computed(() => {
+    if (costStore.ksefLastCheckFetchError) return 'KSeF: status niedostępny';
+    if (!costStore.ksefLastCheckLoaded) return 'KSeF: …';
+    if (!costStore.ksefLastCheck) return 'KSeF: jeszcze nie sprawdzano';
+    const status = costStore.ksefLastCheck.status;
+    if (status === 'QUEUED' || status === 'RUNNING') return 'Sprawdzanie KSeF w toku…';
+    const ts = asyncTaskStatusTimestamp(costStore.ksefLastCheck);
+    const when = ts && moment(ts).isValid() ? moment(ts).format('DD.MM.YYYY, HH:mm') : null;
+    if (when) return `Ostatnie sprawdzenie KSeF: ${when}`;
+    return 'Ostatnie sprawdzenie KSeF';
+  });
+
   function openKsefCheckDialog() {
     if (loadingKsefSearch.value) return;
     ksefDateFrom.value = new Date(firstDayOfCurrentMonth());
@@ -520,10 +553,12 @@
       });
     } finally {
       loadingKsefSearch.value = false;
+      void costStore.fetchLatestKsefCostCheck();
     }
   }
 
   onMounted(async () => {
+    void costStore.fetchLatestKsefCostCheck();
     if (supplierStore.suppliers.length <= 1) supplierStore.getSuppliersFromDb('ALL');
     if (costStore.costs.length === 0 && !costStore.loadingCosts) {
       await costStore.filterCosts(filters.value);
@@ -835,6 +870,34 @@
         />
       </div>
       <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <div
+            class="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-1 text-xs text-surface-600 dark:text-surface-400"
+            :title="ksefLastCheckTitle"
+            role="status"
+            aria-live="polite"
+        >
+          <ProgressSpinner
+              v-if="ksefLastCheckIndicator === 'loading'"
+              class="h-4 w-4 shrink-0"
+              stroke-width="6"
+          />
+          <span
+              v-else-if="ksefLastCheckIndicator === 'failed'"
+              class="h-2 w-2 shrink-0 rounded-full bg-red-500"
+              aria-hidden="true"
+          />
+          <span
+              v-else-if="ksefLastCheckIndicator === 'success'"
+              class="h-2 w-2 shrink-0 rounded-full bg-green-500"
+              aria-hidden="true"
+          />
+          <span
+              v-else-if="ksefLastCheckIndicator === 'none' || ksefLastCheckIndicator === 'unavailable'"
+              class="h-2 w-2 shrink-0 rounded-full bg-surface-400 dark:bg-surface-500"
+              aria-hidden="true"
+          />
+          <span>{{ ksefLastCheckLabel }}</span>
+        </div>
         <IconField icon-position="left">
           <InputIcon>
             <i class="pi pi-search" />

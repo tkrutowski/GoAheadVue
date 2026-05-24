@@ -5,6 +5,11 @@ import moment from 'moment';
 import type { Cost } from '@/types/Cost.ts';
 import type { PaymentStatus } from '@/types/Invoice.ts';
 import type { KsefCostPreviewFetchResult } from '@/types/KsefCostPreview.ts';
+import {
+  ASYNC_JOB_TYPE_KSEF_COST,
+  type AsyncTaskStatusResponse,
+} from '@/types/AsyncTask.ts';
+import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
 import type {
   CostUploadCompleteRequest,
   CostUploadResult,
@@ -34,6 +39,10 @@ export const useCostStore = defineStore('cost', {
     sortField: 'sellDate',
     sortOrder: -1 as 1 | -1,
     filters: {} as any,
+    ksefLastCheck: null as AsyncTaskStatusResponse | null,
+    ksefLastCheckLoaded: false,
+    ksefLastCheckFetchError: false,
+    loadingKsefLastCheck: false,
   }),
 
   getters: {
@@ -496,6 +505,36 @@ export const useCostStore = defineStore('cost', {
         partial: finalStatus.status === 'PARTIAL',
         total,
       };
+    },
+
+    /**
+     * Ostatnie zadanie sprawdzenia kosztów KSeF (GET /v1/async/latest).
+     * 404 = brak historii; inne błędy nie blokują UI (ksefLastCheckFetchError).
+     */
+    async fetchLatestKsefCostCheck(): Promise<void> {
+      this.loadingKsefLastCheck = true;
+      this.ksefLastCheckFetchError = false;
+      try {
+        const response = await httpCommon.get<AsyncTaskStatusResponse>('/v1/async/latest', {
+          params: { jobType: ASYNC_JOB_TYPE_KSEF_COST },
+          validateStatus: (status) => status === 200 || status === 404,
+        });
+        if (response.status === 404) {
+          this.ksefLastCheck = null;
+          return;
+        }
+        const raw = response.data;
+        const status = String(raw?.status ?? '').toUpperCase() as KsefAsyncJobStatus;
+        this.ksefLastCheck = {
+          status,
+          updatedAt: raw.updatedAt,
+        };
+      } catch {
+        this.ksefLastCheckFetchError = true;
+      } finally {
+        this.loadingKsefLastCheck = false;
+        this.ksefLastCheckLoaded = true;
+      }
     },
 
     async updateCostStatusDb(costId: number, status: PaymentStatus) {
