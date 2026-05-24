@@ -1,11 +1,13 @@
 <script setup lang="ts">
   import { computed, ref, onMounted, onUnmounted } from 'vue';
   import { useAuthorizationStore } from '@/stores/authorization';
+  import { useZusDraDialogStore } from '@/stores/zusDraDialog';
   import router from '@/router';
   import { useRoute } from 'vue-router';
 
   const route = useRoute();
   const authorizationStore = useAuthorizationStore();
+  const zusDraDialogStore = useZusDraDialogStore();
   const openSubmenu = ref<string | null>(null);
 
   const activeMenu = computed(() => {
@@ -20,9 +22,11 @@
   interface SubmenuItem {
     label: string;
     icon: string;
-    routeName: string;
+    routeName?: string;
     params?: Record<string, string | number>;
     query?: Record<string, string>;
+    /** Otwiera globalny dialog ZUS DRA bez zmiany trasy. */
+    openZusDra?: boolean;
   }
 
   interface MenuItem {
@@ -75,6 +79,11 @@
           label: 'Lista faktur',
           icon: 'pi pi-list',
           routeName: 'Invoices',
+        },
+        {
+          label: 'Oblicz ZUS DRA',
+          icon: 'pi pi-calculator',
+          openZusDra: true,
         },
       ],
     },
@@ -141,6 +150,17 @@
     openSubmenu.value = null;
   };
 
+  const handleSubmenuClick = (subItem: SubmenuItem) => {
+    if (subItem.openZusDra) {
+      zusDraDialogStore.open();
+      openSubmenu.value = null;
+      return;
+    }
+    if (subItem.routeName) {
+      navigateTo(subItem.routeName, subItem.params, subItem.query);
+    }
+  };
+
   const handleLogout = () => {
     authorizationStore.logout();
     router.push({ name: 'login' });
@@ -202,7 +222,7 @@
               v-for="subItem in item.submenu"
               :key="subItem.label"
               class="w-full flex items-center gap-2 px-4 py-2.5 text-[#bbbbbb] hover:bg-[#3a4147] hover:text-white transition-colors text-sm text-left"
-              @click="navigateTo(subItem.routeName, subItem.params, subItem.query)"
+              @click="handleSubmenuClick(subItem)"
             >
               <i :class="['text-sm', subItem.icon]"></i>
               <span>{{ subItem.label }}</span>

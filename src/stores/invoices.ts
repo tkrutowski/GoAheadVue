@@ -3,8 +3,14 @@ import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
 import { type Invoice, PaymentMethod, PaymentStatus } from '@/types/Invoice';
 import moment from 'moment';
-import { pollInvoicePdfJobUntilTerminal, pollKsefInvoiceJobUntilTerminal } from '@/utils/pollAsyncJob';
+import {
+  fetchZusDraJobResult,
+  pollInvoicePdfJobUntilTerminal,
+  pollKsefInvoiceJobUntilTerminal,
+  pollZusDraJobUntilTerminal,
+} from '@/utils/pollAsyncJob';
 import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
+import type { ZusDraFetchResult } from '@/types/ZusDra';
 import { invoicePdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
 
 export const useInvoiceStore = defineStore('invoice', {
@@ -515,6 +521,48 @@ export const useInvoiceStore = defineStore('invoice', {
       await httpCommon.post(`/goahead/invoice/upo`, unique);
       await this.getInvoicesFromDb(this.currentPage);
       console.log('END - downloadUpoConfirmation()');
+    },
+
+    /**
+     * Obliczenie danych ZUS DRA (async job).
+     * Backend: POST /goahead/invoice/zus-dra { settlementDate } → 202 + { jobId };
+     * GET .../jobs/{jobId}; GET .../jobs/{jobId}/result → ZusDraDataDto.
+     */
+    async calculateZusDra(settlementDate: string): Promise<ZusDraFetchResult> {
+      const response = await httpCommon.post<unknown>(
+        `/goahead/invoice/zus-dra`,
+        { settlementDate },
+        {
+          validateStatus: (status) => status === 202,
+        }
+      );
+
+      const jobId = ksefStartResponseJobId(response.data);
+      if (jobId == null) {
+        return { ok: false, message: 'Brak jobId w odpowiedzi serwera po starcie obliczenia ZUS DRA.' };
+      }
+
+      let finalStatus;
+      try {
+        finalStatus = await pollZusDraJobUntilTerminal(httpCommon, jobId);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Nie udało się sprawdzić statusu zadania ZUS DRA.';
+        return { ok: false, message: msg };
+      }
+
+      if (finalStatus.status === 'FAILED') {
+        const message =
+          finalStatus.message?.trim() || 'Obliczenie ZUS DRA nie powiodło się.';
+        return { ok: false, message };
+      }
+
+      try {
+        const data = await fetchZusDraJobResult(httpCommon, jobId);
+        return { ok: true, data };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Nie udało się pobrać wyniku obliczenia ZUS DRA.';
+        return { ok: false, message: msg };
+      }
     },
 
     convertResponse(invoice: Invoice) {
