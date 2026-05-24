@@ -38,6 +38,7 @@
       global: { value: null, matchMode: FilterMatchMode.CONTAINS },
       supplier: { value: null, matchMode: FilterMatchMode.IN },
       sellDate: { constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }] },
+      invoiceDate: { constraints: [{ value: null, matchMode: FilterMatchMode.DATE_AFTER }] },
       amount: { constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
       number: { value: null, matchMode: FilterMatchMode.CONTAINS },
       paymentStatus: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -1013,12 +1014,12 @@
         </template>
       </Column>
 
-      <Column field="invoiceDate" header="Data wystawienia" :sortable="true" data-type="date">
+      <Column field="invoiceDate" header="Data wystawienia" :sortable="true" data-type="date" :show-filter-match-modes="true">
         <template #body="{ data }">
           {{ UtilsService.formatDateToString(data.invoiceDate) }}
         </template>
         <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
+          <DatePicker v-model="filterModel.value" date-format="yy-mm-dd" placeholder="yyyy-dd-mm" />
         </template>
       </Column>
 
@@ -1028,12 +1029,9 @@
         </template>
       </Column>
 
-      <Column field="paymentDate" header="Termin płatności" :sortable="true" data-type="date">
+      <Column field="paymentDate" header="Termin płatności" :sortable="true" data-type="date" :filter="false">
         <template #body="{ data }">
           {{ UtilsService.formatDateToString(data.paymentDate) }}
-        </template>
-        <template #filter="{ filterModel }">
-          <InputText v-model="filterModel.value" type="text" placeholder="Wpisz tutaj..." />
         </template>
       </Column>
 
