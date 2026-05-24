@@ -29,7 +29,7 @@ export const useInvoiceStore = defineStore('invoice', {
 
   //getters = computed
   getters: {
-    getSortedInvoices: (state) => state.invoices.sort((a, b) => a.idInvoice - b.idInvoice),
+    getSortedInvoices: (state) => state.invoices.sort((a, b) => a.id - b.id),
   },
   //actions = metody w komponentach
   actions: {
@@ -266,7 +266,7 @@ export const useInvoiceStore = defineStore('invoice', {
     async updateInvoiceStatusDb(invoiceId: number, status: PaymentStatus) {
       console.log('START - updateInvoiceStatusDb()');
       await httpCommon.put(`/goahead/invoice/paymentstatus/` + invoiceId, { value: status });
-      const inv = this.invoices.find((inv) => inv.idInvoice === invoiceId);
+      const inv = this.invoices.find((inv) => inv.id === invoiceId);
       if (inv) {
         inv.paymentStatus = status;
       }
@@ -331,7 +331,7 @@ export const useInvoiceStore = defineStore('invoice', {
     async deleteInvoicesDb(invoiceIds: number[]) {
       if (!invoiceIds?.length) return;
       const uniqueIds = [...new Set(invoiceIds)];
-      const idsOnPage = new Set(this.invoices.map((i) => i.idInvoice));
+      const idsOnPage = new Set(this.invoices.map((i) => i.id));
       const deletingFromPage = uniqueIds.filter((id) => idsOnPage.has(id));
       const deletesAllVisible = this.invoices.length > 0 && deletingFromPage.length === this.invoices.length;
 
@@ -420,7 +420,7 @@ export const useInvoiceStore = defineStore('invoice', {
           return {
             failed: unique.map((id) => ({
               idInvoice: id,
-              invoiceNumber: this.invoices.find((i) => i.idInvoice === id)?.number ?? String(id),
+              invoiceNumber: this.invoices.find((i) => i.id === id)?.number ?? String(id),
             })),
           };
         }
@@ -433,7 +433,7 @@ export const useInvoiceStore = defineStore('invoice', {
           return {
             failed: unique.map((id) => ({
               idInvoice: id,
-              invoiceNumber: this.invoices.find((i) => i.idInvoice === id)?.number ?? String(id),
+              invoiceNumber: this.invoices.find((i) => i.id === id)?.number ?? String(id),
             })),
           };
         }

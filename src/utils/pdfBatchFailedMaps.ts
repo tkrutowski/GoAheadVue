@@ -7,7 +7,7 @@ export function invoicePdfFailedFromJob(
   job: PdfBatchJobStatusResponse,
   invoices: Invoice[]
 ): { idInvoice: number; invoiceNumber: string }[] {
-  const numById = new Map(invoices.map((i) => [i.idInvoice, i.number]));
+  const numById = new Map(invoices.map((i) => [i.id, i.number]));
 
   const fromErrors = (): { idInvoice: number; invoiceNumber: string }[] => {
     const seen = new Set<number>();
@@ -42,7 +42,7 @@ export function costPdfFailedFromJob(
   job: PdfBatchJobStatusResponse,
   costs: Cost[]
 ): { idCost: number; costNumber: string }[] {
-  const numById = new Map(costs.map((c) => [c.idCost, c.number]));
+  const numById = new Map(costs.map((c) => [c.id, c.number]));
 
   const fromErrors = (): { idCost: number; costNumber: string }[] => {
     const seen = new Set<number>();

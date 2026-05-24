@@ -10,7 +10,7 @@ export enum Vat {
 }
 
 export interface CostItem {
-  idCostItem: number;
+  id: number;
   idCost: number;
   name: string;
   unit: string;
@@ -34,7 +34,7 @@ export interface CostItem {
 }
 
 export interface Cost {
-  idCost: number;
+  id: number;
   supplier: Supplier | null;
   number: string;
   sellDate: Date | null;

@@ -37,7 +37,7 @@ export const useCostStore = defineStore('cost', {
   }),
 
   getters: {
-    getSortedCosts: (state) => state.costs.slice().sort((a, b) => a.idCost - b.idCost),
+    getSortedCosts: (state) => state.costs.slice().sort((a, b) => a.id - b.id),
   },
 
   actions: {
@@ -189,7 +189,7 @@ export const useCostStore = defineStore('cost', {
     async deleteCostsDb(costIds: number[]) {
       if (!costIds?.length) return;
       const uniqueIds = [...new Set(costIds)];
-      const idsOnPage = new Set(this.costs.map((c) => c.idCost));
+      const idsOnPage = new Set(this.costs.map((c) => c.id));
       const deletingFromPage = uniqueIds.filter((id) => idsOnPage.has(id));
       const deletesAllVisible = this.costs.length > 0 && deletingFromPage.length === this.costs.length;
 
@@ -336,7 +336,7 @@ export const useCostStore = defineStore('cost', {
       const parsedRaw = this.parseUploadRaw(raw);
       const cost = this.convertResponse(parsedRaw);
       cost.costItems = (cost.costItems ?? []).map((item) => {
-        const next = { ...item, idCostItem: 0, idCost: cost.idCost ?? 0 };
+        const next = { ...item, id: 0, idCost: cost.id ?? 0 };
         FinanceService.updateCostItemAmounts(next);
         return next;
       });
@@ -425,7 +425,7 @@ export const useCostStore = defineStore('cost', {
           return {
             failed: unique.map((id) => ({
               idCost: id,
-              costNumber: this.costs.find((c) => c.idCost === id)?.number ?? String(id),
+              costNumber: this.costs.find((c) => c.id === id)?.number ?? String(id),
             })),
           };
         }
@@ -438,7 +438,7 @@ export const useCostStore = defineStore('cost', {
           return {
             failed: unique.map((id) => ({
               idCost: id,
-              costNumber: this.costs.find((c) => c.idCost === id)?.number ?? String(id),
+              costNumber: this.costs.find((c) => c.id === id)?.number ?? String(id),
             })),
           };
         }
@@ -500,7 +500,7 @@ export const useCostStore = defineStore('cost', {
 
     async updateCostStatusDb(costId: number, status: PaymentStatus) {
       await httpCommon.put(`/goahead/cost/paymentstatus/${costId}`, { value: status });
-      const cost = this.costs.find((c) => c.idCost === costId);
+      const cost = this.costs.find((c) => c.id === costId);
       if (cost) {
         cost.paymentStatus = status;
       }

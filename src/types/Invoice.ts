@@ -2,7 +2,7 @@ import type { Customer } from '@/types/Customer.ts';
 import type { Vat } from '@/types/Cost.ts';
 
 export interface Invoice {
-  idInvoice: number;
+  id: number;
   customer: Customer | null;
   number: string;
   sellDate: Date | null;
@@ -20,7 +20,7 @@ export interface Invoice {
 }
 // export default Invoice
 export interface InvoiceItem {
-  idInvoiceItem: number;
+  id: number;
   idInvoice: number;
   name: string;
   unit: string;

@@ -54,9 +54,9 @@
 
   /** Po GET/odświeżeniu listy w store `selectedCosts` może nadal wskazywać stare obiekty — toolbar nie widzi nowych pól (np. pdfUrl). */
   function syncSelectedCostsFromStore() {
-    const ids = new Set(selectedCosts.value.map((c) => c.idCost));
+    const ids = new Set(selectedCosts.value.map((c) => c.id));
     if (ids.size === 0) return;
-    selectedCosts.value = costStore.costs.filter((c) => ids.has(c.idCost));
+    selectedCosts.value = costStore.costs.filter((c) => ids.has(c.id));
   }
 
   const canEdit = computed(() => {
@@ -223,7 +223,7 @@
     if (costTemp.value) {
       const newStatus: PaymentStatus = costTemp.value.paymentStatus === PaymentStatus.PAID ? PaymentStatus.TO_PAY : PaymentStatus.PAID;
       await costStore
-        .updateCostStatusDb(costTemp.value.idCost, newStatus)
+        .updateCostStatusDb(costTemp.value.id, newStatus)
         .then(() => {
           toast.add({
             severity: 'success',
@@ -274,7 +274,7 @@
       showDeleteConfirmationDialog.value = false;
       return;
     }
-    const ids = toDelete.map((c) => c.idCost);
+    const ids = toDelete.map((c) => c.id);
     try {
       await costStore.deleteCostsDb(ids);
       toast.add({
@@ -359,7 +359,7 @@
   };
 
   const runGeneratePdf = async () => {
-    const ids = costsEligibleForPdf.value.map((c) => c.idCost);
+    const ids = costsEligibleForPdf.value.map((c) => c.id);
     if (!ids.length || costStore.loadingFile) return;
     showGeneratePdfConfirmationDialog.value = false;
     showPartialKsefGenerateDialog.value = false;
@@ -409,7 +409,7 @@
     const costItem: Cost = JSON.parse(JSON.stringify(item));
     router.push({
       name: 'Cost',
-      params: { isEdit: 'true', costId: costItem.idCost },
+      params: { isEdit: 'true', costId: costItem.id },
     });
   };
 
@@ -572,7 +572,7 @@
 
   const onCostRowContextMenu = async (event: DataTableRowContextMenuEvent) => {
     const row = event.data as Cost;
-    const inSelection = selectedCosts.value.some((c) => c.idCost === row.idCost);
+    const inSelection = selectedCosts.value.some((c) => c.id === row.id);
     if (!inSelection) {
       selectedCosts.value = [row];
     }
@@ -875,7 +875,7 @@
       table-style="min-width: 50rem"
       filter-display="menu"
       selection-mode="multiple"
-      dataKey="idCost"
+      dataKey="id"
       :meta-key-selection="true"
       :global-filter-fields="['supplier.name', 'number', 'sellDate']"
       @page="handlePageChange"

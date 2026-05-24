@@ -23,7 +23,7 @@
 
   const toast = useToast();
   const invoice = ref<Invoice>({
-    idInvoice: 0,
+    id: 0,
     customer: null,
     number: '',
     sellDate: new Date(),
@@ -43,7 +43,7 @@
   const invoiceItem = ref<InvoiceItem>({
     idInvoice: 0,
     unit: '',
-    idInvoiceItem: 0,
+    id: 0,
     amount: 0,
     name: '',
     quantity: 0,
@@ -191,14 +191,14 @@
 
     if (latestItem !== null) {
       invoiceItem.value = JSON.parse(JSON.stringify(latestItem));
-      invoiceItem.value.idInvoiceItem = 0;
-      invoiceItem.value.idInvoice = invoice.value.idInvoice;
+      invoiceItem.value.id = 0;
+      invoiceItem.value.idInvoice = invoice.value.id;
       invoiceItem.value.unit = latestItem.unit;
       invoiceItem.value.name = latestItem.name;
       invoiceItem.value.amount = latestItem.amount;
       invoiceItem.value.quantity = latestItem.quantity;
     } else {
-      invoiceItem.value.idInvoice = invoice.value.idInvoice;
+      invoiceItem.value.idInvoice = invoice.value.id;
       invoiceItem.value.unit = 'l';
       invoiceItem.value.name = 'Kurs języka angielskiego ';
       invoiceItem.value.amount = 0;

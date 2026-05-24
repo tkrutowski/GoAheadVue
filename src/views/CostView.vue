@@ -28,7 +28,7 @@
   const toast = useToast();
 
   const cost = ref<Cost>({
-    idCost: 0,
+    id: 0,
     supplier: null,
     number: '',
     sellDate: new Date(),
@@ -44,7 +44,7 @@
   });
 
   const costItem = ref<CostItem>({
-    idCostItem: 0,
+    id: 0,
     idCost: 0,
     name: '',
     unit: '',
@@ -149,8 +149,8 @@
   }
 
   function newItem() {
-    costItem.value.idCostItem = 0;
-    costItem.value.idCost = cost.value.idCost;
+    costItem.value.id = 0;
+    costItem.value.idCost = cost.value.id;
     if (!costItem.value.unit) costItem.value.unit = 'szt.';
     FinanceService.updateCostItemAmounts(costItem.value);
     cost.value.costItems.push({ ...costItem.value });
@@ -319,8 +319,8 @@
         uploaded.costItems.length > 0
           ? uploaded.costItems.map((item) => ({
               ...item,
-              idCost: cost.value.idCost,
-              idCostItem: 0,
+              idCost: cost.value.id,
+              id: 0,
             }))
           : cost.value.costItems,
     };
@@ -500,7 +500,7 @@
               class="pt-2 invoice-items-table"
               size="small"
               editMode="cell"
-              dataKey="idCostItem"
+              dataKey="id"
               @cell-edit-complete="onCellEditComplete"
             >
               <template #header>

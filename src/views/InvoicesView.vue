@@ -51,9 +51,9 @@
 
   /** Po GET/odświeżeniu listy w store `selectedInvoices` może nadal wskazywać stare obiekty — toolbar (canKsef, canEdit, …) wtedy nie widzi nowych pól. */
   function syncSelectedInvoicesFromStore() {
-    const ids = new Set(selectedInvoices.value.map((i) => i.idInvoice));
+    const ids = new Set(selectedInvoices.value.map((i) => i.id));
     if (ids.size === 0) return;
-    selectedInvoices.value = invoiceStore.invoices.filter((inv) => ids.has(inv.idInvoice));
+    selectedInvoices.value = invoiceStore.invoices.filter((inv) => ids.has(inv.id));
   }
 
   const selectedInvoice = computed(() => (selectedInvoices.value?.length === 1 ? selectedInvoices.value[0] : null));
@@ -78,7 +78,7 @@
     if (invoiceTemp.value) {
       let newStatus: PaymentStatus = invoiceTemp.value.paymentStatus === 'PAID' ? PaymentStatus.TO_PAY : PaymentStatus.PAID;
       await invoiceStore
-        .updateInvoiceStatusDb(invoiceTemp.value.idInvoice, newStatus)
+        .updateInvoiceStatusDb(invoiceTemp.value.id, newStatus)
         .then(() => {
           toast.add({
             severity: 'success',
@@ -133,7 +133,7 @@
       showDeleteConfirmationDialog.value = false;
       return;
     }
-    const ids = toDelete.map((i) => i.idInvoice);
+    const ids = toDelete.map((i) => i.id);
     try {
       await invoiceStore.deleteInvoicesDb(ids);
       toast.add({
@@ -186,7 +186,7 @@
   };
 
   const runGeneratePdf = async () => {
-    const ids = selectedInvoices.value.map((i) => i.idInvoice);
+    const ids = selectedInvoices.value.map((i) => i.id);
     if (!ids.length || invoiceStore.loadingFile) return;
     showGeneratePdfConfirmationDialog.value = false;
     try {
@@ -325,7 +325,7 @@
     const invoiceItem: Invoice = JSON.parse(JSON.stringify(item));
     router.push({
       name: 'Invoice',
-      params: { isEdit: 'true', invoiceId: invoiceItem.idInvoice },
+      params: { isEdit: 'true', invoiceId: invoiceItem.id },
     });
   };
 
@@ -475,7 +475,7 @@
       showKsefConfirmationDialog.value = false;
       return;
     }
-    const ids = toSend.map((i) => i.idInvoice);
+    const ids = toSend.map((i) => i.id);
     ksefSubmitLoading.value = true;
     try {
       const { partial } = await invoiceStore.sendInvoicesToKsef(ids);
@@ -510,7 +510,7 @@
   };
 
   const handleDownloadUpo = async () => {
-    const ids = selectedInvoices.value.filter((inv) => !inv.upoUrl?.trim()).map((inv) => inv.idInvoice);
+    const ids = selectedInvoices.value.filter((inv) => !inv.upoUrl?.trim()).map((inv) => inv.id);
     if (!ids.length) return;
     try {
       await invoiceStore.downloadUpoConfirmation(ids);
@@ -551,7 +551,7 @@
 
   const onInvoiceRowContextMenu = async (event: DataTableRowContextMenuEvent) => {
     const row = event.data as Invoice;
-    const inSelection = selectedInvoices.value.some((i) => i.idInvoice === row.idInvoice);
+    const inSelection = selectedInvoices.value.some((i) => i.id === row.id);
     if (!inSelection) {
       selectedInvoices.value = [row];
     }
@@ -782,7 +782,7 @@
       context-menu
       selection-mode="multiple"
       :meta-key-selection="true"
-      data-key="idInvoice"
+      data-key="id"
       striped-rows
       removable-sort
       paginator
