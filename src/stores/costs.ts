@@ -16,6 +16,7 @@ import type {
   CostUploadUrlRequest,
   CostUploadUrlResponse,
 } from '@/types/CostUpload.ts';
+import type { FileInfo } from '@/types/FileUpload.ts';
 import type { Supplier } from '@/types/Supplier.ts';
 import { pollCostPdfJobUntilTerminal, pollCostUploadJobUntilTerminal, pollKsefCostPreviewJobUntilTerminal } from '@/utils/pollAsyncJob';
 import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
@@ -33,6 +34,7 @@ export const useCostStore = defineStore('cost', {
     loadingCostNumber: false,
     loadingFile: false,
     loadingCostUpload: false,
+    loadingCostDocumentUpload: false,
     costs: [] as Cost[],
     totalCosts: 0,
     currentPage: 0,
@@ -266,7 +268,7 @@ export const useCostStore = defineStore('cost', {
     },
 
     async requestCostUploadUrl(fileName: string, contentType: string): Promise<CostUploadUrlResponse> {
-      const payload: CostUploadUrlRequest = { fileName, contentType, module: 'GO_AHEAD' };
+      const payload: CostUploadUrlRequest = { fileName, contentType, module: 'GO_AHEAD_COST' };
       const { data } = await httpCommon.post<CostUploadUrlResponse>(`/v1/files/upload-url`, payload);
       if (!data?.uploadUrl) {
         throw new Error('Brak adresu uploadu w odpowiedzi serwera.');
@@ -380,6 +382,45 @@ export const useCostStore = defineStore('cost', {
         supplierMatched: matched,
         supplierDraft: matched ? null : this.buildSupplierDraftFromUpload(parsedRaw),
       };
+    },
+
+    /**
+     * Wgrywa PDF/obraz do ręcznego kosztu przez backend (multipart, bez presigned S3 z frontendu).
+     * Backend zwraca FileInfo (pole url → Cost.pdfUrl); pdfUrl zapisujemy PUT /goahead/cost.
+     */
+    async uploadCostDocument(costId: number, file: File): Promise<Cost> {
+      this.assertCostUploadFile(file);
+      this.loadingCostDocumentUpload = true;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await httpCommon.post<FileInfo>('/v1/files/GO_AHEAD_COST', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        const fileUrl = data?.url?.trim();
+        if (!fileUrl) {
+          throw new Error('Brak adresu pliku (url) w odpowiedzi serwera.');
+        }
+
+        const cost = await this.getCostFromDb(costId);
+        if (!cost) {
+          throw new Error('Nie znaleziono kosztu.');
+        }
+        if (cost.ksefNumber?.trim()) {
+          throw new Error('Nie można dołączyć pliku do kosztu z numerem KSeF.');
+        }
+        if (cost.pdfUrl?.trim()) {
+          throw new Error('Koszt ma już dołączony plik.');
+        }
+
+        cost.pdfUrl = fileUrl;
+        await this.updateCostDb(cost);
+        return cost;
+      } finally {
+        this.loadingCostDocumentUpload = false;
+      }
     },
 
     async uploadCostFromFile(file: File): Promise<CostUploadResult> {

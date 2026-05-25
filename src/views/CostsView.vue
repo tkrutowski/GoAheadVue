@@ -411,6 +411,60 @@
       costsEligibleForPdf.value.length >= 1,
   );
 
+  //
+  //-------------------------------------------------UPLOAD COST DOCUMENT-------------------------------------------------
+  //
+  const costDocumentFileInputRef = ref<HTMLInputElement | null>(null);
+
+  const canUploadCostDocument = computed(
+    () =>
+      selectedCosts.value.length === 1 &&
+      !selectedCosts.value[0].ksefNumber?.trim() &&
+      !selectedCosts.value[0].pdfUrl?.trim() &&
+      !costStore.loadingCostDocumentUpload,
+  );
+
+  const uploadCostDocumentErrorDetail = (error: unknown): string => {
+    if (error instanceof Error) return error.message;
+    const ax = error as AxiosError<{ message?: string }>;
+    return ax.response?.data?.message ?? ax.message ?? 'Nie udało się dołączyć pliku.';
+  };
+
+  const openCostDocumentFilePicker = () => {
+    if (!canUploadCostDocument.value) return;
+    costDocumentFileInputRef.value?.click();
+  };
+
+  const onCostDocumentFileSelected = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !selectedCost.value) return;
+    void runUploadCostDocument(file);
+  };
+
+  const runUploadCostDocument = async (file: File) => {
+    const cost = selectedCost.value;
+    if (!cost || costStore.loadingCostDocumentUpload) return;
+    try {
+      await costStore.uploadCostDocument(cost.id, file);
+      syncSelectedCostsFromStore();
+      toast.add({
+        severity: 'success',
+        summary: 'Plik',
+        detail: `Dołączono plik do kosztu nr ${cost.number}.`,
+        life: 3000,
+      });
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd',
+        detail: uploadCostDocumentErrorDetail(error),
+        life: 5000,
+      });
+    }
+  };
+
   const editItem = (item: Cost) => {
     const costItem: Cost = JSON.parse(JSON.stringify(item));
     router.push({
@@ -655,6 +709,12 @@
       command: () => handleOpenCostPdfUrls(),
     },
     {
+      label: 'PDF',
+      icon: 'pi pi-upload',
+      disabled: !canUploadCostDocument.value,
+      command: () => openCostDocumentFilePicker(),
+    },
+    {
       label: 'KSeF PDF',
       icon: 'pi pi-file-pdf',
       disabled: !canKsefPdf.value,
@@ -861,8 +921,26 @@
           icon="pi pi-file-pdf"
           variant="orange"
           :disabled="!canPreviewPdfUrl"
-          title="Otwórz wygenerowany PDF"
+          title="Otwórz załączony PDF"
           @click="handleOpenCostPdfUrls"
+        />
+        <input
+          ref="costDocumentFileInputRef"
+          type="file"
+          accept=".pdf,image/*"
+          class="hidden"
+          tabindex="-1"
+          aria-hidden="true"
+          @change="onCostDocumentFileSelected"
+        />
+        <ToolbarActionButton
+          label="PDF"
+          icon="pi pi-upload"
+          variant="orange"
+          :disabled="!canUploadCostDocument"
+          :loading="costStore.loadingCostDocumentUpload"
+          title="Wgraj PDF lub obraz (koszt bez numeru KSeF i bez załączonego pliku)"
+          @click="openCostDocumentFilePicker"
         />
         <ToolbarActionButton
           label="KSeF PDF"

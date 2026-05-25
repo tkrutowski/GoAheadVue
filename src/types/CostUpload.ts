@@ -5,7 +5,7 @@ import type { Supplier } from '@/types/Supplier.ts';
 export interface CostUploadUrlRequest {
   fileName: string;
   contentType: string;
-  module: 'GO_AHEAD' | 'AUTO';
+  module: 'GO_AHEAD' | 'GO_AHEAD_COST' | 'GO_AHEAD_INVOICE' | 'GO_AHEAD_SUPPLIER';
 }
 
 export interface CostUploadUrlResponse {
