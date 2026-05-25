@@ -24,6 +24,7 @@
   import moment from 'moment';
   import { asyncTaskStatusTimestamp } from '@/types/AsyncTask.ts';
   import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
+  import { useDatatableSelectedRowStyle } from '@/composables/useDatatableSelectedRowStyle';
 
   const route = useRoute();
   const supplierStore = useSupplierStore();
@@ -53,6 +54,8 @@
 
   const expandedRows = ref([]);
   const selectedCosts = ref<Cost[]>([]);
+  const { selectedRowClass: costSelectedRowClass, selectedRowStyle: costSelectedRowStyle } =
+    useDatatableSelectedRowStyle(selectedCosts);
   const selectedCost = computed(() => (selectedCosts.value?.length === 1 ? selectedCosts.value[0] : null));
 
   /** Po GET/odświeżeniu listy w store `selectedCosts` może nadal wskazywać stare obiekty — toolbar nie widzi nowych pól (np. pdfUrl). */
@@ -920,6 +923,8 @@
 
     <DataTable
       v-model:selection="selectedCosts"
+      :row-class="costSelectedRowClass"
+      :row-style="costSelectedRowStyle"
       v-model:context-menu-selection="contextMenuCost"
       v-model:expanded-rows="expandedRows"
       v-model:filters="filters"
@@ -1059,7 +1064,7 @@
             :value="data[field] === 'PAID' ? 'Zapłacony' : 'Do zapłaty'"
             :severity="data[field] === 'PAID' ? 'success' : 'danger'"
             :icon="data[field] === 'PAID' ? 'pi pi-check-circle' : 'pi pi-times-circle'"
-            class="cursor-pointer transition-opacity hover:opacity-80"
+            class="cursor-pointer border border-current transition-opacity hover:opacity-80"
             :title="'Zmień status kosztu (Zapłacony/Do zapłaty)'"
             @click="confirmStatusChange(data)"
           />

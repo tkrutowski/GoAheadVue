@@ -44,6 +44,8 @@
   --p-text-hover-muted-color: var(--p-surface-600);
 
   --p-user-payment-border-color: var(--p-surface-200);
+  --p-datatable-row-selected-bg: color-mix(in srgb, var(--p-primary-200), transparent 90%);
+  --p-datatable-row-selected-accent: var(--p-primary-50);
 }
 
 /* Dark */
@@ -65,4 +67,13 @@
   --p-text-hover-muted-color: var(--p-surface-500);
 
   --p-user-payment-border-color: var(--p-surface-800);
+  --p-datatable-row-selected-bg: color-mix(in srgb, var(--p-primary-500), transparent 90%);
+  /* kolor ramki zaznaczenia wiersza */
+  --p-datatable-row-selected-accent: var(--p-primary-800);
+}
+
+/* striped-rows: tło na komórkach (tr.row-style bywa niewidoczny bez tego) */
+.p-datatable-tbody > tr.datatable-row-selected-emphasis > td {
+  background-color: var(--p-datatable-row-selected-bg) !important;
+  box-shadow: inset 4px 0 0 var(--p-datatable-row-selected-accent);
 }

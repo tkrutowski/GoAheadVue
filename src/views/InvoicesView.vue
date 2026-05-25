@@ -18,6 +18,7 @@
   import type { DataTableRowClickEvent, DataTableRowContextMenuEvent } from 'primevue/datatable';
   import type { MenuItem } from 'primevue/menuitem';
   import ContextMenu from 'primevue/contextmenu';
+  import { useDatatableSelectedRowStyle } from '@/composables/useDatatableSelectedRowStyle';
 
   const customerStore = useCustomerStore();
 
@@ -48,6 +49,8 @@
 
   const expandedRows = ref([]);
   const selectedInvoices = ref<Invoice[]>([]);
+  const { selectedRowClass: invoiceSelectedRowClass, selectedRowStyle: invoiceSelectedRowStyle } =
+    useDatatableSelectedRowStyle(selectedInvoices);
 
   /** Po GET/odświeżeniu listy w store `selectedInvoices` może nadal wskazywać stare obiekty — toolbar (canKsef, canEdit, …) wtedy nie widzi nowych pól. */
   function syncSelectedInvoicesFromStore() {
@@ -774,6 +777,8 @@
 
     <DataTable
       v-model:selection="selectedInvoices"
+      :row-class="invoiceSelectedRowClass"
+      :row-style="invoiceSelectedRowStyle"
       v-model:context-menu-selection="contextMenuInvoice"
       v-model:expanded-rows="expandedRows"
       v-model:filters="filters"
@@ -918,7 +923,7 @@
             :value="data[field] === 'PAID' ? 'Zapłacona' : 'Do zapłaty'"
             :severity="data[field] === 'PAID' ? 'success' : 'danger'"
             :icon="data[field] === 'PAID' ? 'pi pi-check-circle' : 'pi pi-times-circle'"
-            class="cursor-pointer hover:opacity-80 transition-opacity"
+            class="cursor-pointer border border-current transition-opacity hover:opacity-80"
             @click="confirmStatusChange(data)"
             :title="'Zmień status faktury (Zapłacona/Do zapłaty)'"
           />
