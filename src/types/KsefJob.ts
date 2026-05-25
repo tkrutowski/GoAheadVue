@@ -35,6 +35,7 @@ export interface KsefCostPreviewJobErrorItem {
 export interface KsefCostPreviewJobStatusResponse {
   status: KsefAsyncJobStatus;
   processed?: number;
+  duplicates?: number;
   total?: number;
   message?: string;
   errors?: KsefCostPreviewJobErrorItem[];

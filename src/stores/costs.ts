@@ -1,31 +1,32 @@
-import { defineStore } from 'pinia';
+import {defineStore} from 'pinia';
 import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
 import moment from 'moment';
-import type { Cost } from '@/types/Cost.ts';
-import type { PaymentStatus } from '@/types/Invoice.ts';
-import type { KsefCostPreviewFetchResult } from '@/types/KsefCostPreview.ts';
-import {
-  ASYNC_JOB_TYPE_KSEF_COST,
-  type AsyncTaskStatusResponse,
-} from '@/types/AsyncTask.ts';
-import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
+import type {Cost} from '@/types/Cost.ts';
+import type {PaymentStatus} from '@/types/Invoice.ts';
+import type {KsefCostPreviewFetchResult} from '@/types/KsefCostPreview.ts';
+import {ASYNC_JOB_TYPE_KSEF_COST, type AsyncTaskStatusResponse,} from '@/types/AsyncTask.ts';
+import type {KsefAsyncJobStatus} from '@/types/KsefJob.ts';
 import type {
   CostUploadCompleteRequest,
   CostUploadResult,
   CostUploadUrlRequest,
   CostUploadUrlResponse,
 } from '@/types/CostUpload.ts';
-import type { FileInfo } from '@/types/FileUpload.ts';
-import type { Supplier } from '@/types/Supplier.ts';
-import { pollCostPdfJobUntilTerminal, pollCostUploadJobUntilTerminal, pollKsefCostPreviewJobUntilTerminal } from '@/utils/pollAsyncJob';
-import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
-import { costPdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
-import { FinanceService } from '@/service/FinanceService.ts';
-import { UtilsService } from '@/service/UtilsService.ts';
-import { useSupplierStore } from '@/stores/suppliers';
-import { createEmptySupplier } from '@/composables/useSupplierForm';
-import { ActiveStatus, type Address } from '@/types/Customer.ts';
+import type {FileInfo} from '@/types/FileUpload.ts';
+import type {Supplier} from '@/types/Supplier.ts';
+import {
+  pollCostPdfJobUntilTerminal,
+  pollCostUploadJobUntilTerminal,
+  pollKsefCostPreviewJobUntilTerminal
+} from '@/utils/pollAsyncJob';
+import {ksefStartResponseJobId} from '@/utils/ksefJobHelpers';
+import {costPdfFailedFromJob} from '@/utils/pdfBatchFailedMaps';
+import {FinanceService} from '@/service/FinanceService.ts';
+import {UtilsService} from '@/service/UtilsService.ts';
+import {useSupplierStore} from '@/stores/suppliers';
+import {createEmptySupplier} from '@/composables/useSupplierForm';
+import {ActiveStatus, type Address} from '@/types/Customer.ts';
 
 export const useCostStore = defineStore('cost', {
   state: () => ({
@@ -35,6 +36,7 @@ export const useCostStore = defineStore('cost', {
     loadingFile: false,
     loadingCostUpload: false,
     loadingCostDocumentUpload: false,
+    loadingCostDocumentRemove: false,
     costs: [] as Cost[],
     totalCosts: 0,
     currentPage: 0,
@@ -166,9 +168,7 @@ export const useCostStore = defineStore('cost', {
       }
 
       const response = await httpCommon.get(`/goahead/cost/page?${params.toString()}`);
-      const costs = response.data.content.map((cost: any) => this.convertResponse(cost));
-
-      this.costs = costs;
+      this.costs = response.data.content.map((cost: any) => this.convertResponse(cost));
       this.totalCosts = response.data.totalElements;
       this.currentPage = response.data.number;
       this.loadingCosts = false;
@@ -238,10 +238,9 @@ export const useCostStore = defineStore('cost', {
 
     async getPdfFromS3(url: string) {
       try {
-        const response = await axios.get(url, {
+        return await axios.get(url, {
           responseType: 'blob',
         });
-        return response;
       } catch (error) {
         console.error('Błąd podczas pobierania PDF z S3', error);
         throw error;
@@ -423,6 +422,31 @@ export const useCostStore = defineStore('cost', {
       }
     },
 
+    /**
+     * Usuwa ręczny załącznik (pdfUrl) z kosztu bez numeru KSeF.
+     * Backend: DELETE /goahead/cost/{costId}/document (S3 + wyczyszczenie pdfUrl).
+     */
+    async removeCostDocument(costId: number): Promise<void> {
+      this.loadingCostDocumentRemove = true;
+      try {
+        const cost = await this.getCostFromDb(costId);
+        if (!cost) {
+          throw new Error('Nie znaleziono kosztu.');
+        }
+        if (cost.ksefNumber?.trim()) {
+          throw new Error('Nie można usunąć pliku z kosztu z numerem KSeF.');
+        }
+        if (!cost.pdfUrl?.trim()) {
+          throw new Error('Koszt nie ma załączonego pliku.');
+        }
+
+        await httpCommon.delete(`/goahead/cost/${costId}/document`);
+        await this.getCostsFromDb(this.currentPage);
+      } finally {
+        this.loadingCostDocumentRemove = false;
+      }
+    },
+
     async uploadCostFromFile(file: File): Promise<CostUploadResult> {
       this.assertCostUploadFile(file);
       this.loadingCostUpload = true;
@@ -561,11 +585,16 @@ export const useCostStore = defineStore('cost', {
         typeof finalStatus.total === 'number' && Number.isFinite(finalStatus.total)
           ? finalStatus.total
           : 0;
+      const duplicates =
+        typeof finalStatus.duplicates === 'number' && Number.isFinite(finalStatus.duplicates)
+          ? finalStatus.duplicates
+          : 0;
 
       return {
         ok: true,
         partial: finalStatus.status === 'PARTIAL',
         total,
+        duplicates,
       };
     },
 

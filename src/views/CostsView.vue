@@ -421,13 +421,63 @@
       selectedCosts.value.length === 1 &&
       !selectedCosts.value[0].ksefNumber?.trim() &&
       !selectedCosts.value[0].pdfUrl?.trim() &&
+      !costStore.loadingCostDocumentUpload &&
+      !costStore.loadingCostDocumentRemove,
+  );
+
+  const canRemoveCostDocument = computed(
+    () =>
+      selectedCosts.value.length === 1 &&
+      !selectedCosts.value[0].ksefNumber?.trim() &&
+      !!selectedCosts.value[0].pdfUrl?.trim() &&
+      !costStore.loadingCostDocumentRemove &&
       !costStore.loadingCostDocumentUpload,
   );
 
-  const uploadCostDocumentErrorDetail = (error: unknown): string => {
+  const showRemoveDocumentConfirmationDialog = ref(false);
+
+  const removeDocumentConfirmationMessage = computed(() => {
+    const cost = selectedCost.value;
+    if (!cost) return '';
+    return `Czy usunąć załączony plik z kosztu nr <b>${cost.number}</b>? Koszt pozostanie w bazie.`;
+  });
+
+  const costDocumentErrorDetail = (error: unknown, fallback: string): string => {
     if (error instanceof Error) return error.message;
     const ax = error as AxiosError<{ message?: string }>;
-    return ax.response?.data?.message ?? ax.message ?? 'Nie udało się dołączyć pliku.';
+    return ax.response?.data?.message ?? ax.message ?? fallback;
+  };
+
+  const confirmRemoveCostDocument = () => {
+    if (!canRemoveCostDocument.value) return;
+    showRemoveDocumentConfirmationDialog.value = true;
+  };
+
+  const submitRemoveCostDocument = async () => {
+    const cost = selectedCost.value;
+    if (!cost || costStore.loadingCostDocumentRemove) {
+      showRemoveDocumentConfirmationDialog.value = false;
+      return;
+    }
+    try {
+      await costStore.removeCostDocument(cost.id);
+      syncSelectedCostsFromStore();
+      toast.add({
+        severity: 'success',
+        summary: 'Plik',
+        detail: `Usunięto załącznik z kosztu nr ${cost.number}.`,
+        life: 3000,
+      });
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd',
+        detail: costDocumentErrorDetail(error, 'Nie udało się usunąć pliku.'),
+        life: 5000,
+      });
+    } finally {
+      showRemoveDocumentConfirmationDialog.value = false;
+    }
   };
 
   const openCostDocumentFilePicker = () => {
@@ -459,7 +509,7 @@
       toast.add({
         severity: 'error',
         summary: 'Błąd',
-        detail: uploadCostDocumentErrorDetail(error),
+        detail: costDocumentErrorDetail(error, 'Nie udało się dołączyć pliku.'),
         life: 5000,
       });
     }
@@ -567,7 +617,8 @@
         return;
       }
 
-      const { partial, total } = result;
+      const { partial, total, duplicates } = result;
+      const newCount = Math.max(0, total - duplicates);
 
       if (partial) {
         toast.add({
@@ -579,12 +630,12 @@
         });
       }
 
-      if (total > 0) {
+      if (newCount > 0) {
         if (!partial) {
           const detail =
-            total === 1
+            newCount === 1
               ? 'Pobrano 1 nowy koszt z KSeF. Lista została odświeżona.'
-              : `Pobrano ${total} nowych kosztów z KSeF. Lista została odświeżona.`;
+              : `Pobrano ${newCount} nowych kosztów z KSeF. Lista została odświeżona.`;
           toast.add({
             severity: 'success',
             summary: 'KSeF',
@@ -593,6 +644,17 @@
           });
         }
         await costStore.getCostsFromDb(costStore.currentPage);
+      } else if (total > 0 && duplicates > 0) {
+        const detail =
+          total === 1
+            ? 'Koszt z KSeF jest już w systemie.'
+            : `Znaleziono ${total} kosztów w KSeF, ale wszystkie są już w systemie.`;
+        toast.add({
+          severity: 'info',
+          summary: 'KSeF',
+          detail,
+          life: 4000,
+        });
       } else {
         toast.add({
           severity: 'info',
@@ -759,6 +821,14 @@
     label="Usuń"
     @save="submitDelete"
     @cancel="showDeleteConfirmationDialog = false"
+  />
+
+  <ConfirmationDialog
+    v-model:visible="showRemoveDocumentConfirmationDialog"
+    :msg="removeDocumentConfirmationMessage"
+    label="Usuń"
+    @save="submitRemoveCostDocument"
+    @cancel="showRemoveDocumentConfirmationDialog = false"
   />
 
   <ConfirmationDialog
@@ -941,6 +1011,15 @@
           :loading="costStore.loadingCostDocumentUpload"
           title="Wgraj PDF lub obraz (koszt bez numeru KSeF i bez załączonego pliku)"
           @click="openCostDocumentFilePicker"
+        />
+        <ToolbarActionButton
+          label="PDF"
+          icon="pi pi-trash"
+          variant="orange"
+          :disabled="!canRemoveCostDocument"
+          :loading="costStore.loadingCostDocumentRemove"
+          title="Usuń załączony PDF lub obraz (koszt bez numeru KSeF, z załączonym plikiem)"
+          @click="confirmRemoveCostDocument"
         />
         <ToolbarActionButton
           label="KSeF PDF"
