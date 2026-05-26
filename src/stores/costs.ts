@@ -1,32 +1,23 @@
-import {defineStore} from 'pinia';
+import { defineStore } from 'pinia';
 import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
 import moment from 'moment';
-import type {Cost} from '@/types/Cost.ts';
-import type {PaymentStatus} from '@/types/Invoice.ts';
-import type {KsefCostPreviewFetchResult} from '@/types/KsefCostPreview.ts';
-import {ASYNC_JOB_TYPE_KSEF_COST, type AsyncTaskStatusResponse,} from '@/types/AsyncTask.ts';
-import type {KsefAsyncJobStatus} from '@/types/KsefJob.ts';
-import type {
-  CostUploadCompleteRequest,
-  CostUploadResult,
-  CostUploadUrlRequest,
-  CostUploadUrlResponse,
-} from '@/types/CostUpload.ts';
-import type {FileInfo} from '@/types/FileUpload.ts';
-import type {Supplier} from '@/types/Supplier.ts';
-import {
-  pollCostPdfJobUntilTerminal,
-  pollCostUploadJobUntilTerminal,
-  pollKsefCostPreviewJobUntilTerminal
-} from '@/utils/pollAsyncJob';
-import {ksefStartResponseJobId} from '@/utils/ksefJobHelpers';
-import {costPdfFailedFromJob} from '@/utils/pdfBatchFailedMaps';
-import {FinanceService} from '@/service/FinanceService.ts';
-import {UtilsService} from '@/service/UtilsService.ts';
-import {useSupplierStore} from '@/stores/suppliers';
-import {createEmptySupplier} from '@/composables/useSupplierForm';
-import {ActiveStatus, type Address} from '@/types/Customer.ts';
+import type { Cost } from '@/types/Cost.ts';
+import type { PaymentStatus } from '@/types/Invoice.ts';
+import type { KsefCostPreviewFetchResult } from '@/types/KsefCostPreview.ts';
+import { ASYNC_JOB_TYPE_KSEF_COST, type AsyncTaskStatusResponse } from '@/types/AsyncTask.ts';
+import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
+import type { CostUploadCompleteRequest, CostUploadResult, CostUploadUrlRequest, CostUploadUrlResponse } from '@/types/CostUpload.ts';
+import type { FileInfo } from '@/types/FileUpload.ts';
+import type { Supplier } from '@/types/Supplier.ts';
+import { pollCostPdfJobUntilTerminal, pollCostUploadJobUntilTerminal, pollKsefCostPreviewJobUntilTerminal } from '@/utils/pollAsyncJob';
+import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
+import { costPdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
+import { FinanceService } from '@/service/FinanceService.ts';
+import { UtilsService } from '@/service/UtilsService.ts';
+import { useSupplierStore } from '@/stores/suppliers';
+import { createEmptySupplier } from '@/composables/useSupplierForm';
+import { ActiveStatus, type Address } from '@/types/Customer.ts';
 
 export const useCostStore = defineStore('cost', {
   state: () => ({
@@ -256,10 +247,7 @@ export const useCostStore = defineStore('cost', {
       const name = file.name.toLowerCase();
       const mime = (file.type || '').toLowerCase();
       const allowedMime =
-        mime === 'application/pdf' ||
-        mime.startsWith('image/') ||
-        name.endsWith('.pdf') ||
-        /\.(jpe?g|png|gif|webp|bmp|tiff?)$/.test(name);
+        mime === 'application/pdf' || mime.startsWith('image/') || name.endsWith('.pdf') || /\.(jpe?g|png|gif|webp|bmp|tiff?)$/.test(name);
 
       if (!allowedMime) {
         throw new Error('Obsługiwane są wyłącznie pliki PDF oraz obrazy.');
@@ -575,20 +563,12 @@ export const useCostStore = defineStore('cost', {
 
       if (finalStatus.status === 'FAILED') {
         const fromErrors = finalStatus.errors?.map((e) => `${e.costId ?? '?'}: ${e.message}`).join('; ');
-        const message =
-          [finalStatus.message, fromErrors].filter(Boolean).join(' — ') ||
-          'Pobieranie kosztów z KSeF nie powiodło się.';
+        const message = [finalStatus.message, fromErrors].filter(Boolean).join(' — ') || 'Pobieranie kosztów z KSeF nie powiodło się.';
         return { ok: false, message };
       }
 
-      const total =
-        typeof finalStatus.total === 'number' && Number.isFinite(finalStatus.total)
-          ? finalStatus.total
-          : 0;
-      const duplicates =
-        typeof finalStatus.duplicates === 'number' && Number.isFinite(finalStatus.duplicates)
-          ? finalStatus.duplicates
-          : 0;
+      const total = typeof finalStatus.total === 'number' && Number.isFinite(finalStatus.total) ? finalStatus.total : 0;
+      const duplicates = typeof finalStatus.duplicates === 'number' && Number.isFinite(finalStatus.duplicates) ? finalStatus.duplicates : 0;
 
       return {
         ok: true,

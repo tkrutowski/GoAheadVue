@@ -58,18 +58,11 @@
   @apply overflow-hidden whitespace-nowrap;
 }
 
-.p-treetable-resizable-table
-  > .p-treetable-thead
-  > tr
-  > th.p-treetable-resizable-column:not(.p-treetable-frozen-column) {
+.p-treetable-resizable-table > .p-treetable-thead > tr > th.p-treetable-resizable-column:not(.p-treetable-frozen-column) {
   @apply bg-clip-padding relative;
 }
 
-.p-treetable-resizable-table-fit
-  > .p-treetable-thead
-  > tr
-  > th.p-treetable-resizable-column:last-child
-  .p-treetable-column-resizer {
+.p-treetable-resizable-table-fit > .p-treetable-thead > tr > th.p-treetable-resizable-column:last-child .p-treetable-column-resizer {
   @apply hidden;
 }
 

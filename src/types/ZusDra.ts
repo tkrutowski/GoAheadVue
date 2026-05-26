@@ -11,11 +11,6 @@ export interface ZusDraDataDto {
   totalCosts: number;
 }
 
-export type ZusDraFetchResult =
-  | { ok: true; data: ZusDraDataDto }
-  | { ok: false; message: string };
+export type ZusDraFetchResult = { ok: true; data: ZusDraDataDto } | { ok: false; message: string };
 
-export const ZUS_DRA_JOB_TERMINAL_STATUSES: ReadonlySet<ZusDraAsyncJobStatus> = new Set([
-  'SUCCEEDED',
-  'FAILED',
-]);
+export const ZUS_DRA_JOB_TERMINAL_STATUSES: ReadonlySet<ZusDraAsyncJobStatus> = new Set(['SUCCEEDED', 'FAILED']);

@@ -1,10 +1,5 @@
 /** Wspólne stany zadań KSeF (faktury, podgląd kosztów) */
-export type KsefAsyncJobStatus =
-  | 'QUEUED'
-  | 'RUNNING'
-  | 'SUCCEEDED'
-  | 'FAILED'
-  | 'PARTIAL';
+export type KsefAsyncJobStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'PARTIAL';
 
 /** Status zadania wysyłki faktur — alias dla czytelności przy endpointach faktur */
 export type KsefInvoiceJobApiStatus = KsefAsyncJobStatus;
@@ -43,12 +38,7 @@ export interface KsefCostPreviewJobStatusResponse {
   costs?: unknown[];
 }
 
-export const KSEF_ASYNC_JOB_TERMINAL_STATUSES: ReadonlySet<KsefAsyncJobStatus> = new Set([
-  'SUCCEEDED',
-  'FAILED',
-  'PARTIAL',
-]);
+export const KSEF_ASYNC_JOB_TERMINAL_STATUSES: ReadonlySet<KsefAsyncJobStatus> = new Set(['SUCCEEDED', 'FAILED', 'PARTIAL']);
 
 /** Zachowana nazwa dla istniejących importów — ta sama instancja zbioru */
-export const KSEF_INVOICE_JOB_TERMINAL_STATUSES: ReadonlySet<KsefInvoiceJobApiStatus> =
-  KSEF_ASYNC_JOB_TERMINAL_STATUSES;
+export const KSEF_INVOICE_JOB_TERMINAL_STATUSES: ReadonlySet<KsefInvoiceJobApiStatus> = KSEF_ASYNC_JOB_TERMINAL_STATUSES;

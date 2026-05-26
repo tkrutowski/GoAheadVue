@@ -55,7 +55,7 @@
   const customerLookupHint = computed(() =>
     isCompanyType.value
       ? 'Wpisz NIP i wybierz Szukaj, aby uzupełnić nazwę oraz adres firmy.'
-      : 'Dla typu osoba wyszukiwanie GUS pozostaje wyłączone, ale możesz wpisać NIP ręcznie.',
+      : 'Dla typu osoba wyszukiwanie GUS pozostaje wyłączone, ale możesz wpisać NIP ręcznie.'
   );
   const getCustomerFullName = computed(() => `${customer.value?.firstName ?? ''} ${customer.value?.name ?? ''}`.trim());
 
@@ -311,7 +311,9 @@
 
   <div class="mx-auto w-full max-w-5xl px-4 pb-10 pt-4 sm:px-6">
     <form class="w-full" @submit.stop.prevent="saveCustomer">
-      <Panel class="overflow-hidden rounded-[1.75rem] border border-surface-200 bg-surface-100 shadow-lg dark:border-surface-700 dark:bg-surface-800">
+      <Panel
+        class="overflow-hidden rounded-[1.75rem] border border-surface-200 bg-surface-100 shadow-lg dark:border-surface-700 dark:bg-surface-800"
+      >
         <template #header>
           <div class="flex w-full flex-col gap-4 border-b border-surface-200 px-4 py-4 dark:border-surface-700 sm:px-6">
             <div class="flex items-center justify-between gap-3">
@@ -434,7 +436,14 @@
 
                 <div class="flex flex-col">
                   <label :class="labelClass" for="customer-name">{{ customerNameLabel }}</label>
-                  <InputText id="customer-name" v-model="customer.name" :class="inputClass" maxlength="100" :invalid="showErrorName()" size="large" />
+                  <InputText
+                    id="customer-name"
+                    v-model="customer.name"
+                    :class="inputClass"
+                    maxlength="100"
+                    :invalid="showErrorName()"
+                    size="large"
+                  />
                   <small :class="helperClass">{{ showErrorName() ? 'Pole jest wymagane.' : '\u00A0' }}</small>
                 </div>
               </div>
@@ -464,7 +473,14 @@
 
                 <div class="flex flex-col">
                   <label :class="labelClass" for="customer-zip">Kod</label>
-                  <InputText id="customer-zip" v-model="customer.address.zip" :class="inputClass" maxlength="6" :invalid="showErrorZip()" size="large" />
+                  <InputText
+                    id="customer-zip"
+                    v-model="customer.address.zip"
+                    :class="inputClass"
+                    maxlength="6"
+                    :invalid="showErrorZip()"
+                    size="large"
+                  />
                   <small :class="helperClass">{{ showErrorZip() ? 'Format 61754 lub 61-754.' : '\u00A0' }}</small>
                 </div>
               </div>
@@ -472,7 +488,14 @@
               <div class="grid gap-4 md:grid-cols-1">
                 <div class="flex flex-col">
                   <label :class="labelClass" for="customer-city">Miasto</label>
-                  <InputText id="customer-city" v-model="customer.address.city" :class="inputClass" maxlength="100" :invalid="showErrorCity()" size="large" />
+                  <InputText
+                    id="customer-city"
+                    v-model="customer.address.city"
+                    :class="inputClass"
+                    maxlength="100"
+                    :invalid="showErrorCity()"
+                    size="large"
+                  />
                   <small :class="helperClass">{{ showErrorCity() ? 'Pole jest wymagane.' : '\u00A0' }}</small>
                 </div>
               </div>
@@ -489,13 +512,27 @@
               <div class="grid gap-4 md:grid-cols-2">
                 <div class="flex flex-col">
                   <label :class="labelClass" for="customer-mail">E-mail</label>
-                  <InputText id="customer-mail" v-model="customer.mail" :class="inputClass" :invalid="showErrorMail()" maxlength="100" size="large" />
+                  <InputText
+                    id="customer-mail"
+                    v-model="customer.mail"
+                    :class="inputClass"
+                    :invalid="showErrorMail()"
+                    maxlength="100"
+                    size="large"
+                  />
                   <small :class="helperClass">{{ showErrorMail() ? 'Niepoprawny format.' : '\u00A0' }}</small>
                 </div>
 
                 <div class="flex flex-col">
                   <label :class="labelClass" for="customer-phone">Telefon</label>
-                  <InputText id="customer-phone" v-model="customer.phone" :class="inputClass" maxlength="15" :invalid="showErrorPhone()" size="large" />
+                  <InputText
+                    id="customer-phone"
+                    v-model="customer.phone"
+                    :class="inputClass"
+                    maxlength="15"
+                    :invalid="showErrorPhone()"
+                    size="large"
+                  />
                   <small :class="helperClass">{{ showErrorPhone() ? 'Niepoprawny format.' : '\u00A0' }}</small>
                 </div>
               </div>

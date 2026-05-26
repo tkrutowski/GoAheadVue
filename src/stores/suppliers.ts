@@ -33,9 +33,7 @@ export const useSupplierStore = defineStore('supplier', {
       const addr = raw.address && typeof raw.address === 'object' ? (raw.address as Supplier['address']) : empty.address;
       const statusRaw = raw.status;
       const status =
-        statusRaw === ActiveStatus.ACTIVE || statusRaw === ActiveStatus.INACTIVE
-          ? (statusRaw as ActiveStatus)
-          : ActiveStatus.ACTIVE;
+        statusRaw === ActiveStatus.ACTIVE || statusRaw === ActiveStatus.INACTIVE ? (statusRaw as ActiveStatus) : ActiveStatus.ACTIVE;
 
       return {
         ...empty,

@@ -387,9 +387,7 @@
 
   const canDelete = computed(() => selectedInvoices.value.length >= 1);
 
-  const canGeneratePdf = computed(
-    () => selectedInvoices.value.length >= 1 && !invoiceStore.loadingFile,
-  );
+  const canGeneratePdf = computed(() => selectedInvoices.value.length >= 1 && !invoiceStore.loadingFile);
 
   const canPreviewPdfUrl = computed(() => {
     const sel = selectedInvoices.value;

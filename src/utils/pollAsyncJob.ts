@@ -7,12 +7,7 @@ import {
 } from '@/types/KsefJob';
 import type { CostUploadJobStatusResponse } from '@/types/CostUpload';
 import type { PdfBatchJobStatusResponse } from '@/types/PdfBatchJob';
-import {
-  type ZusDraAsyncJobStatus,
-  type ZusDraDataDto,
-  type ZusDraJobStatusResponse,
-  ZUS_DRA_JOB_TERMINAL_STATUSES,
-} from '@/types/ZusDra';
+import { type ZusDraAsyncJobStatus, type ZusDraDataDto, type ZusDraJobStatusResponse, ZUS_DRA_JOB_TERMINAL_STATUSES } from '@/types/ZusDra';
 
 export interface PollAsyncJobOptions {
   /** Pierwszy i bazowy odstęp między zapytaniami (ms). Domyślnie 2000. */
@@ -72,17 +67,10 @@ export async function pollKsefInvoiceJobUntilTerminal(
   jobId: string | number,
   options?: PollAsyncJobOptions
 ): Promise<KsefInvoiceJobStatusResponse> {
-  return pollJobUntilTerminal<KsefInvoiceJobStatusResponse>(
-    http,
-    jobId,
-    INVOICE_JOBS_BASE,
-    options,
-    {
-      timeout:
-        'Przekroczono czas oczekiwania na zakończenie wysyłki faktur do KSeF. Sprawdź listę faktur za chwilę.',
-      invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu wysyłki KSeF.',
-    }
-  );
+  return pollJobUntilTerminal<KsefInvoiceJobStatusResponse>(http, jobId, INVOICE_JOBS_BASE, options, {
+    timeout: 'Przekroczono czas oczekiwania na zakończenie wysyłki faktur do KSeF. Sprawdź listę faktur za chwilę.',
+    invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu wysyłki KSeF.',
+  });
 }
 
 /**
@@ -93,17 +81,10 @@ export async function pollKsefCostPreviewJobUntilTerminal(
   jobId: string | number,
   options?: PollAsyncJobOptions
 ): Promise<KsefCostPreviewJobStatusResponse> {
-  return pollJobUntilTerminal<KsefCostPreviewJobStatusResponse>(
-    http,
-    jobId,
-    COST_KSEF_JOBS_BASE,
-    options,
-    {
-      timeout:
-        'Przekroczono czas oczekiwania na pobranie kosztów z KSeF. Spróbuj ponownie za chwilę lub zawęź zakres dat.',
-      invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu pobierania kosztów z KSeF.',
-    }
-  );
+  return pollJobUntilTerminal<KsefCostPreviewJobStatusResponse>(http, jobId, COST_KSEF_JOBS_BASE, options, {
+    timeout: 'Przekroczono czas oczekiwania na pobranie kosztów z KSeF. Spróbuj ponownie za chwilę lub zawęź zakres dat.',
+    invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu pobierania kosztów z KSeF.',
+  });
 }
 
 /**
@@ -114,17 +95,10 @@ export async function pollInvoicePdfJobUntilTerminal(
   jobId: string | number,
   options?: PollAsyncJobOptions
 ): Promise<PdfBatchJobStatusResponse> {
-  return pollJobUntilTerminal<PdfBatchJobStatusResponse>(
-    http,
-    jobId,
-    INVOICE_PDF_JOBS_BASE,
-    options,
-    {
-      timeout:
-        'Przekroczono czas oczekiwania na wygenerowanie PDF faktur. Sprawdź listę za chwilę lub spróbuj ponownie.',
-      invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu generowania PDF faktur.',
-    }
-  );
+  return pollJobUntilTerminal<PdfBatchJobStatusResponse>(http, jobId, INVOICE_PDF_JOBS_BASE, options, {
+    timeout: 'Przekroczono czas oczekiwania na wygenerowanie PDF faktur. Sprawdź listę za chwilę lub spróbuj ponownie.',
+    invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu generowania PDF faktur.',
+  });
 }
 
 /**
@@ -135,17 +109,10 @@ export async function pollCostPdfJobUntilTerminal(
   jobId: string | number,
   options?: PollAsyncJobOptions
 ): Promise<PdfBatchJobStatusResponse> {
-  return pollJobUntilTerminal<PdfBatchJobStatusResponse>(
-    http,
-    jobId,
-    COST_PDF_JOBS_BASE,
-    options,
-    {
-      timeout:
-        'Przekroczono czas oczekiwania na wygenerowanie PDF kosztów. Sprawdź listę za chwilę lub spróbuj ponownie.',
-      invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu generowania PDF kosztów.',
-    }
-  );
+  return pollJobUntilTerminal<PdfBatchJobStatusResponse>(http, jobId, COST_PDF_JOBS_BASE, options, {
+    timeout: 'Przekroczono czas oczekiwania na wygenerowanie PDF kosztów. Sprawdź listę za chwilę lub spróbuj ponownie.',
+    invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu generowania PDF kosztów.',
+  });
 }
 
 /**
@@ -156,17 +123,10 @@ export async function pollCostUploadJobUntilTerminal(
   jobId: string | number,
   options?: PollAsyncJobOptions
 ): Promise<CostUploadJobStatusResponse> {
-  return pollJobUntilTerminal<CostUploadJobStatusResponse>(
-    http,
-    jobId,
-    COST_UPLOAD_JOBS_BASE,
-    options,
-    {
-      timeout:
-        'Przekroczono czas oczekiwania na odczyt danych z pliku. Spróbuj ponownie za chwilę.',
-      invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu odczytu pliku kosztu.',
-    }
-  );
+  return pollJobUntilTerminal<CostUploadJobStatusResponse>(http, jobId, COST_UPLOAD_JOBS_BASE, options, {
+    timeout: 'Przekroczono czas oczekiwania na odczyt danych z pliku. Spróbuj ponownie za chwilę.',
+    invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu odczytu pliku kosztu.',
+  });
 }
 
 async function pollZusDraJobUntilTerminalInternal(
@@ -211,8 +171,7 @@ export async function pollZusDraJobUntilTerminal(
   options?: PollAsyncJobOptions
 ): Promise<ZusDraJobStatusResponse> {
   return pollZusDraJobUntilTerminalInternal(http, jobId, options, {
-    timeout:
-      'Przekroczono czas oczekiwania na obliczenie ZUS DRA. Spróbuj ponownie za chwilę.',
+    timeout: 'Przekroczono czas oczekiwania na obliczenie ZUS DRA. Spróbuj ponownie za chwilę.',
     invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu obliczenia ZUS DRA.',
   });
 }
@@ -224,17 +183,8 @@ function parseZusDraResultPayload(data: unknown): ZusDraDataDto {
   const raw = data as Record<string, unknown>;
   const period = typeof raw.period === 'string' ? raw.period : '';
   const totalIncome =
-    typeof raw.totalIncome === 'number'
-      ? raw.totalIncome
-      : typeof raw.totalIncome === 'string'
-        ? Number(raw.totalIncome)
-        : 0;
-  const totalCosts =
-    typeof raw.totalCosts === 'number'
-      ? raw.totalCosts
-      : typeof raw.totalCosts === 'string'
-        ? Number(raw.totalCosts)
-        : 0;
+    typeof raw.totalIncome === 'number' ? raw.totalIncome : typeof raw.totalIncome === 'string' ? Number(raw.totalIncome) : 0;
+  const totalCosts = typeof raw.totalCosts === 'number' ? raw.totalCosts : typeof raw.totalCosts === 'string' ? Number(raw.totalCosts) : 0;
   return {
     period,
     totalIncome: Number.isFinite(totalIncome) ? totalIncome : 0,
@@ -245,10 +195,7 @@ function parseZusDraResultPayload(data: unknown): ZusDraDataDto {
 /**
  * Pobiera wynik GET /goahead/invoice/zus-dra/jobs/{jobId}/result (po statusie SUCCEEDED).
  */
-export async function fetchZusDraJobResult(
-  http: AxiosInstance,
-  jobId: string | number
-): Promise<ZusDraDataDto> {
+export async function fetchZusDraJobResult(http: AxiosInstance, jobId: string | number): Promise<ZusDraDataDto> {
   const path = `${ZUS_DRA_JOBS_BASE}/${encodeURIComponent(String(jobId))}/result`;
   const maxAttempts = 4;
   const retryDelayMs = 500;

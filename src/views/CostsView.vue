@@ -12,12 +12,12 @@
   import { useCostStore } from '@/stores/costs';
   import type { Supplier } from '@/types/Supplier.ts';
   import type { Cost } from '@/types/Cost.ts';
-  import {PaymentStatus } from '@/types/Invoice.ts';
+  import { PaymentStatus } from '@/types/Invoice.ts';
   import { UtilsService } from '@/service/UtilsService.ts';
   import { FinanceService } from '@/service/FinanceService.ts';
   import { TranslationService } from '@/service/TranslationService.ts';
   import type { DataTablePageEvent } from 'primevue';
-  import type {DataTableRowClickEvent, DataTableRowContextMenuEvent } from 'primevue/datatable';
+  import type { DataTableRowClickEvent, DataTableRowContextMenuEvent } from 'primevue/datatable';
   import type { MenuItem } from 'primevue/menuitem';
   import ContextMenu from 'primevue/contextmenu';
   import type { AxiosError } from 'axios';
@@ -54,8 +54,7 @@
 
   const expandedRows = ref([]);
   const selectedCosts = ref<Cost[]>([]);
-  const { selectedRowClass: costSelectedRowClass, selectedRowStyle: costSelectedRowStyle } =
-    useDatatableSelectedRowStyle(selectedCosts);
+  const { selectedRowClass: costSelectedRowClass, selectedRowStyle: costSelectedRowStyle } = useDatatableSelectedRowStyle(selectedCosts);
   const selectedCost = computed(() => (selectedCosts.value?.length === 1 ? selectedCosts.value[0] : null));
 
   /** Po GET/odświeżeniu listy w store `selectedCosts` może nadal wskazywać stare obiekty — toolbar nie widzi nowych pól (np. pdfUrl). */
@@ -192,7 +191,7 @@
         url: c.pdfUrl!,
         costNumber: c.number || '—',
         docLabel: 'PDF',
-      })),
+      }))
     );
   };
 
@@ -205,7 +204,7 @@
         url: c.ksefUrl!,
         costNumber: c.number || '—',
         docLabel: 'KSeF PDF',
-      })),
+      }))
     );
   };
 
@@ -404,12 +403,7 @@
     }
   };
 
-  const canGeneratePdf = computed(
-    () =>
-      selectedCosts.value.length >= 1 &&
-      !costStore.loadingFile &&
-      costsEligibleForPdf.value.length >= 1,
-  );
+  const canGeneratePdf = computed(() => selectedCosts.value.length >= 1 && !costStore.loadingFile && costsEligibleForPdf.value.length >= 1);
 
   //
   //-------------------------------------------------UPLOAD COST DOCUMENT-------------------------------------------------
@@ -422,7 +416,7 @@
       !selectedCosts.value[0].ksefNumber?.trim() &&
       !selectedCosts.value[0].pdfUrl?.trim() &&
       !costStore.loadingCostDocumentUpload &&
-      !costStore.loadingCostDocumentRemove,
+      !costStore.loadingCostDocumentRemove
   );
 
   const canRemoveCostDocument = computed(
@@ -431,7 +425,7 @@
       !selectedCosts.value[0].ksefNumber?.trim() &&
       !!selectedCosts.value[0].pdfUrl?.trim() &&
       !costStore.loadingCostDocumentRemove &&
-      !costStore.loadingCostDocumentUpload,
+      !costStore.loadingCostDocumentUpload
   );
 
   const showRemoveDocumentConfirmationDialog = ref(false);
@@ -624,8 +618,7 @@
         toast.add({
           severity: 'warn',
           summary: 'KSeF',
-          detail:
-            'Synchronizacja zakończona częściowo — sprawdź szczegóły i ewentualne komunikaty z serwera.',
+          detail: 'Synchronizacja zakończona częściowo — sprawdź szczegóły i ewentualne komunikaty z serwera.',
           life: 6000,
         });
       }
@@ -646,9 +639,7 @@
         await costStore.getCostsFromDb(costStore.currentPage);
       } else if (total > 0 && duplicates > 0) {
         const detail =
-          total === 1
-            ? 'Koszt z KSeF jest już w systemie.'
-            : `Znaleziono ${total} kosztów w KSeF, ale wszystkie są już w systemie.`;
+          total === 1 ? 'Koszt z KSeF jest już w systemie.' : `Znaleziono ${total} kosztów w KSeF, ale wszystkie są już w systemie.`;
         toast.add({
           severity: 'info',
           summary: 'KSeF',
@@ -691,7 +682,7 @@
     () => route.query.action,
     (action) => {
       if (action === 'ksef') openKsefCheckDialogFromRoute();
-    },
+    }
   );
 
   const handlePageChange = async (event: DataTablePageEvent) => {
@@ -898,37 +889,18 @@
       <div class="grid gap-3 sm:grid-cols-2 sm:items-end">
         <div class="flex flex-col gap-1">
           <label for="ksef-from" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">Okres od</label>
-          <DatePicker
-            id="ksef-from"
-            v-model="ksefDateFrom"
-            date-format="yy-mm-dd"
-            show-icon
-            fluid
-            :disabled="loadingKsefSearch"
-          />
+          <DatePicker id="ksef-from" v-model="ksefDateFrom" date-format="yy-mm-dd" show-icon fluid :disabled="loadingKsefSearch" />
         </div>
         <div class="flex flex-col gap-1">
           <label for="ksef-to" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">Okres do</label>
-          <DatePicker
-            id="ksef-to"
-            v-model="ksefDateTo"
-            date-format="yy-mm-dd"
-            show-icon
-            fluid
-            :disabled="loadingKsefSearch"
-          />
+          <DatePicker id="ksef-to" v-model="ksefDateTo" date-format="yy-mm-dd" show-icon fluid :disabled="loadingKsefSearch" />
         </div>
       </div>
     </div>
 
     <template #footer>
       <div class="flex flex-row justify-end gap-1">
-        <OfficeButton
-          text="Anuluj"
-          btn-type="office-regular"
-          :btn-disabled="loadingKsefSearch"
-          @click="closeKsefDialog"
-        />
+        <OfficeButton text="Anuluj" btn-type="office-regular" :btn-disabled="loadingKsefSearch" @click="closeKsefDialog" />
         <OfficeButton
           text="Wyszukaj"
           btn-type="office-save"
@@ -1032,30 +1004,18 @@
       </div>
       <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
         <div
-            class="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-1 text-xs text-surface-600 dark:text-surface-400"
-            :title="ksefLastCheckTitle"
-            role="status"
-            aria-live="polite"
+          class="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-1 text-xs text-surface-600 dark:text-surface-400"
+          :title="ksefLastCheckTitle"
+          role="status"
+          aria-live="polite"
         >
-          <ProgressSpinner
-              v-if="ksefLastCheckIndicator === 'loading'"
-              class="h-4 w-4 shrink-0"
-              stroke-width="6"
-          />
+          <ProgressSpinner v-if="ksefLastCheckIndicator === 'loading'" class="h-4 w-4 shrink-0" stroke-width="6" />
+          <span v-else-if="ksefLastCheckIndicator === 'failed'" class="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true" />
+          <span v-else-if="ksefLastCheckIndicator === 'success'" class="h-2 w-2 shrink-0 rounded-full bg-green-500" aria-hidden="true" />
           <span
-              v-else-if="ksefLastCheckIndicator === 'failed'"
-              class="h-2 w-2 shrink-0 rounded-full bg-red-500"
-              aria-hidden="true"
-          />
-          <span
-              v-else-if="ksefLastCheckIndicator === 'success'"
-              class="h-2 w-2 shrink-0 rounded-full bg-green-500"
-              aria-hidden="true"
-          />
-          <span
-              v-else-if="ksefLastCheckIndicator === 'none' || ksefLastCheckIndicator === 'unavailable'"
-              class="h-2 w-2 shrink-0 rounded-full bg-surface-400 dark:bg-surface-500"
-              aria-hidden="true"
+            v-else-if="ksefLastCheckIndicator === 'none' || ksefLastCheckIndicator === 'unavailable'"
+            class="h-2 w-2 shrink-0 rounded-full bg-surface-400 dark:bg-surface-500"
+            aria-hidden="true"
           />
           <span>{{ ksefLastCheckLabel }}</span>
         </div>

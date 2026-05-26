@@ -333,8 +333,7 @@
 
       if (!result.supplierMatched) {
         cost.value.supplier = null;
-        const draft =
-          result.supplierDraft ?? costStore.buildSupplierDraftFromEntity(result.cost.supplier as Partial<Supplier> | null);
+        const draft = result.supplierDraft ?? costStore.buildSupplierDraftFromEntity(result.cost.supplier as Partial<Supplier> | null);
         openSupplierCreateDialogFromOcr(draft);
         toast.add({
           severity: 'info',
@@ -415,10 +414,7 @@
         </template>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Fieldset
-            class="w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700"
-            legend="Dane kosztu"
-          >
+          <Fieldset class="w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700" legend="Dane kosztu">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div class="flex flex-col w-full">
                 <label class="pl-1 pb-1 text-surface-800 dark:text-surface-400" for="input-seller">Wybierz sprzedawcę:</label>

@@ -551,8 +551,7 @@ export const useInvoiceStore = defineStore('invoice', {
       }
 
       if (finalStatus.status === 'FAILED') {
-        const message =
-          finalStatus.message?.trim() || 'Obliczenie ZUS DRA nie powiodło się.';
+        const message = finalStatus.message?.trim() || 'Obliczenie ZUS DRA nie powiodło się.';
         return { ok: false, message };
       }
 

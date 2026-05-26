@@ -13,18 +13,11 @@
   /** API bywa niespójne co do wielkości liter na enumach. */
   const status = computed(() => String(props.btnType ?? '').toUpperCase());
 
-  const isPositive = computed(
-    () => status.value === 'PAID' || status.value === 'ACTIVE',
-  );
+  const isPositive = computed(() => status.value === 'PAID' || status.value === 'ACTIVE');
 </script>
 <template>
   <Button text rounded size="small" class="my-button">
-    <i
-      class="pi"
-      :class="[
-        isPositive ? 'pi-check-circle !text-emerald-600' : 'pi-times-circle !text-red-600',
-      ]"
-    />
+    <i class="pi" :class="[isPositive ? 'pi-check-circle !text-emerald-600' : 'pi-times-circle !text-red-600']" />
   </Button>
 </template>
 <style scoped>

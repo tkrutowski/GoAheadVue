@@ -49,8 +49,7 @@
   });
   const submitChangeStatus = async () => {
     if (supplierTemp.value) {
-      const newStatus: ActiveStatus =
-        supplierTemp.value?.status === ActiveStatus.ACTIVE ? ActiveStatus.INACTIVE : ActiveStatus.ACTIVE;
+      const newStatus: ActiveStatus = supplierTemp.value?.status === ActiveStatus.ACTIVE ? ActiveStatus.INACTIVE : ActiveStatus.ACTIVE;
 
       await supplierStore
         .updateSupplierStatusDb(supplierTemp.value?.id, newStatus)
@@ -235,11 +234,7 @@
 
       <Column field="status" header="Status" style="width: 100px">
         <template #body="{ data, field }">
-          <StatusButton
-            title="Zmień status dostawcy (Aktywny/Nieaktywny)"
-            :btn-type="data[field]"
-            @click="confirmStatusChange(data)"
-          />
+          <StatusButton title="Zmień status dostawcy (Aktywny/Nieaktywny)" :btn-type="data[field]" @click="confirmStatusChange(data)" />
         </template>
       </Column>
       <Column header="Akcja" :exportable="false" style="min-width: 8rem">

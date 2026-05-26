@@ -93,18 +93,8 @@
     <div class="flex min-h-0 flex-col gap-4">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div class="flex min-w-0 flex-1 flex-col gap-1">
-          <label for="zus-dra-month" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">
-            Data rozliczenia
-          </label>
-          <DatePicker
-            id="zus-dra-month"
-            v-model="settlementMonth"
-            view="month"
-            date-format="mm/yy"
-            show-icon
-            fluid
-            :disabled="loading"
-          />
+          <label for="zus-dra-month" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400"> Data rozliczenia </label>
+          <DatePicker id="zus-dra-month" v-model="settlementMonth" view="month" date-format="mm/yy" show-icon fluid :disabled="loading" />
         </div>
         <OfficeButton
           text="Oblicz"

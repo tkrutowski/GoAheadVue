@@ -34,15 +34,7 @@
 </script>
 
 <template>
-  <input
-    ref="fileInputRef"
-    type="file"
-    accept=".pdf,image/*"
-    class="hidden"
-    tabindex="-1"
-    aria-hidden="true"
-    @change="onFileChange"
-  />
+  <input ref="fileInputRef" type="file" accept=".pdf,image/*" class="hidden" tabindex="-1" aria-hidden="true" @change="onFileChange" />
   <OfficeButton
     text="Z pliku"
     btn-type="office-regular"

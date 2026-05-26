@@ -57,8 +57,7 @@
   });
   const submitChangeStatus = async () => {
     if (customerTemp.value) {
-      let newStatus: ActiveStatus =
-        customerTemp.value?.activeStatus === ActiveStatus.ACTIVE ? ActiveStatus.INACTIVE : ActiveStatus.ACTIVE;
+      let newStatus: ActiveStatus = customerTemp.value?.activeStatus === ActiveStatus.ACTIVE ? ActiveStatus.INACTIVE : ActiveStatus.ACTIVE;
 
       await customerStore
         .updateCustomerStatusDb(customerTemp.value?.id, newStatus)
@@ -252,11 +251,7 @@
       <!--  STATUS BUTTON    -->
       <Column field="activeStatus" header="Status" style="width: 100px">
         <template #body="{ data, field }">
-          <StatusButton
-            title="Zmień status klienta (Aktywny/Nieaktywny)"
-            :btn-type="data[field]"
-            @click="confirmStatusChange(data)"
-          />
+          <StatusButton title="Zmień status klienta (Aktywny/Nieaktywny)" :btn-type="data[field]" @click="confirmStatusChange(data)" />
         </template>
       </Column>
       <!--                EDIT, DELETE-->

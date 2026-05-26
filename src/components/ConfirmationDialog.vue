@@ -43,20 +43,8 @@
     </div>
     <template #footer>
       <div class="flex flex-row gap-1 justify-content-end">
-        <OfficeButton
-          text="Anuluj"
-          btn-type="office-regular"
-          :btn-disabled="saveLoading"
-          @click="cancel"
-          @abort="cancel"
-        />
-        <OfficeButton
-          :text="label"
-          btn-type="office-save"
-          :loading="saveLoading"
-          :btn-disabled="saveLoading"
-          @click="save"
-        />
+        <OfficeButton text="Anuluj" btn-type="office-regular" :btn-disabled="saveLoading" @click="cancel" @abort="cancel" />
+        <OfficeButton :text="label" btn-type="office-save" :loading="saveLoading" :btn-disabled="saveLoading" @click="save" />
       </div>
     </template>
   </Dialog>

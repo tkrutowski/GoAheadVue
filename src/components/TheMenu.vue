@@ -141,11 +141,7 @@
     }
   };
 
-  const navigateTo = (
-    routeName: string,
-    params?: Record<string, string | number>,
-    query?: Record<string, string>,
-  ) => {
+  const navigateTo = (routeName: string, params?: Record<string, string | number>, query?: Record<string, string>) => {
     router.push({ name: routeName, ...(params ? { params } : {}), ...(query ? { query } : {}) });
     openSubmenu.value = null;
   };

@@ -8,8 +8,7 @@ import type { AxiosError } from 'axios';
 
 export const SUPPLIER_FORM_SECTION_CLASS =
   'rounded-2xl border border-surface-200 bg-white/80 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900/40 sm:p-5';
-export const SUPPLIER_FORM_SECTION_TITLE_CLASS =
-  'flex items-center gap-2 text-lg font-semibold text-surface-900 dark:text-surface-50';
+export const SUPPLIER_FORM_SECTION_TITLE_CLASS = 'flex items-center gap-2 text-lg font-semibold text-surface-900 dark:text-surface-50';
 export const SUPPLIER_FORM_LABEL_CLASS = 'pb-1 pl-1 text-sm font-medium text-surface-700 dark:text-surface-300';
 export const SUPPLIER_FORM_HELPER_CLASS = 'min-h-5 pl-1 text-xs text-red-500';
 export const SUPPLIER_FORM_INPUT_CLASS = 'w-full';

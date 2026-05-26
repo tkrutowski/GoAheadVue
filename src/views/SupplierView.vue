@@ -9,7 +9,15 @@
   import OfficeIconButton from '@/components/OfficeIconButton.vue';
   import BankAccountInfoCard from '@/components/BankAccountInfoCard.vue';
   import SupplierFormCore from '@/components/supplier/SupplierFormCore.vue';
-  import { createEmptySupplier, useSupplierForm, SUPPLIER_FORM_SECTION_CLASS, SUPPLIER_FORM_SECTION_TITLE_CLASS, SUPPLIER_FORM_LABEL_CLASS, SUPPLIER_FORM_HELPER_CLASS, SUPPLIER_FORM_INPUT_CLASS } from '@/composables/useSupplierForm';
+  import {
+    createEmptySupplier,
+    useSupplierForm,
+    SUPPLIER_FORM_SECTION_CLASS,
+    SUPPLIER_FORM_SECTION_TITLE_CLASS,
+    SUPPLIER_FORM_LABEL_CLASS,
+    SUPPLIER_FORM_HELPER_CLASS,
+    SUPPLIER_FORM_INPUT_CLASS,
+  } from '@/composables/useSupplierForm';
   import { UtilsService } from '@/service/UtilsService.ts';
   import type { AxiosError } from 'axios';
 
@@ -141,7 +149,9 @@
 
   <div class="mx-auto w-full max-w-5xl px-4 pb-10 pt-4 sm:px-6">
     <form class="w-full" @submit.stop.prevent="saveSupplier">
-      <Panel class="overflow-hidden rounded-[1.75rem] border border-surface-200 bg-surface-100 shadow-lg dark:border-surface-700 dark:bg-surface-800">
+      <Panel
+        class="overflow-hidden rounded-[1.75rem] border border-surface-200 bg-surface-100 shadow-lg dark:border-surface-700 dark:bg-surface-800"
+      >
         <template #header>
           <div class="flex w-full flex-col gap-4 border-b border-surface-200 px-4 py-4 dark:border-surface-700 sm:px-6">
             <div class="flex items-center justify-between gap-3">
@@ -182,13 +192,27 @@
               <div class="grid gap-4 md:grid-cols-2">
                 <div class="flex flex-col">
                   <label :class="SUPPLIER_FORM_LABEL_CLASS" for="supplier-mail">E-mail</label>
-                  <InputText id="supplier-mail" v-model="supplier.mail" :class="SUPPLIER_FORM_INPUT_CLASS" :invalid="showErrorMail()" maxlength="100" size="large" />
+                  <InputText
+                    id="supplier-mail"
+                    v-model="supplier.mail"
+                    :class="SUPPLIER_FORM_INPUT_CLASS"
+                    :invalid="showErrorMail()"
+                    maxlength="100"
+                    size="large"
+                  />
                   <small :class="SUPPLIER_FORM_HELPER_CLASS">{{ showErrorMail() ? 'Niepoprawny format.' : '\u00A0' }}</small>
                 </div>
 
                 <div class="flex flex-col">
                   <label :class="SUPPLIER_FORM_LABEL_CLASS" for="supplier-phone">Telefon</label>
-                  <InputText id="supplier-phone" v-model="supplier.phone" :class="SUPPLIER_FORM_INPUT_CLASS" maxlength="15" :invalid="showErrorPhone()" size="large" />
+                  <InputText
+                    id="supplier-phone"
+                    v-model="supplier.phone"
+                    :class="SUPPLIER_FORM_INPUT_CLASS"
+                    maxlength="15"
+                    :invalid="showErrorPhone()"
+                    size="large"
+                  />
                   <small :class="SUPPLIER_FORM_HELPER_CLASS">{{ showErrorPhone() ? 'Niepoprawny format.' : '\u00A0' }}</small>
                 </div>
               </div>
