@@ -19,6 +19,11 @@
   import type { MenuItem } from 'primevue/menuitem';
   import ContextMenu from 'primevue/contextmenu';
   import { useDatatableSelectedRowStyle } from '@/composables/useDatatableSelectedRowStyle';
+  import {
+    buildInvoicePdfDownloadFileName,
+    buildUpoPdfDownloadFileName,
+    downloadBlobAsFile,
+  } from '@/utils/pdfFileDownload';
 
   const customerStore = useCustomerStore();
 
@@ -229,7 +234,7 @@
   };
 
   // —— Podgląd PDF w aplikacji (bez nowych kart; przeglądarki nie obsługują niezawodnie „kart w tle”) ——
-  type PdfPreviewItem = { label: string; blobUrl: string };
+  type PdfPreviewItem = { label: string; blobUrl: string; downloadFileName: string; pdfBlob: Blob };
 
   const showPdfPreviewDialog = ref(false);
   const pdfPreviewTitle = ref('');
@@ -241,6 +246,19 @@
   const pdfPreviewSelectOptions = computed(() => pdfPreviewItems.value.map((item, i) => ({ label: item.label, value: i })));
 
   const currentPdfPreviewSrc = computed(() => pdfPreviewItems.value[pdfPreviewActiveIndex.value]?.blobUrl ?? '');
+
+  const currentPdfPreviewItem = computed(() => pdfPreviewItems.value[pdfPreviewActiveIndex.value] ?? null);
+
+  const downloadCurrentPdfPreview = () => {
+    const item = currentPdfPreviewItem.value;
+    if (!item) return;
+    downloadBlobAsFile(item.pdfBlob, item.downloadFileName);
+  };
+
+  const resolvePdfDownloadFileName = (docLabel: string, invoiceNumber: string): string => {
+    if (docLabel === 'UPO') return buildUpoPdfDownloadFileName(invoiceNumber);
+    return buildInvoicePdfDownloadFileName(invoiceNumber);
+  };
 
   const revokePdfPreviewUrls = () => {
     for (const u of pdfPreviewBlobUrlsToRevoke.value) {
@@ -284,6 +302,8 @@
           items.push({
             label: `${e.docLabel} · ${e.invoiceNumber}`,
             blobUrl,
+            downloadFileName: resolvePdfDownloadFileName(e.docLabel, e.invoiceNumber),
+            pdfBlob,
           });
         } catch {
           failedNumbers.push(e.invoiceNumber);
@@ -660,15 +680,28 @@
         <ProgressSpinner class="h-16 w-16" stroke-width="4" />
       </div>
       <template v-else>
-        <Select
-          v-if="pdfPreviewItems.length > 1"
-          v-model="pdfPreviewActiveIndex"
-          :options="pdfPreviewSelectOptions"
-          option-label="label"
-          option-value="value"
-          placeholder="Wybierz dokument"
-          class="w-full max-w-md"
-        />
+        <div class="flex flex-wrap items-center gap-2">
+          <Select
+            v-if="pdfPreviewItems.length > 1"
+            v-model="pdfPreviewActiveIndex"
+            :options="pdfPreviewSelectOptions"
+            option-label="label"
+            option-value="value"
+            placeholder="Wybierz dokument"
+            class="w-full max-w-md sm:flex-1"
+          />
+          <Button
+            type="button"
+            label="Pobierz"
+            icon="pi pi-download"
+            size="small"
+            outlined
+            class="shrink-0"
+            :title="currentPdfPreviewItem ? `Zapisz jako ${currentPdfPreviewItem.downloadFileName}` : 'Pobierz PDF'"
+            :disabled="!currentPdfPreviewItem"
+            @click="downloadCurrentPdfPreview"
+          />
+        </div>
         <iframe
           v-if="currentPdfPreviewSrc"
           :key="pdfPreviewActiveIndex"
