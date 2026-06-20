@@ -11,7 +11,7 @@
   import { useSupplierStore } from '@/stores/suppliers';
   import { useCostStore } from '@/stores/costs';
   import type { Supplier } from '@/types/Supplier.ts';
-  import type { Cost } from '@/types/Cost.ts';
+  import { Vat, type Cost } from '@/types/Cost.ts';
   import { PaymentStatus } from '@/types/Invoice.ts';
   import { UtilsService } from '@/service/UtilsService.ts';
   import { FinanceService } from '@/service/FinanceService.ts';
@@ -32,6 +32,14 @@
   const toast = useToast();
 
   const toolbarBtnNowa = 'rounded-full !px-4 !py-1.5 text-xs sm:text-sm font-semibold uppercase tracking-wide';
+
+  const vatOptions = [
+    { label: '0%', value: Vat.VAT_0 },
+    { label: '5%', value: Vat.VAT_5 },
+    { label: '8%', value: Vat.VAT_8 },
+    { label: '23%', value: Vat.VAT_23 },
+    { label: 'ZW', value: Vat.VAT_ZW },
+  ];
 
   const filters = ref();
   const initFilters = () => {
@@ -1237,7 +1245,7 @@
             </Column>
             <Column field="amountNet">
               <template #header>
-                <div class="w-full text-center">Kwota netto / j.</div>
+                <div class="w-full text-center">Kwota netto</div>
               </template>
               <template #body="slotPropsItem">
                 <p class="text-center">
@@ -1245,9 +1253,29 @@
                 </p>
               </template>
             </Column>
+            <Column field="vat">
+              <template #header>
+                <div class="w-full text-center">VAT</div>
+              </template>
+              <template #body="slotPropsItem">
+                <p class="text-center">
+                  {{ vatOptions.find((opt) => opt.value === slotPropsItem.data.vat)?.label || '' }}
+                </p>
+              </template>
+            </Column>
             <Column>
               <template #header>
-                <div class="w-full text-center">Wartość</div>
+                <div class="w-full text-center">Kwota VAT</div>
+              </template>
+              <template #body="slotPropsItem">
+                <p class="text-center">
+                  {{ UtilsService.formatCurrency(FinanceService.getCostItemVat(slotPropsItem.data)) }}
+                </p>
+              </template>
+            </Column>
+            <Column>
+              <template #header>
+                <div class="w-full text-center">Kwota brutto</div>
               </template>
               <template #body="slotPropsItem">
                 <p class="text-center">

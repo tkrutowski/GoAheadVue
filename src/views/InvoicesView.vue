@@ -19,11 +19,7 @@
   import type { MenuItem } from 'primevue/menuitem';
   import ContextMenu from 'primevue/contextmenu';
   import { useDatatableSelectedRowStyle } from '@/composables/useDatatableSelectedRowStyle';
-  import {
-    buildInvoicePdfDownloadFileName,
-    buildUpoPdfDownloadFileName,
-    downloadBlobAsFile,
-  } from '@/utils/pdfFileDownload';
+  import { buildInvoicePdfDownloadFileName, buildUpoPdfDownloadFileName, downloadBlobAsFile } from '@/utils/pdfFileDownload';
 
   const customerStore = useCustomerStore();
 
