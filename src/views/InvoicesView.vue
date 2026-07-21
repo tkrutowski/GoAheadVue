@@ -1024,6 +1024,21 @@
             </Column>
           </DataTable>
           <p class="mt-2" style="text-align: center"><b>Info:</b> {{ slotProps.data.otherInfo }}</p>
+          <div
+            v-if="slotProps.data.vatGroupRecipientName?.trim()"
+            class="mt-3 rounded border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-3 text-sm"
+          >
+            <p class="font-semibold text-center mb-2">Odbiorca grupy VAT (GV)</p>
+            <p class="text-center">
+              {{ slotProps.data.vatGroupRecipientName }},
+              NIP {{ slotProps.data.vatGroupRecipientNip }},
+              {{ slotProps.data.vatGroupRecipientStreet }},
+              {{ slotProps.data.vatGroupRecipientZip }} {{ slotProps.data.vatGroupRecipientCity }}
+            </p>
+            <p v-if="slotProps.data.buyerContactEmail?.trim()" class="text-center mt-2">
+              <b>E-mail zamawiającego:</b> {{ slotProps.data.buyerContactEmail }}
+            </p>
+          </div>
         </div>
       </template>
     </DataTable>

@@ -356,6 +356,9 @@ export const useCostStore = defineStore('cost', {
       const cost = this.convertResponse(parsedRaw);
       cost.costItems = (cost.costItems ?? []).map((item) => {
         const next = { ...item, id: 0, idCost: cost.id ?? 0 };
+        if (!next.amountUnitNet && next.quantity > 0 && next.amountNet) {
+          next.amountUnitNet = next.amountNet / next.quantity;
+        }
         FinanceService.updateCostItemAmounts(next);
         return next;
       });

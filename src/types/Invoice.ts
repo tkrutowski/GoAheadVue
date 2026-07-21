@@ -14,9 +14,23 @@ export interface Invoice {
   otherInfo: string;
   ksefNumber: string;
   upoUrl: string;
-  ksefUrl: string;
   pdfUrl: string;
+  vatGroupRecipientNip: string;
+  vatGroupRecipientName: string;
+  vatGroupRecipientStreet: string;
+  vatGroupRecipientZip: string;
+  vatGroupRecipientCity: string;
+  buyerContactEmail: string;
   invoiceItems: InvoiceItem[];
+}
+
+export interface VatGroupRecipientData {
+  vatGroupRecipientNip: string;
+  vatGroupRecipientName: string;
+  vatGroupRecipientStreet: string;
+  vatGroupRecipientZip: string;
+  vatGroupRecipientCity: string;
+  buyerContactEmail: string;
 }
 // export default Invoice
 export interface InvoiceItem {

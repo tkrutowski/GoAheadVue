@@ -11,6 +11,7 @@ declare module 'vue' {
     Button: typeof import('primevue/button')['default']
     Calendar: typeof import('primevue/calendar')['default']
     Chart: typeof import('primevue/chart')['default']
+    Checkbox: typeof import('primevue/checkbox')['default']
     Column: typeof import('primevue/column')['default']
     ConfirmationDialog: typeof import('./src/components/ConfirmationDialog.vue')['default']
     CostFileUploadButton: typeof import('./src/components/CostFileUploadButton.vue')['default']

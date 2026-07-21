@@ -16,7 +16,11 @@ export interface CostItem {
   unit: string;
   quantity: number;
   /**
-   * Kwota netto za jednostkę.
+   * Cena netto za jednostkę.
+   */
+  amountUnitNet: number;
+  /**
+   * Kwota netto za całość pozycji (quantity * amountUnitNet).
    */
   amountNet: number;
   /**
@@ -24,11 +28,11 @@ export interface CostItem {
    */
   vat: Vat;
   /**
-   * Kwota VAT dla całej pozycji (readonly w UI, liczona z quantity, amount i vat).
+   * Kwota VAT dla całej pozycji (readonly w UI, liczona z quantity, amountUnitNet i vat).
    */
   amountVat: number;
   /**
-   * Kwota brutto dla całej pozycji (readonly w UI, liczona z quantity, amount i vat).
+   * Kwota brutto dla całej pozycji (readonly w UI, liczona z quantity, amountUnitNet i vat).
    */
   amountGross: number;
 }

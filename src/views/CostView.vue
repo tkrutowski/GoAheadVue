@@ -49,6 +49,7 @@
     name: '',
     unit: '',
     quantity: 0,
+    amountUnitNet: 0,
     amountNet: 0,
     vat: Vat.VAT_23,
     amountVat: 0,
@@ -160,7 +161,7 @@
     const { data, newValue, field, originalEvent } = event;
 
     switch (field) {
-      case 'amountNet':
+      case 'amountUnitNet':
       case 'quantity':
         if (UtilsService.isPositiveFloat(newValue)) {
           data[field] = newValue;
@@ -282,7 +283,7 @@
     return (
       cost.value.supplier !== null &&
       cost.value.costItems.length > 0 &&
-      cost.value.costItems.every((item) => item.quantity > 0 && item.amountNet > 0)
+      cost.value.costItems.every((item) => item.quantity > 0 && item.amountUnitNet > 0)
     );
   };
 
@@ -542,17 +543,28 @@
                 </template>
               </Column>
 
-              <Column field="amountNet" class="min-w-16" bodyStyle="text-align: center; cursor: pointer">
+              <Column field="amountUnitNet" class="min-w-16" bodyStyle="text-align: center; cursor: pointer">
+                <template #header>
+                  <div class="w-full text-center">Cena netto</div>
+                </template>
+                <template #body="{ data }">
+                  <div class="text-center">
+                    {{ UtilsService.formatCurrency(data.amountUnitNet) }}
+                  </div>
+                </template>
+                <template #editor="{ data, field }">
+                  <InputNumber v-model="data[field]" mode="currency" currency="PLN" locale="pl-PL" fluid @focus="UtilsService.selectText" />
+                </template>
+              </Column>
+
+              <Column field="amountNet" class="min-w-16" bodyStyle="text-align: center">
                 <template #header>
                   <div class="w-full text-center">Kwota netto</div>
                 </template>
                 <template #body="{ data }">
                   <div class="text-center">
-                    {{ UtilsService.formatCurrency(data.amountNet) }}
+                    {{ UtilsService.formatCurrency(FinanceService.getCostItemNet(data)) }}
                   </div>
-                </template>
-                <template #editor="{ data, field }">
-                  <InputNumber v-model="data[field]" mode="currency" currency="PLN" locale="pl-PL" fluid @focus="UtilsService.selectText" />
                 </template>
               </Column>
 

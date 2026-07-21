@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import httpCommon from '@/config/http-common.ts';
 import axios from 'axios';
-import { type Invoice, PaymentMethod, PaymentStatus } from '@/types/Invoice';
+import { type Invoice, type VatGroupRecipientData, PaymentMethod, PaymentStatus } from '@/types/Invoice';
 import moment from 'moment';
 import {
   fetchZusDraJobResult,
@@ -148,6 +148,34 @@ export const useInvoiceStore = defineStore('invoice', {
       return typeof d === 'number' && !Number.isNaN(d) ? d : fallback;
     },
 
+    /**
+     * Dane odbiorcy GV z ostatniej faktury danego klienta-nabywcy (wg daty sprzedaży).
+     */
+    getLatestVatGroupRecipientForCustomer(customerId: number | undefined): VatGroupRecipientData | null {
+      if (customerId === undefined) {
+        return null;
+      }
+      const itemsForId = this.invoices
+        .filter((inv) => inv.customer?.id === customerId && inv.vatGroupRecipientName?.trim())
+        .sort((a: Invoice, b: Invoice) => {
+          const dateA = a.sellDate ? new Date(a.sellDate).getTime() : 0;
+          const dateB = b.sellDate ? new Date(b.sellDate).getTime() : 0;
+          return dateB - dateA;
+        });
+      if (itemsForId.length === 0) {
+        return null;
+      }
+      const inv = itemsForId[0];
+      return {
+        vatGroupRecipientNip: inv.vatGroupRecipientNip ?? '',
+        vatGroupRecipientName: inv.vatGroupRecipientName ?? '',
+        vatGroupRecipientStreet: inv.vatGroupRecipientStreet ?? '',
+        vatGroupRecipientZip: inv.vatGroupRecipientZip ?? '',
+        vatGroupRecipientCity: inv.vatGroupRecipientCity ?? '',
+        buyerContactEmail: inv.buyerContactEmail ?? '',
+      };
+    },
+
     //
     //GET INVOICES FROM DB WITH PAGINATION
     //
@@ -228,7 +256,7 @@ export const useInvoiceStore = defineStore('invoice', {
       // (backend może sortować jako string, więc poprawiamy to tutaj)
       if (this.sortField === 'number') {
         invoices = invoices.sort((a: Invoice, b: Invoice) => {
-          // Parsuj numer faktury (format: YYYY/N lub YYYY/NN)
+          // Parsuj numer faktury (format: YYYY/NN, ewentualnie stare YYYY/N)
           const parseInvoiceNumber = (invoiceNumber: string): number => {
             const parts = invoiceNumber.split('/');
             if (parts.length === 2) {
@@ -572,6 +600,12 @@ export const useInvoiceStore = defineStore('invoice', {
         invoiceDate: invoice.invoiceDate ? new Date(invoice.invoiceDate) : null,
         sellDate: invoice.sellDate ? new Date(invoice.sellDate) : null,
         paymentDate: invoice.paymentDate ? new Date(invoice.paymentDate) : null,
+        vatGroupRecipientNip: invoice.vatGroupRecipientNip ?? '',
+        vatGroupRecipientName: invoice.vatGroupRecipientName ?? '',
+        vatGroupRecipientStreet: invoice.vatGroupRecipientStreet ?? '',
+        vatGroupRecipientZip: invoice.vatGroupRecipientZip ?? '',
+        vatGroupRecipientCity: invoice.vatGroupRecipientCity ?? '',
+        buyerContactEmail: invoice.buyerContactEmail ?? '',
       };
     },
   },

@@ -35,10 +35,18 @@
     otherInfo: '',
     ksefNumber: '',
     upoUrl: '',
-    ksefUrl: '',
     pdfUrl: '',
+    vatGroupRecipientNip: '',
+    vatGroupRecipientName: '',
+    vatGroupRecipientStreet: '',
+    vatGroupRecipientZip: '',
+    vatGroupRecipientCity: '',
+    buyerContactEmail: '',
     invoiceItems: [],
   });
+
+  const isVatGroupRecipient = ref(false);
+  const vatGroupRecipientCustomer = ref<Customer | null>(null);
 
   const invoiceItem = ref<InvoiceItem>({
     idInvoice: 0,
@@ -54,6 +62,11 @@
   const paymentDeadline = ref<number>();
   const btnShowBusy = ref<boolean>(false);
   const btnSaveDisabled = ref<boolean>(false);
+
+  /** Numer faktury jako YYYY/NN (2 cyfry — spójny sort stringowy w backendzie). */
+  const formatInvoiceNumber = (year: number, number: number): string => {
+    return `${year}/${String(number).padStart(2, '0')}`;
+  };
 
   watch(invoiceYear, async (newValue) => {
     if (!isEdit.value && newValue) invoiceNumber.value = await invoiceStore.findInvoiceNumber(newValue);
@@ -86,6 +99,57 @@
     }
   }
 
+  function hasVatGroupRecipientData(inv: Invoice): boolean {
+    return !!(
+      inv.vatGroupRecipientName?.trim() ||
+      inv.vatGroupRecipientNip?.trim() ||
+      inv.vatGroupRecipientStreet?.trim() ||
+      inv.vatGroupRecipientZip?.trim() ||
+      inv.vatGroupRecipientCity?.trim() ||
+      inv.buyerContactEmail?.trim()
+    );
+  }
+
+  function clearVatGroupRecipientFields() {
+    invoice.value.vatGroupRecipientNip = '';
+    invoice.value.vatGroupRecipientName = '';
+    invoice.value.vatGroupRecipientStreet = '';
+    invoice.value.vatGroupRecipientZip = '';
+    invoice.value.vatGroupRecipientCity = '';
+    invoice.value.buyerContactEmail = '';
+  }
+
+  function applyLatestVatGroupRecipient(customerId: number | undefined) {
+    const latest = invoiceStore.getLatestVatGroupRecipientForCustomer(customerId);
+    if (!latest) return;
+    invoice.value.vatGroupRecipientNip = latest.vatGroupRecipientNip;
+    invoice.value.vatGroupRecipientName = latest.vatGroupRecipientName;
+    invoice.value.vatGroupRecipientStreet = latest.vatGroupRecipientStreet;
+    invoice.value.vatGroupRecipientZip = latest.vatGroupRecipientZip;
+    invoice.value.vatGroupRecipientCity = latest.vatGroupRecipientCity;
+    invoice.value.buyerContactEmail = latest.buyerContactEmail;
+  }
+
+  function applyVatGroupRecipientFromCustomer(customer: Customer | null) {
+    if (!customer) return;
+    invoice.value.vatGroupRecipientName = `${customer.name} ${customer.firstName}`.trim();
+    invoice.value.vatGroupRecipientNip = UtilsService.normalizeNipDigits(customer.nip);
+    invoice.value.vatGroupRecipientStreet = customer.address?.street ?? '';
+    invoice.value.vatGroupRecipientZip = customer.address?.zip ?? '';
+    invoice.value.vatGroupRecipientCity = customer.address?.city ?? '';
+    if (customer.mail?.trim()) {
+      invoice.value.buyerContactEmail = customer.mail.trim();
+    }
+  }
+
+  function prepareInvoiceForSave() {
+    if (!isVatGroupRecipient.value) {
+      clearVatGroupRecipientFields();
+    } else {
+      invoice.value.vatGroupRecipientNip = UtilsService.normalizeNipDigits(invoice.value.vatGroupRecipientNip);
+    }
+  }
+
   function saveInvoice() {
     submitted.value = true;
     if (isEdit.value) {
@@ -105,8 +169,9 @@
     } else {
       btnSaveDisabled.value = true;
       btnShowBusy.value = true;
-      invoice.value.number = invoiceYear.value + '/' + invoiceNumber.value;
+      invoice.value.number = formatInvoiceNumber(invoiceYear.value!, invoiceNumber.value);
       applyPaymentDeadlineToInvoice();
+      prepareInvoiceForSave();
       await invoiceStore
         .addInvoiceDb(invoice.value)
         .then(() => {
@@ -146,15 +211,36 @@
       if (isEdit.value) return;
       invoice.value.otherInfo = invoiceStore.getLatestOtherInfoForCustomer(customer?.id);
       paymentDeadline.value = invoiceStore.getLatestPaymentDeadlineForCustomer(customer?.id);
+      if (isVatGroupRecipient.value) {
+        applyLatestVatGroupRecipient(customer?.id);
+      }
     }
   );
+
+  watch(isVatGroupRecipient, (checked) => {
+    if (!checked) {
+      clearVatGroupRecipientFields();
+      vatGroupRecipientCustomer.value = null;
+      return;
+    }
+    if (!isEdit.value && invoice.value.customer) {
+      applyLatestVatGroupRecipient(invoice.value.customer.id);
+    }
+  });
+
+  watch(vatGroupRecipientCustomer, (customer) => {
+    if (customer) {
+      applyVatGroupRecipientFromCustomer(customer);
+    }
+  });
 
   async function editInvoice() {
     if (!isValid()) {
       showError('Uzupełnij brakujące elementy');
     } else {
-      invoice.value.number = invoiceYear.value + '/' + invoiceNumber.value;
+      invoice.value.number = formatInvoiceNumber(invoiceYear.value!, invoiceNumber.value);
       applyPaymentDeadlineToInvoice();
+      prepareInvoiceForSave();
       btnSaveDisabled.value = true;
       btnShowBusy.value = true;
       await invoiceStore
@@ -276,6 +362,7 @@
         .then((data) => {
           if (data) {
             invoice.value = data;
+            isVatGroupRecipient.value = hasVatGroupRecipientData(data);
             if (data.paymentDate && data.invoiceDate) {
               const paymentDate = moment(data.paymentDate);
               const invoiceDate = moment(data.invoiceDate);
@@ -312,13 +399,54 @@
       life: 3000,
     });
   };
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const isValidVatGroupRecipient = () => {
+    if (!isVatGroupRecipient.value) return true;
+    const inv = invoice.value;
+    const nipDigits = UtilsService.normalizeNipDigits(inv.vatGroupRecipientNip);
+    return (
+      inv.vatGroupRecipientName.trim().length > 0 &&
+      /^\d{10}$/.test(nipDigits) &&
+      inv.vatGroupRecipientStreet.trim().length > 0 &&
+      inv.vatGroupRecipientZip.trim().length > 0 &&
+      inv.vatGroupRecipientCity.trim().length > 0 &&
+      inv.buyerContactEmail.trim().length > 0 &&
+      isValidEmail(inv.buyerContactEmail)
+    );
+  };
+
   const isValid = () => {
     return (
       invoice.value.customer !== null &&
       invoice.value.invoiceItems.length > 0 &&
-      invoice.value.invoiceItems.every((item) => item.quantity > 0 && item.amount > 0)
+      invoice.value.invoiceItems.every((item) => item.quantity > 0 && item.amount > 0) &&
+      isValidVatGroupRecipient()
     );
   };
+
+  const isVatGroupRecipientNameInvalid = computed(
+    () => submitted.value && isVatGroupRecipient.value && !invoice.value.vatGroupRecipientName.trim()
+  );
+  const isVatGroupRecipientNipInvalid = computed(() => {
+    if (!submitted.value || !isVatGroupRecipient.value) return false;
+    const digits = UtilsService.normalizeNipDigits(invoice.value.vatGroupRecipientNip);
+    return digits.length === 0 || !/^\d{10}$/.test(digits);
+  });
+  const isVatGroupRecipientStreetInvalid = computed(
+    () => submitted.value && isVatGroupRecipient.value && !invoice.value.vatGroupRecipientStreet.trim()
+  );
+  const isVatGroupRecipientZipInvalid = computed(
+    () => submitted.value && isVatGroupRecipient.value && !invoice.value.vatGroupRecipientZip.trim()
+  );
+  const isVatGroupRecipientCityInvalid = computed(
+    () => submitted.value && isVatGroupRecipient.value && !invoice.value.vatGroupRecipientCity.trim()
+  );
+  const isBuyerContactEmailInvalid = computed(() => {
+    if (!submitted.value || !isVatGroupRecipient.value) return false;
+    const email = invoice.value.buyerContactEmail.trim();
+    return email.length === 0 || !isValidEmail(email);
+  });
 
   const customerFieldErrorId = 'invoice-customer-error';
 
@@ -402,7 +530,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="number">Numer faktury</label>
                 <div class="flex min-w-0 w-full items-start gap-2">
                   <div class="min-w-0 flex-1">
-                    <InputNumber id="number" fluid v-model="invoiceNumber" mode="decimal" show-buttons :min="1" :max="100" />
+                    <InputNumber id="number" fluid v-model="invoiceNumber" mode="decimal" show-buttons :min="1" :max="99" />
                   </div>
                   <div v-if="invoiceStore.loadingInvoiceNo" class="mt-1 shrink-0">
                     <ProgressSpinner class="h-[30px] w-[30px]" stroke-width="5" />
@@ -466,6 +594,16 @@
               <Textarea id="otherInfo" v-model="invoice.otherInfo" rows="3" cols="30" fluid />
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="otherInfo">Dodatkowe informacje</label>
             </IftaLabel>
+            <small class="block mt-1 text-surface-500 dark:text-surface-400">
+              Możesz tu podać, kto z uczelni zamawiał towar/usługę (alternatywa dla e-maila kontaktowego).
+            </small>
+
+            <div class="mt-6 flex items-center gap-2">
+              <Checkbox v-model="isVatGroupRecipient" input-id="isVatGroupRecipient" binary />
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer" for="isVatGroupRecipient">
+                Faktura dla odbiorcy GV
+              </label>
+            </div>
           </Fieldset>
 
           <!-- TABLE INVOIS_ITEMS -->
@@ -585,6 +723,120 @@
             </div>
           </Fieldset>
         </div>
+
+        <Fieldset
+          v-if="isVatGroupRecipient"
+          class="mt-4 w-full bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700"
+          legend="Odbiorca grupy VAT (GV)"
+        >
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="min-w-0 sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="gv-recipient-customer">
+                Wybierz odbiorcę z listy klientów
+              </label>
+              <Select
+                id="gv-recipient-customer"
+                v-model="vatGroupRecipientCustomer"
+                class="w-full"
+                :options="customerStore.getCustomerActive"
+                :option-label="getCustomerLabel"
+                placeholder="Opcjonalnie — uzupełni pola poniżej"
+                show-clear
+                :loading="customerStore.loadingCustomer"
+              />
+            </div>
+
+            <div class="min-w-0">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="vatGroupRecipientName">Nazwa odbiorcy</label>
+              <InputText
+                id="vatGroupRecipientName"
+                v-model="invoice.vatGroupRecipientName"
+                fluid
+                maxlength="200"
+                :invalid="isVatGroupRecipientNameInvalid"
+              />
+              <small class="p-error block min-h-[1.25rem] text-red-500">
+                {{ isVatGroupRecipientNameInvalid ? 'Pole jest wymagane.' : '\u00a0' }}
+              </small>
+            </div>
+
+            <div class="min-w-0">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="vatGroupRecipientNip">NIP</label>
+              <InputText
+                id="vatGroupRecipientNip"
+                v-model="invoice.vatGroupRecipientNip"
+                fluid
+                maxlength="13"
+                :invalid="isVatGroupRecipientNipInvalid"
+              />
+              <small class="p-error block min-h-[1.25rem] text-red-500">
+                {{ isVatGroupRecipientNipInvalid ? 'NIP musi składać się z 10 cyfr.' : '\u00a0' }}
+              </small>
+            </div>
+
+            <div class="min-w-0">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="vatGroupRecipientStreet">Ulica</label>
+              <InputText
+                id="vatGroupRecipientStreet"
+                v-model="invoice.vatGroupRecipientStreet"
+                fluid
+                maxlength="200"
+                :invalid="isVatGroupRecipientStreetInvalid"
+              />
+              <small class="p-error block min-h-[1.25rem] text-red-500">
+                {{ isVatGroupRecipientStreetInvalid ? 'Pole jest wymagane.' : '\u00a0' }}
+              </small>
+            </div>
+
+            <div class="min-w-0">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="vatGroupRecipientZip">Kod pocztowy</label>
+              <InputText
+                id="vatGroupRecipientZip"
+                v-model="invoice.vatGroupRecipientZip"
+                fluid
+                maxlength="10"
+                :invalid="isVatGroupRecipientZipInvalid"
+              />
+              <small class="p-error block min-h-[1.25rem] text-red-500">
+                {{ isVatGroupRecipientZipInvalid ? 'Pole jest wymagane.' : '\u00a0' }}
+              </small>
+            </div>
+
+            <div class="min-w-0">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="vatGroupRecipientCity">Miasto</label>
+              <InputText
+                id="vatGroupRecipientCity"
+                v-model="invoice.vatGroupRecipientCity"
+                fluid
+                maxlength="100"
+                :invalid="isVatGroupRecipientCityInvalid"
+              />
+              <small class="p-error block min-h-[1.25rem] text-red-500">
+                {{ isVatGroupRecipientCityInvalid ? 'Pole jest wymagane.' : '\u00a0' }}
+              </small>
+            </div>
+
+            <div class="min-w-0 sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="buyerContactEmail">
+                E-mail osoby zamawiającej
+              </label>
+              <InputText
+                id="buyerContactEmail"
+                v-model="invoice.buyerContactEmail"
+                type="email"
+                fluid
+                maxlength="200"
+                :invalid="isBuyerContactEmailInvalid"
+              />
+              <small class="block text-surface-500 dark:text-surface-400 mt-1">
+                Adres mailowy osoby zamawiającej usługę lub kupującej towar.
+              </small>
+              <small class="p-error block min-h-[1.25rem] text-red-500">
+                {{ isBuyerContactEmailInvalid ? 'Podaj poprawny adres e-mail.' : '\u00a0' }}
+              </small>
+            </div>
+          </div>
+        </Fieldset>
       </Panel>
     </form>
   </div>
