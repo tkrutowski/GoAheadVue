@@ -69,8 +69,40 @@
   };
 
   watch(invoiceYear, async (newValue) => {
-    if (!isEdit.value && newValue) invoiceNumber.value = await invoiceStore.findInvoiceNumber(newValue);
+    if (isEdit.value || !newValue) return;
+    try {
+      invoiceNumber.value = await invoiceStore.findInvoiceNumber(newValue);
+    } catch (error) {
+      console.error('Błąd podczas pobierania numeru faktury:', error);
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd pobierania numeru faktury.',
+        detail: getErrorMessage(error),
+        life: 5000,
+      });
+    }
   });
+
+  /** Komunikat błędu z odpowiedzi API; bezpieczny także gdy serwer nie odpowiedział (timeout, brak sieci). */
+  const getErrorMessage = (error: unknown): string => {
+    const err = error as AxiosError<{ message?: string }>;
+    return err?.response?.data?.message ?? err?.message ?? 'Nieznany błąd.';
+  };
+
+  const DEFAULT_PAYMENT_DEADLINE = 14;
+  const isCashPayment = computed(() => invoice.value.paymentMethod === PaymentMethod.CASH);
+
+  /** Gotówka → 0 dni (bez zmiany); pozostałe formy → domyślnie 14, gdy brak dodatniej wartości. */
+  watch(
+    () => invoice.value.paymentMethod,
+    (method) => {
+      if (method === PaymentMethod.CASH) {
+        paymentDeadline.value = 0;
+      } else if (!paymentDeadline.value || paymentDeadline.value <= 0) {
+        paymentDeadline.value = DEFAULT_PAYMENT_DEADLINE;
+      }
+    }
+  );
 
   const totalAmount = computed(() => {
     let total = invoice.value.invoiceItems.reduce((acc, item) => {
@@ -92,7 +124,7 @@
   //SAVE
   //
   function applyPaymentDeadlineToInvoice() {
-    const days = paymentDeadline.value ?? invoice.value.paymentDeadline;
+    const days = isCashPayment.value ? 0 : (paymentDeadline.value ?? invoice.value.paymentDeadline);
     invoice.value.paymentDeadline = days;
     if (invoice.value.invoiceDate) {
       invoice.value.paymentDate = moment(invoice.value.invoiceDate).add(days, 'day').toDate();
@@ -189,7 +221,7 @@
           toast.add({
             severity: 'error',
             summary: 'Błąd podczas zapisu faktury.',
-            detail: (reason?.response?.data as { message: string }).message,
+            detail: getErrorMessage(reason),
             life: 5000,
           });
           btnSaveDisabled.value = false;
@@ -210,7 +242,12 @@
     (customer) => {
       if (isEdit.value) return;
       invoice.value.otherInfo = invoiceStore.getLatestOtherInfoForCustomer(customer?.id);
-      paymentDeadline.value = invoiceStore.getLatestPaymentDeadlineForCustomer(customer?.id);
+      if (isCashPayment.value) {
+        paymentDeadline.value = 0;
+      } else {
+        const latestDeadline = invoiceStore.getLatestPaymentDeadlineForCustomer(customer?.id);
+        paymentDeadline.value = latestDeadline > 0 ? latestDeadline : DEFAULT_PAYMENT_DEADLINE;
+      }
       if (isVatGroupRecipient.value) {
         applyLatestVatGroupRecipient(customer?.id);
       }
@@ -260,7 +297,7 @@
           toast.add({
             severity: 'error',
             summary: 'Błąd podczas edycji faktury.',
-            detail: (reason?.response?.data as { message: string }).message,
+            detail: getErrorMessage(reason),
             life: 5000,
           });
           btnSaveDisabled.value = false;
@@ -352,7 +389,7 @@
     if (!isEdit.value) {
       console.log('onMounted NEW INVOICE');
       invoiceYear.value = new Date(Date.now()).getFullYear();
-      paymentDeadline.value = 14;
+      paymentDeadline.value = isCashPayment.value ? 0 : DEFAULT_PAYMENT_DEADLINE;
     } else {
       console.log('onMounted EDIT INVOICE');
       const invoiceId = Number(route.params.invoiceId as string);
@@ -421,9 +458,13 @@
       invoice.value.customer !== null &&
       invoice.value.invoiceItems.length > 0 &&
       invoice.value.invoiceItems.every((item) => item.quantity > 0 && item.amount > 0) &&
+      isValidPaymentDeadline() &&
       isValidVatGroupRecipient()
     );
   };
+
+  const isValidPaymentDeadline = () => isCashPayment.value || (paymentDeadline.value ?? 0) > 0;
+  const isPaymentDeadlineInvalid = computed(() => submitted.value && !isValidPaymentDeadline());
 
   const isVatGroupRecipientNameInvalid = computed(
     () => submitted.value && isVatGroupRecipient.value && !invoice.value.vatGroupRecipientName.trim()
@@ -569,7 +610,20 @@
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-4">
               <div class="flex flex-col w-full mt-4 sm:mt-0">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="input">Odroczenie płatności:</label>
-                <InputNumber id="input" v-model="paymentDeadline" mode="decimal" :use-grouping="false" show-buttons :min="0" :max="90" />
+                <InputNumber
+                  id="paymentDeadline"
+                  v-model="paymentDeadline"
+                  mode="decimal"
+                  :use-grouping="false"
+                  show-buttons
+                  :min="isCashPayment ? 0 : 1"
+                  :max="90"
+                  :disabled="isCashPayment"
+                  :invalid="isPaymentDeadlineInvalid"
+                />
+                <small class="p-error block min-h-[1.25rem] text-red-500">
+                  {{ isPaymentDeadlineInvalid ? 'Odroczenie płatności musi być większe od 0.' : ' ' }}
+                </small>
               </div>
               <div class="flex flex-row gap-4">
                 <div class="flex flex-col w-full">

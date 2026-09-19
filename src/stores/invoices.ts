@@ -386,10 +386,13 @@ export const useInvoiceStore = defineStore('invoice', {
     async findInvoiceNumber(year: number): Promise<number> {
       this.loadingInvoiceNo = true;
       console.log('findInvoiceNumber(', year, ')');
-      const res = await httpCommon.get(`/goahead/invoice/number/` + year);
-      console.log('new fv number: ', res);
-      this.loadingInvoiceNo = false;
-      return res.data;
+      try {
+        const res = await httpCommon.get(`/goahead/invoice/number/` + year);
+        console.log('new fv number: ', res);
+        return res.data;
+      } finally {
+        this.loadingInvoiceNo = false;
+      }
     },
 
     //
