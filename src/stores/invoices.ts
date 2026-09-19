@@ -54,8 +54,9 @@ export const useInvoiceStore = defineStore('invoice', {
     //
     async sortInvoices(sortField: string, sortOrder: number) {
       console.log('sortInvoices()', sortField, sortOrder);
-      this.sortField = sortField;
-      this.sortOrder = sortOrder;
+      // removable-sort: trzeci klik czyści sortowanie (sortField = null) - wracamy do domyślnego
+      this.sortField = sortField || 'number';
+      this.sortOrder = sortField ? sortOrder : -1;
       await this.getInvoicesFromDb(0); // Reset to first page after sort
     },
     //

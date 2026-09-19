@@ -53,8 +53,9 @@ export const useCostStore = defineStore('cost', {
     },
 
     async sortCosts(sortField: string, sortOrder: number) {
-      this.sortField = sortField;
-      this.sortOrder = (sortOrder === 1 ? 1 : -1) as 1 | -1;
+      // removable-sort: trzeci klik czyści sortowanie (sortField = null) - wracamy do domyślnego
+      this.sortField = sortField || 'sellDate';
+      this.sortOrder = (sortField && sortOrder === 1 ? 1 : -1) as 1 | -1;
       await this.getCostsFromDb(0);
     },
 

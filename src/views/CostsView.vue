@@ -1172,7 +1172,9 @@
         data-type="numeric"
         filter-field="amount"
         :show-filter-match-modes="true"
-        :show-filter-operator="true"
+        :show-filter-operator="false"
+        :show-add-button="false"
+        :sortable="true"
       >
         <template #body="{ data }">
           {{ UtilsService.formatCurrency(FinanceService.getCostTotalGross(data)) }}

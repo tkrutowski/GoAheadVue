@@ -934,7 +934,9 @@
         dataType="numeric"
         filter-field="amount"
         :show-filter-match-modes="true"
-        :show-filter-operator="true"
+        :show-filter-operator="false"
+        :show-add-button="false"
+        :sortable="true"
       >
         <template #body="{ data }">
           {{ UtilsService.formatCurrency(FinanceService.getInvoiceAmount(data)) }}
@@ -1030,10 +1032,9 @@
           >
             <p class="font-semibold text-center mb-2">Odbiorca grupy VAT (GV)</p>
             <p class="text-center">
-              {{ slotProps.data.vatGroupRecipientName }},
-              NIP {{ slotProps.data.vatGroupRecipientNip }},
-              {{ slotProps.data.vatGroupRecipientStreet }},
-              {{ slotProps.data.vatGroupRecipientZip }} {{ slotProps.data.vatGroupRecipientCity }}
+              {{ slotProps.data.vatGroupRecipientName }}, NIP {{ slotProps.data.vatGroupRecipientNip }},
+              {{ slotProps.data.vatGroupRecipientStreet }}, {{ slotProps.data.vatGroupRecipientZip }}
+              {{ slotProps.data.vatGroupRecipientCity }}
             </p>
             <p v-if="slotProps.data.buyerContactEmail?.trim()" class="text-center mt-2">
               <b>E-mail zamawiającego:</b> {{ slotProps.data.buyerContactEmail }}
