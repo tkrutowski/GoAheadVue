@@ -1,7 +1,7 @@
 import type { AxiosInstance } from 'axios';
 import {
   type KsefAsyncJobStatus,
-  type KsefCostPreviewJobStatusResponse,
+  type KsefFetchJobStatusResponse,
   type KsefInvoiceJobStatusResponse,
   KSEF_ASYNC_JOB_TERMINAL_STATUSES,
 } from '@/types/KsefJob';
@@ -19,6 +19,7 @@ export interface PollAsyncJobOptions {
 }
 
 const INVOICE_JOBS_BASE = '/goahead/invoice/ksef/jobs';
+const INVOICE_KSEF_IMPORT_JOBS_BASE = '/goahead/invoice/ksef/import/jobs';
 const COST_KSEF_JOBS_BASE = '/goahead/cost/ksef/jobs';
 const INVOICE_PDF_JOBS_BASE = '/goahead/invoice/pdf/jobs';
 const COST_PDF_JOBS_BASE = '/goahead/cost/pdf/jobs';
@@ -74,14 +75,28 @@ export async function pollKsefInvoiceJobUntilTerminal(
 }
 
 /**
+ * Poluje GET /goahead/invoice/ksef/import/jobs/{jobId} (import faktur sprzedażowych z KSeF) do statusu terminalnego.
+ */
+export async function pollKsefInvoiceImportJobUntilTerminal(
+  http: AxiosInstance,
+  jobId: string | number,
+  options?: PollAsyncJobOptions
+): Promise<KsefFetchJobStatusResponse> {
+  return pollJobUntilTerminal<KsefFetchJobStatusResponse>(http, jobId, INVOICE_KSEF_IMPORT_JOBS_BASE, options, {
+    timeout: 'Przekroczono czas oczekiwania na import faktur z KSeF. Sprawdź listę faktur za chwilę lub zawęź zakres dat.',
+    invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu importu faktur z KSeF.',
+  });
+}
+
+/**
  * Poluje GET /goahead/cost/ksef/jobs/{jobId} do statusu terminalnego.
  */
 export async function pollKsefCostPreviewJobUntilTerminal(
   http: AxiosInstance,
   jobId: string | number,
   options?: PollAsyncJobOptions
-): Promise<KsefCostPreviewJobStatusResponse> {
-  return pollJobUntilTerminal<KsefCostPreviewJobStatusResponse>(http, jobId, COST_KSEF_JOBS_BASE, options, {
+): Promise<KsefFetchJobStatusResponse> {
+  return pollJobUntilTerminal<KsefFetchJobStatusResponse>(http, jobId, COST_KSEF_JOBS_BASE, options, {
     timeout: 'Przekroczono czas oczekiwania na pobranie kosztów z KSeF. Spróbuj ponownie za chwilę lub zawęź zakres dat.',
     invalid: 'Niepoprawna odpowiedź serwera przy sprawdzaniu statusu pobierania kosztów z KSeF.',
   });

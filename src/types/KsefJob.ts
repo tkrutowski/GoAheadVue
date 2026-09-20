@@ -21,21 +21,27 @@ export interface KsefInvoiceJobStatusResponse {
   errors?: KsefInvoiceJobErrorItem[];
 }
 
-/** Błędy per pozycja przy podglądzie kosztów z KSeF (opcjonalny identyfikator kosztu) */
-export interface KsefCostPreviewJobErrorItem {
-  costId?: number;
+/** Błąd per pozycja przy imporcie z KSeF (`entityId` = numer KSeF lub numer faktury; null przy nieoczekiwanym błędzie całego zadania). */
+export interface KsefFetchErrorItem {
+  entityId?: string | null;
   message: string;
 }
 
-export interface KsefCostPreviewJobStatusResponse {
+/**
+ * Status zadania importu z KSeF — wspólny dla kosztów (GET /goahead/cost/ksef/jobs/{id})
+ * i faktur sprzedażowych (GET /goahead/invoice/ksef/import/jobs/{id}).
+ * `message` to gotowy tekst po polsku (pokazywać w całości).
+ */
+export interface KsefFetchJobStatusResponse {
   status: KsefAsyncJobStatus;
-  processed?: number;
-  duplicates?: number;
+  /** Pozycje znalezione w KSeF. */
   total?: number;
+  /** Nowo zaimportowane pozycje. */
+  processed?: number;
+  /** Pozycje, które już były w systemie. */
+  duplicates?: number;
   message?: string;
-  errors?: KsefCostPreviewJobErrorItem[];
-  /** Surowe rekordy kosztów jak z synchronicznego GET /goahead/cost/ksef */
-  costs?: unknown[];
+  errors?: KsefFetchErrorItem[];
 }
 
 export const KSEF_ASYNC_JOB_TERMINAL_STATUSES: ReadonlySet<KsefAsyncJobStatus> = new Set(['SUCCEEDED', 'FAILED', 'PARTIAL']);

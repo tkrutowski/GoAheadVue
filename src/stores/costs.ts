@@ -4,9 +4,8 @@ import axios from 'axios';
 import moment from 'moment';
 import type { Cost } from '@/types/Cost.ts';
 import type { PaymentStatus } from '@/types/Invoice.ts';
-import type { KsefCostPreviewFetchResult } from '@/types/KsefCostPreview.ts';
 import { ASYNC_JOB_TYPE_KSEF_COST, type AsyncTaskStatusResponse } from '@/types/AsyncTask.ts';
-import type { KsefAsyncJobStatus } from '@/types/KsefJob.ts';
+import type { KsefAsyncJobStatus, KsefFetchJobStatusResponse } from '@/types/KsefJob.ts';
 import type { CostUploadCompleteRequest, CostUploadResult, CostUploadUrlRequest, CostUploadUrlResponse } from '@/types/CostUpload.ts';
 import type { FileInfo } from '@/types/FileUpload.ts';
 import type { Supplier } from '@/types/Supplier.ts';
@@ -540,10 +539,11 @@ export const useCostStore = defineStore('cost', {
     },
 
     /**
-     * Synchronizacja / pobieranie kosztów z KSeF (async job). Wynik w bazie — odśwież listę stroną.
-     * Backend: POST /goahead/cost/ksef { fromDate, toDate } → 202 + { jobId }; GET .../cost/ksef/jobs/{jobId} (brak listy kosztów w odpowiedzi).
+     * Pobieranie kosztów z KSeF (async job). Wynik w bazie — odśwież listę po zakończeniu.
+     * Backend: POST /goahead/cost/ksef { fromDate, toDate } → 202 + { jobId }; GET .../cost/ksef/jobs/{jobId}.
+     * Zwraca końcowy status zadania (SUCCEEDED | PARTIAL | FAILED) z `message` i `errors`; wyjątek tylko przy błędzie startu/pollingu.
      */
-    async fetchKsefNewCostsPreview(fromDate: string, toDate: string): Promise<KsefCostPreviewFetchResult> {
+    async fetchKsefCosts(fromDate: string, toDate: string): Promise<KsefFetchJobStatusResponse> {
       const response = await httpCommon.post<unknown>(
         `/goahead/cost/ksef`,
         { fromDate, toDate },
@@ -554,32 +554,9 @@ export const useCostStore = defineStore('cost', {
 
       const jobId = ksefStartResponseJobId(response.data);
       if (jobId == null) {
-        return { ok: false, message: 'Brak jobId w odpowiedzi serwera po starcie pobierania kosztów z KSeF.' };
+        throw new Error('Brak jobId w odpowiedzi serwera po starcie pobierania kosztów z KSeF.');
       }
-
-      let finalStatus;
-      try {
-        finalStatus = await pollKsefCostPreviewJobUntilTerminal(httpCommon, jobId);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Nie udało się sprawdzić statusu zadania KSeF.';
-        return { ok: false, message: msg };
-      }
-
-      if (finalStatus.status === 'FAILED') {
-        const fromErrors = finalStatus.errors?.map((e) => `${e.costId ?? '?'}: ${e.message}`).join('; ');
-        const message = [finalStatus.message, fromErrors].filter(Boolean).join(' — ') || 'Pobieranie kosztów z KSeF nie powiodło się.';
-        return { ok: false, message };
-      }
-
-      const total = typeof finalStatus.total === 'number' && Number.isFinite(finalStatus.total) ? finalStatus.total : 0;
-      const duplicates = typeof finalStatus.duplicates === 'number' && Number.isFinite(finalStatus.duplicates) ? finalStatus.duplicates : 0;
-
-      return {
-        ok: true,
-        partial: finalStatus.status === 'PARTIAL',
-        total,
-        duplicates,
-      };
+      return pollKsefCostPreviewJobUntilTerminal(httpCommon, jobId);
     },
 
     /**

@@ -3,7 +3,8 @@
   import { FilterMatchMode } from '@primevue/core/api';
   import TheMenu from '@/components/TheMenu.vue';
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
-  import OfficeButton from '@/components/OfficeButton.vue';
+  import KsefDateRangeDialog from '@/components/KsefDateRangeDialog.vue';
+  import { ksefJobToDialogResult, type KsefDialogResult } from '@/utils/ksefJobResult';
   import ToolbarActionButton from '@/components/ToolbarActionButton.vue';
   import router from '@/router';
   import { useRoute } from 'vue-router';
@@ -573,10 +574,13 @@
     return 'Ostatnie sprawdzenie KSeF';
   });
 
+  const ksefResult = ref<KsefDialogResult | null>(null);
+
   function openKsefCheckDialog() {
     if (loadingKsefSearch.value) return;
     ksefDateFrom.value = new Date(firstDayOfCurrentMonth());
     ksefDateTo.value = new Date(lastDayOfCurrentMonth());
+    ksefResult.value = null;
     showKsefDialog.value = true;
   }
 
@@ -584,10 +588,6 @@
     if (route.query.action !== 'ksef') return;
     openKsefCheckDialog();
     router.replace({ name: 'Costs' });
-  }
-
-  function closeKsefDialog() {
-    showKsefDialog.value = false;
   }
 
   async function searchKsefCosts() {
@@ -602,65 +602,22 @@
       });
       return;
     }
-    const fromDate = fromM.format('YYYY-MM-DD');
-    const toDate = toM.format('YYYY-MM-DD');
 
     loadingKsefSearch.value = true;
-    showKsefDialog.value = false;
     try {
-      const result = await costStore.fetchKsefNewCostsPreview(fromDate, toDate);
-      if (!result.ok) {
-        toast.add({
-          severity: 'error',
-          summary: 'KSeF',
-          detail: result.message,
-          life: 6000,
-        });
-        return;
-      }
+      const job = await costStore.fetchKsefCosts(fromM.format('YYYY-MM-DD'), toM.format('YYYY-MM-DD'));
+      const result = ksefJobToDialogResult(job, 'kosztów');
+      const { severity, message, errors } = result;
 
-      const { partial, total, duplicates } = result;
-      const newCount = Math.max(0, total - duplicates);
+      toast.add({ severity, summary: 'KSeF', detail: message, life: severity === 'success' ? 5000 : 8000 });
 
-      if (partial) {
-        toast.add({
-          severity: 'warn',
-          summary: 'KSeF',
-          detail: 'Synchronizacja zakończona częściowo — sprawdź szczegóły i ewentualne komunikaty z serwera.',
-          life: 6000,
-        });
-      }
+      // Także po FAILED: mogły się pojawić nowe koszty/dostawcy (backend zakłada dostawców).
+      await Promise.all([costStore.getCostsFromDb(costStore.currentPage), supplierStore.getSuppliersFromDb('ALL')]);
 
-      if (newCount > 0) {
-        if (!partial) {
-          const detail =
-            newCount === 1
-              ? 'Pobrano 1 nowy koszt z KSeF. Lista została odświeżona.'
-              : `Pobrano ${newCount} nowych kosztów z KSeF. Lista została odświeżona.`;
-          toast.add({
-            severity: 'success',
-            summary: 'KSeF',
-            detail,
-            life: 5000,
-          });
-        }
-        await costStore.getCostsFromDb(costStore.currentPage);
-      } else if (total > 0 && duplicates > 0) {
-        const detail =
-          total === 1 ? 'Koszt z KSeF jest już w systemie.' : `Znaleziono ${total} kosztów w KSeF, ale wszystkie są już w systemie.`;
-        toast.add({
-          severity: 'info',
-          summary: 'KSeF',
-          detail,
-          life: 4000,
-        });
+      if (severity === 'success' && errors.length === 0) {
+        showKsefDialog.value = false;
       } else {
-        toast.add({
-          severity: 'info',
-          summary: 'KSeF',
-          detail: 'Brak nowych kosztów z KSeF w wybranym okresie.',
-          life: 4000,
-        });
+        ksefResult.value = result;
       }
     } catch (e: unknown) {
       const err = e as AxiosError<{ message?: string }>;
@@ -884,41 +841,15 @@
 
   <ContextMenu ref="costRowContextMenu" :model="costRowMenuModel" @hide="onCostContextMenuHide" />
 
-  <Dialog
+  <KsefDateRangeDialog
     v-model:visible="showKsefDialog"
-    modal
+    v-model:date-from="ksefDateFrom"
+    v-model:date-to="ksefDateTo"
     header="Sprawdź KSeF"
-    class="w-full max-w-[min(96vw,480px)]"
-    :dismissable-mask="!loadingKsefSearch"
-    :closable="!loadingKsefSearch"
-    :close-on-escape="!loadingKsefSearch"
-  >
-    <div class="flex min-h-0 flex-col gap-4">
-      <div class="grid gap-3 sm:grid-cols-2 sm:items-end">
-        <div class="flex flex-col gap-1">
-          <label for="ksef-from" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">Okres od</label>
-          <DatePicker id="ksef-from" v-model="ksefDateFrom" date-format="yy-mm-dd" show-icon fluid :disabled="loadingKsefSearch" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="ksef-to" class="pl-1 pb-1 text-sm text-surface-800 dark:text-surface-400">Okres do</label>
-          <DatePicker id="ksef-to" v-model="ksefDateTo" date-format="yy-mm-dd" show-icon fluid :disabled="loadingKsefSearch" />
-        </div>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex flex-row justify-end gap-1">
-        <OfficeButton text="Anuluj" btn-type="office-regular" :btn-disabled="loadingKsefSearch" @click="closeKsefDialog" />
-        <OfficeButton
-          text="Wyszukaj"
-          btn-type="office-save"
-          :loading="loadingKsefSearch"
-          :btn-disabled="loadingKsefSearch"
-          @click="searchKsefCosts"
-        />
-      </div>
-    </template>
-  </Dialog>
+    :loading="loadingKsefSearch"
+    :result="ksefResult"
+    @submit="searchKsefCosts"
+  />
 
   <Panel>
     <div

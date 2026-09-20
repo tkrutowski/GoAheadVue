@@ -40,6 +40,15 @@ export const useAuthorizationStore = defineStore('authorization', {
         return false;
       }
     },
+    /** Uprawnienie zapisu (GOAHEAD_WRITE z JWT) — wymagane m.in. przy imporcie faktur z KSeF. */
+    canWrite(): boolean {
+      try {
+        const decoded = jwt_decode(this.accessToken);
+        return decoded.authorities.includes('GOAHEAD_WRITE');
+      } catch {
+        return false;
+      }
+    },
   },
 
   //actions = metody w komponentach

@@ -27,6 +27,8 @@
     query?: Record<string, string>;
     /** Otwiera globalny dialog ZUS DRA bez zmiany trasy. */
     openZusDra?: boolean;
+    /** Pozycja widoczna tylko z uprawnieniem zapisu (GOAHEAD_WRITE). */
+    requiresWrite?: boolean;
   }
 
   interface MenuItem {
@@ -84,6 +86,13 @@
           label: 'Oblicz ZUS DRA',
           icon: 'pi pi-calculator',
           openZusDra: true,
+        },
+        {
+          label: 'Pobierz z KSeF',
+          icon: 'pi pi-cloud-download',
+          routeName: 'Invoices',
+          query: { action: 'ksef' },
+          requiresWrite: true,
         },
       ],
     },
@@ -215,7 +224,7 @@
             @mouseleave="openSubmenu = null"
           >
             <button
-              v-for="subItem in item.submenu"
+              v-for="subItem in item.submenu.filter((s) => !s.requiresWrite || authorizationStore.canWrite)"
               :key="subItem.label"
               class="w-full flex items-center gap-2 px-4 py-2.5 text-[#bbbbbb] hover:bg-[#3a4147] hover:text-white transition-colors text-sm text-left"
               @click="handleSubmenuClick(subItem)"

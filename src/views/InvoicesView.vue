@@ -5,6 +5,11 @@
   import TheMenu from '@/components/TheMenu.vue';
   import ToolbarActionButton from '@/components/ToolbarActionButton.vue';
   import router from '@/router';
+  import { useRoute } from 'vue-router';
+  import moment from 'moment';
+  import KsefDateRangeDialog from '@/components/KsefDateRangeDialog.vue';
+  import { ksefJobToDialogResult, type KsefDialogResult } from '@/utils/ksefJobResult';
+  import { useAuthorizationStore } from '@/stores/authorization';
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
   import { useToast } from 'primevue/usetoast';
   import { useCustomerStore } from '@/stores/customers';
@@ -21,6 +26,8 @@
   import { useDatatableSelectedRowStyle } from '@/composables/useDatatableSelectedRowStyle';
   import { buildInvoicePdfDownloadFileName, buildUpoPdfDownloadFileName, downloadBlobAsFile } from '@/utils/pdfFileDownload';
 
+  const route = useRoute();
+  const authorizationStore = useAuthorizationStore();
   const customerStore = useCustomerStore();
 
   const invoiceStore = useInvoiceStore();
@@ -348,12 +355,79 @@
     });
   };
 
+  //
+  //-------------------------------------------------IMPORT Z KSeF-------------------------------------------------
+  //
+  const showKsefImportDialog = ref(false);
+  const ksefImportDateFrom = ref<Date>(new Date());
+  const ksefImportDateTo = ref<Date>(new Date());
+  const ksefImportResult = ref<KsefDialogResult | null>(null);
+
+  function openKsefImportDialog() {
+    if (invoiceStore.loadingKsefImport || !authorizationStore.canWrite) return;
+    const now = new Date();
+    ksefImportDateFrom.value = new Date(now.getFullYear(), now.getMonth(), 1);
+    ksefImportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    ksefImportResult.value = null;
+    showKsefImportDialog.value = true;
+  }
+
+  function openKsefImportDialogFromRoute() {
+    if (route.query.action !== 'ksef') return;
+    openKsefImportDialog();
+    router.replace({ name: 'Invoices' });
+  }
+
+  async function importInvoicesFromKsef() {
+    const fromM = moment(ksefImportDateFrom.value).startOf('day');
+    const toM = moment(ksefImportDateTo.value).startOf('day');
+    if (fromM.isAfter(toM)) {
+      toast.add({ severity: 'warn', summary: 'KSeF', detail: 'Data „od” nie może być późniejsza niż data „do”.', life: 4000 });
+      return;
+    }
+
+    try {
+      const job = await invoiceStore.importInvoicesFromKsef(fromM.format('YYYY-MM-DD'), toM.format('YYYY-MM-DD'));
+      const result = ksefJobToDialogResult(job, 'faktur');
+      const { severity, message, errors } = result;
+
+      toast.add({ severity, summary: 'KSeF', detail: message, life: severity === 'success' ? 5000 : 8000 });
+
+      // Także po FAILED: mogły się pojawić nowe faktury/klienci. Backend zakłada klienta po NIP nabywcy.
+      await Promise.all([invoiceStore.getInvoicesFromDb(invoiceStore.currentPage), customerStore.getCustomersFromDb('ALL')]);
+      syncSelectedInvoicesFromStore();
+
+      if (severity === 'success' && errors.length === 0) {
+        showKsefImportDialog.value = false;
+      } else {
+        ksefImportResult.value = result;
+      }
+    } catch (e: unknown) {
+      const err = e as AxiosError<{ message?: string }>;
+      toast.add({
+        severity: 'error',
+        summary: 'Błąd KSeF',
+        detail: err?.response?.data?.message ?? err?.message ?? 'Nie udało się zaimportować faktur z KSeF.',
+        life: 6000,
+      });
+    }
+  }
+
   onMounted(async () => {
     if (customerStore.customers.length <= 1) customerStore.getCustomersFromDb('ALL');
     if (invoiceStore.invoices.length === 0 && !invoiceStore.loadingInvoices) {
       await invoiceStore.filterInvoices(filters.value);
     }
+    await nextTick();
+    openKsefImportDialogFromRoute();
   });
+
+  watch(
+    () => route.query.action,
+    (action) => {
+      if (action === 'ksef') openKsefImportDialogFromRoute();
+    }
+  );
 
   const handlePageChange = async (event: DataTablePageEvent) => {
     console.log('handlePageChange()', event);
@@ -401,7 +475,8 @@
     return !selectedInvoices.value[0].ksefNumber?.trim();
   });
 
-  const canDelete = computed(() => selectedInvoices.value.length >= 1);
+  /** Faktury z numerem KSeF są niezmienne — nie można ich usunąć (docelowo korekty). */
+  const canDelete = computed(() => selectedInvoices.value.length >= 1 && selectedInvoices.value.every((inv) => !inv.ksefNumber?.trim()));
 
   const canGeneratePdf = computed(() => selectedInvoices.value.length >= 1 && !invoiceStore.loadingFile);
 
@@ -660,6 +735,25 @@
     @cancel="showKsefConfirmationDialog = false"
   />
 
+  <KsefDateRangeDialog
+    v-model:visible="showKsefImportDialog"
+    v-model:date-from="ksefImportDateFrom"
+    v-model:date-to="ksefImportDateTo"
+    header="Pobierz faktury z KSeF"
+    submit-label="Pobierz"
+    :loading="invoiceStore.loadingKsefImport"
+    :result="ksefImportResult"
+    @submit="importInvoicesFromKsef"
+  >
+    Import obejmuje faktury sprzedażowe, także wystawione bezpośrednio w portalu KSeF.
+    <ul class="mt-2 list-disc pl-5">
+      <li>Importowane są tylko zwykłe faktury VAT w PLN — korekty, faktury zaliczkowe i walutowe są pomijane.</li>
+      <li>Faktury, które już są w systemie (wg numeru KSeF), są pomijane jako duplikaty.</li>
+      <li>Faktura, której nabywca nie ma NIP-u, nie zostanie zaimportowana i pojawi się na liście błędów.</li>
+    </ul>
+    Import może potrwać kilkadziesiąt sekund.
+  </KsefDateRangeDialog>
+
   <Dialog
     v-model:visible="showPdfPreviewDialog"
     modal
@@ -755,6 +849,16 @@
           :disabled="!canKsef"
           title="Wyślij do KSeF zaznaczone faktury (wymaga potwierdzenia)"
           @click="confirmSendToKsef"
+        />
+        <ToolbarActionButton
+          v-if="authorizationStore.canWrite"
+          label="Pobierz z KSeF"
+          icon="pi pi-cloud-download"
+          variant="green"
+          :loading="invoiceStore.loadingKsefImport"
+          :disabled="invoiceStore.loadingKsefImport"
+          title="Pobierz z KSeF faktury sprzedażowe (także wystawione poza aplikacją) z wybranego okresu"
+          @click="openKsefImportDialog"
         />
         <ToolbarActionButton
           label="UPO"

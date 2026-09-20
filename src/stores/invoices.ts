@@ -6,9 +6,11 @@ import moment from 'moment';
 import {
   fetchZusDraJobResult,
   pollInvoicePdfJobUntilTerminal,
+  pollKsefInvoiceImportJobUntilTerminal,
   pollKsefInvoiceJobUntilTerminal,
   pollZusDraJobUntilTerminal,
 } from '@/utils/pollAsyncJob';
+import type { KsefFetchJobStatusResponse } from '@/types/KsefJob';
 import { ksefStartResponseJobId } from '@/utils/ksefJobHelpers';
 import type { ZusDraFetchResult } from '@/types/ZusDra';
 import { invoicePdfFailedFromJob } from '@/utils/pdfBatchFailedMaps';
@@ -24,6 +26,7 @@ export const useInvoiceStore = defineStore('invoice', {
     loadingPaymentType: false,
     loadingFile: false,
     loadingWait: false,
+    loadingKsefImport: false,
     invoices: [] as Invoice[],
     totalInvoices: 0,
     currentPage: 0,
@@ -540,6 +543,36 @@ export const useInvoiceStore = defineStore('invoice', {
       await this.getInvoicesFromDb(this.currentPage);
       console.log('END - sendInvoicesToKsef()');
       return { partial: finalStatus.status === 'PARTIAL' };
+    },
+
+    /**
+     * Import faktur sprzedażowych z KSeF (także wystawionych poza aplikacją) — async job.
+     * Backend: POST /goahead/invoice/ksef/import { fromDate, toDate } → 202 + { jobId }; GET .../import/jobs/{jobId}.
+     * Zwraca końcowy status zadania (SUCCEEDED | PARTIAL | FAILED) wraz z `message` i `errors`; wyjątek tylko przy błędzie startu/pollingu.
+     */
+    async importInvoicesFromKsef(fromDate: string, toDate: string): Promise<KsefFetchJobStatusResponse> {
+      console.log('START - importInvoicesFromKsef()', fromDate, toDate);
+      this.loadingKsefImport = true;
+      try {
+        const response = await httpCommon.post<unknown>(
+          `/goahead/invoice/ksef/import`,
+          { fromDate, toDate },
+          {
+            validateStatus: (status) => status === 202,
+          }
+        );
+
+        const jobId = ksefStartResponseJobId(response.data);
+        if (jobId == null) {
+          throw new Error('Brak jobId w odpowiedzi serwera po starcie importu faktur z KSeF.');
+        }
+
+        const finalStatus = await pollKsefInvoiceImportJobUntilTerminal(httpCommon, jobId);
+        console.log('END - importInvoicesFromKsef()', finalStatus.status);
+        return finalStatus;
+      } finally {
+        this.loadingKsefImport = false;
+      }
     },
 
     /**

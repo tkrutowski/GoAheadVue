@@ -27,6 +27,7 @@ declare module 'vue' {
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
     InstanceControl: typeof import('./src/components/InstanceControl.vue')['default']
+    KsefDateRangeDialog: typeof import('./src/components/KsefDateRangeDialog.vue')['default']
     LoadingDialog: typeof import('./src/components/LoadingDialog.vue')['default']
     MultiSelect: typeof import('primevue/multiselect')['default']
     OfficeButton: typeof import('./src/components/OfficeButton.vue')['default']
