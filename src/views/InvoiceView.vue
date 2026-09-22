@@ -164,7 +164,7 @@
 
   function applyVatGroupRecipientFromCustomer(customer: Customer | null) {
     if (!customer) return;
-    invoice.value.vatGroupRecipientName = `${customer.name} ${customer.firstName}`.trim();
+    invoice.value.vatGroupRecipientName = [customer.name, customer.firstName].filter(Boolean).join(' ');
     invoice.value.vatGroupRecipientNip = UtilsService.normalizeNipDigits(customer.nip);
     invoice.value.vatGroupRecipientStreet = customer.address?.street ?? '';
     invoice.value.vatGroupRecipientZip = customer.address?.zip ?? '';
@@ -396,8 +396,12 @@
       loadingInvoiceForEdit.value = true;
       invoiceStore
         .getInvoiceFromDb(invoiceId)
-        .then((data) => {
+        .then(async (data) => {
           if (data) {
+            // klient mógł powstać po stronie backendu (import z KSeF) po załadowaniu listy - odśwież, żeby select go znalazł
+            if (data.customer && !customerStore.customers.some((c) => c.id === data.customer?.id)) {
+              await customerStore.getCustomersFromDb('ALL');
+            }
             invoice.value = data;
             isVatGroupRecipient.value = hasVatGroupRecipientData(data);
             if (data.paymentDate && data.invoiceDate) {
@@ -498,8 +502,7 @@
   }));
 
   const getCustomerLabel = (option: Customer) => {
-    console.log('getCustomerLabel', option);
-    return `${option.name} ${option.firstName}`;
+    return [option.name, option.firstName].filter(Boolean).join(' ');
   };
 </script>
 
@@ -554,6 +557,7 @@
                   class="w-full"
                   id="input-customer"
                   v-model="invoice.customer"
+                  data-key="id"
                   :invalid="isCustomerFieldInvalid"
                   :options="isEdit ? customerStore.customers : customerStore.getCustomerActive"
                   :option-label="getCustomerLabel"

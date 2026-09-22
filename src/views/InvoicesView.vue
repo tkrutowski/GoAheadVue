@@ -446,7 +446,7 @@
   };
 
   const getCustomerLabel = (customer: Customer) => {
-    return `${customer.name} ${customer.firstName}`;
+    return [customer.name, customer.firstName].filter(Boolean).join(' ');
   };
 
   // Obsługa wyszukiwania globalnego z debounce
