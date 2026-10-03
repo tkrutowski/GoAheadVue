@@ -553,6 +553,15 @@
     return `Czy wysłać <b>${list.length}</b> faktur do KSeF?<br/><span class="text-sm">${nums}${more}</span>`;
   });
 
+  const copyKsefNumber = async (ksefNumber: string) => {
+    try {
+      await navigator.clipboard.writeText(ksefNumber.trim());
+      toast.add({ severity: 'success', summary: 'Skopiowano', detail: 'Numer KSeF: ' + ksefNumber.trim(), life: 2000 });
+    } catch {
+      toast.add({ severity: 'error', summary: 'Błąd', detail: 'Nie udało się skopiować numeru KSeF.', life: 3000 });
+    }
+  };
+
   const confirmSendToKsef = () => {
     const pending = selectedInvoices.value.filter((inv) => !inv.ksefNumber?.trim());
     if (!pending.length) return;
@@ -958,9 +967,9 @@
             {{ data.number }}
             <i
               v-if="data.ksefNumber?.trim()"
-              class="pi pi-verified shrink-0 ml-2 text-green-600 dark:text-green-400 text-sm"
-              :title="'KSeF: ' + data.ksefNumber"
-              aria-hidden="true"
+              class="pi pi-verified shrink-0 ml-2 text-green-600 dark:text-green-400 text-sm cursor-pointer"
+              :title="'KSeF: ' + data.ksefNumber + ' (kliknij, aby skopiować)'"
+              @click.stop="copyKsefNumber(data.ksefNumber)"
             />
           </span>
         </template>
